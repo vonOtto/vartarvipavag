@@ -1,0 +1,682 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "På Spåret Party Edition - Events v1.1.0",
+  "description": "WebSocket event schemas for Sprint 1 (game flow) and Sprint 1.1 (audio)",
+
+  "definitions": {
+    "Envelope": {
+      "type": "object",
+      "description": "Base envelope for all events",
+      "required": ["type", "sessionId", "serverTimeMs", "payload"],
+      "properties": {
+        "type": { "type": "string" },
+        "sessionId": { "type": "string" },
+        "serverTimeMs": { "type": "integer", "description": "Server monotonic time in milliseconds" },
+        "payload": { "type": "object" }
+      },
+      "additionalProperties": false
+    },
+
+    "Role": {
+      "type": "string",
+      "enum": ["HOST", "PLAYER", "TV"],
+      "description": "Client role type"
+    }
+  },
+
+  "oneOf": [
+    {
+      "title": "HELLO",
+      "description": "Client → Server: Initial connection handshake",
+      "type": "object",
+      "required": ["type", "sessionId", "serverTimeMs", "payload"],
+      "properties": {
+        "type": { "const": "HELLO" },
+        "sessionId": { "type": "string" },
+        "serverTimeMs": { "type": "integer" },
+        "payload": {
+          "type": "object",
+          "required": ["role", "authToken", "clientVersion"],
+          "properties": {
+            "role": { "$ref": "#/definitions/Role" },
+            "authToken": { "type": "string", "description": "Session join code or host token" },
+            "clientVersion": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+            "deviceId": { "type": "string", "description": "Optional persistent device ID for reconnect" },
+            "playerName": { "type": "string", "description": "Required for PLAYER role" }
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+
+    {
+      "title": "WELCOME",
+      "description": "Server → Client: Connection confirmed",
+      "type": "object",
+      "required": ["type", "sessionId", "serverTimeMs", "payload"],
+      "properties": {
+        "type": { "const": "WELCOME" },
+        "sessionId": { "type": "string" },
+        "serverTimeMs": { "type": "integer" },
+        "payload": {
+          "type": "object",
+          "required": ["connectionId", "role", "playerId"],
+          "properties": {
+            "connectionId": { "type": "string" },
+            "role": { "$ref": "#/definitions/Role" },
+            "playerId": { "type": "string", "description": "Assigned player ID" },
+            "serverTimeMs": { "type": "integer", "description": "Server time for sync calculation" },
+            "timeOffsetHintMs": { "type": "integer", "description": "Hint for client to calculate RTT" }
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+
+    {
+      "title": "RESUME_SESSION",
+      "description": "Client → Server: Reconnect to existing session",
+      "type": "object",
+      "required": ["type", "sessionId", "serverTimeMs", "payload"],
+      "properties": {
+        "type": { "const": "RESUME_SESSION" },
+        "sessionId": { "type": "string" },
+        "serverTimeMs": { "type": "integer" },
+        "payload": {
+          "type": "object",
+          "required": ["playerId", "lastReceivedEventId"],
+          "properties": {
+            "playerId": { "type": "string" },
+            "lastReceivedEventId": { "type": "string", "description": "Last event ID received before disconnect" },
+            "deviceId": { "type": "string" }
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+
+    {
+      "title": "STATE_SNAPSHOT",
+      "description": "Server → Client: Full state sync on join/reconnect",
+      "type": "object",
+      "required": ["type", "sessionId", "serverTimeMs", "payload"],
+      "properties": {
+        "type": { "const": "STATE_SNAPSHOT" },
+        "sessionId": { "type": "string" },
+        "serverTimeMs": { "type": "integer" },
+        "payload": {
+          "type": "object",
+          "required": ["state"],
+          "properties": {
+            "state": { "$ref": "state.schema.json" },
+            "missedEvents": {
+              "type": "array",
+              "description": "Events missed during disconnect (for reconnect)",
+              "items": { "$ref": "#/definitions/Envelope" }
+            }
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+
+    {
+      "title": "PLAYER_JOINED",
+      "description": "Server → All: New player joined the session",
+      "type": "object",
+      "required": ["type", "sessionId", "serverTimeMs", "payload"],
+      "properties": {
+        "type": { "const": "PLAYER_JOINED" },
+        "sessionId": { "type": "string" },
+        "serverTimeMs": { "type": "integer" },
+        "payload": {
+          "type": "object",
+          "required": ["playerId", "name", "joinedAtMs"],
+          "properties": {
+            "playerId": { "type": "string" },
+            "name": { "type": "string" },
+            "joinedAtMs": { "type": "integer" },
+            "isReconnect": { "type": "boolean", "default": false }
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+
+    {
+      "title": "PLAYER_LEFT",
+      "description": "Server → All: Player disconnected",
+      "type": "object",
+      "required": ["type", "sessionId", "serverTimeMs", "payload"],
+      "properties": {
+        "type": { "const": "PLAYER_LEFT" },
+        "sessionId": { "type": "string" },
+        "serverTimeMs": { "type": "integer" },
+        "payload": {
+          "type": "object",
+          "required": ["playerId", "reason"],
+          "properties": {
+            "playerId": { "type": "string" },
+            "reason": { "type": "string", "enum": ["disconnect", "kicked", "timeout"] }
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+
+    {
+      "title": "LOBBY_UPDATED",
+      "description": "Server → All: Full lobby state update",
+      "type": "object",
+      "required": ["type", "sessionId", "serverTimeMs", "payload"],
+      "properties": {
+        "type": { "const": "LOBBY_UPDATED" },
+        "sessionId": { "type": "string" },
+        "serverTimeMs": { "type": "integer" },
+        "payload": {
+          "type": "object",
+          "required": ["players", "joinCode"],
+          "properties": {
+            "players": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["playerId", "name", "isConnected"],
+                "properties": {
+                  "playerId": { "type": "string" },
+                  "name": { "type": "string" },
+                  "isConnected": { "type": "boolean" }
+                }
+              }
+            },
+            "joinCode": { "type": "string" }
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+
+    {
+      "title": "HOST_START_GAME",
+      "description": "Host → Server: Start the game",
+      "type": "object",
+      "required": ["type", "sessionId", "serverTimeMs", "payload"],
+      "properties": {
+        "type": { "const": "HOST_START_GAME" },
+        "sessionId": { "type": "string" },
+        "serverTimeMs": { "type": "integer" },
+        "payload": {
+          "type": "object",
+          "properties": {
+            "confirmedPlayers": {
+              "type": "array",
+              "description": "Optional list of player IDs to include",
+              "items": { "type": "string" }
+            }
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+
+    {
+      "title": "CLUE_PRESENT",
+      "description": "Server → All: Present new clue level",
+      "type": "object",
+      "required": ["type", "sessionId", "serverTimeMs", "payload"],
+      "properties": {
+        "type": { "const": "CLUE_PRESENT" },
+        "sessionId": { "type": "string" },
+        "serverTimeMs": { "type": "integer" },
+        "payload": {
+          "type": "object",
+          "required": ["clueText", "clueLevelPoints", "roundIndex"],
+          "properties": {
+            "clueText": { "type": "string" },
+            "clueLevelPoints": { "type": "integer", "enum": [10, 8, 6, 4, 2] },
+            "roundIndex": { "type": "integer" },
+            "clueIndex": { "type": "integer", "description": "0-indexed clue within round" }
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+
+    {
+      "title": "CLUE_ADVANCE",
+      "description": "Server → All: Auto-advance to next clue level",
+      "type": "object",
+      "required": ["type", "sessionId", "serverTimeMs", "payload"],
+      "properties": {
+        "type": { "const": "CLUE_ADVANCE" },
+        "sessionId": { "type": "string" },
+        "serverTimeMs": { "type": "integer" },
+        "payload": {
+          "type": "object",
+          "required": ["nextClueLevelPoints"],
+          "properties": {
+            "nextClueLevelPoints": { "type": "integer", "enum": [10, 8, 6, 4, 2] },
+            "advanceInMs": { "type": "integer", "description": "Time until next clue presents (for UI countdown)" }
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+
+    {
+      "title": "BRAKE_PULL",
+      "description": "Player → Server: Player hits brake button",
+      "type": "object",
+      "required": ["type", "sessionId", "serverTimeMs", "payload"],
+      "properties": {
+        "type": { "const": "BRAKE_PULL" },
+        "sessionId": { "type": "string" },
+        "serverTimeMs": { "type": "integer" },
+        "payload": {
+          "type": "object",
+          "required": ["playerId", "clientTimeMs"],
+          "properties": {
+            "playerId": { "type": "string" },
+            "clientTimeMs": { "type": "integer", "description": "Client's local time for latency calculation" }
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+
+    {
+      "title": "BRAKE_ACCEPTED",
+      "description": "Server → All: Brake accepted, game paused",
+      "type": "object",
+      "required": ["type", "sessionId", "serverTimeMs", "payload"],
+      "properties": {
+        "type": { "const": "BRAKE_ACCEPTED" },
+        "sessionId": { "type": "string" },
+        "serverTimeMs": { "type": "integer" },
+        "payload": {
+          "type": "object",
+          "required": ["playerId", "playerName", "clueLevelPoints"],
+          "properties": {
+            "playerId": { "type": "string" },
+            "playerName": { "type": "string" },
+            "clueLevelPoints": { "type": "integer", "enum": [10, 8, 6, 4, 2] },
+            "answerTimeoutMs": { "type": "integer", "description": "Time allowed for answer submission" }
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+
+    {
+      "title": "BRAKE_REJECTED",
+      "description": "Server → Player: Brake rejected (too late or rate limited)",
+      "type": "object",
+      "required": ["type", "sessionId", "serverTimeMs", "payload"],
+      "properties": {
+        "type": { "const": "BRAKE_REJECTED" },
+        "sessionId": { "type": "string" },
+        "serverTimeMs": { "type": "integer" },
+        "payload": {
+          "type": "object",
+          "required": ["playerId", "reason"],
+          "properties": {
+            "playerId": { "type": "string" },
+            "reason": { "type": "string", "enum": ["too_late", "rate_limited", "already_paused", "invalid_phase"] },
+            "winnerPlayerId": { "type": "string", "description": "Who won the brake race (if too_late)" }
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+
+    {
+      "title": "BRAKE_ANSWER_SUBMIT",
+      "description": "Brake owner → Server: Submit destination answer",
+      "type": "object",
+      "required": ["type", "sessionId", "serverTimeMs", "payload"],
+      "properties": {
+        "type": { "const": "BRAKE_ANSWER_SUBMIT" },
+        "sessionId": { "type": "string" },
+        "serverTimeMs": { "type": "integer" },
+        "payload": {
+          "type": "object",
+          "required": ["playerId", "answerText"],
+          "properties": {
+            "playerId": { "type": "string" },
+            "answerText": { "type": "string", "minLength": 1, "maxLength": 200 }
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+
+    {
+      "title": "BRAKE_ANSWER_LOCKED",
+      "description": "Server → All: Answer has been locked",
+      "type": "object",
+      "required": ["type", "sessionId", "serverTimeMs", "payload"],
+      "properties": {
+        "type": { "const": "BRAKE_ANSWER_LOCKED" },
+        "sessionId": { "type": "string" },
+        "serverTimeMs": { "type": "integer" },
+        "payload": {
+          "type": "object",
+          "required": ["playerId", "lockedAtLevelPoints"],
+          "properties": {
+            "playerId": { "type": "string" },
+            "lockedAtLevelPoints": { "type": "integer", "enum": [10, 8, 6, 4, 2] },
+            "answerText": { "type": "string", "description": "Only visible to HOST projection" },
+            "remainingClues": { "type": "boolean", "description": "If true, game continues to next clue level" }
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+
+    {
+      "title": "DESTINATION_REVEAL",
+      "description": "Server → All: Reveal correct destination answer",
+      "type": "object",
+      "required": ["type", "sessionId", "serverTimeMs", "payload"],
+      "properties": {
+        "type": { "const": "DESTINATION_REVEAL" },
+        "sessionId": { "type": "string" },
+        "serverTimeMs": { "type": "integer" },
+        "payload": {
+          "type": "object",
+          "required": ["destinationName", "country"],
+          "properties": {
+            "destinationName": { "type": "string" },
+            "country": { "type": "string" },
+            "aliases": { "type": "array", "items": { "type": "string" }, "description": "Accepted alternative names" },
+            "revealDelayMs": { "type": "integer", "description": "UI animation timing hint", "default": 1500 }
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+
+    {
+      "title": "DESTINATION_RESULTS",
+      "description": "Server → All: Show who was right/wrong with points awarded",
+      "type": "object",
+      "required": ["type", "sessionId", "serverTimeMs", "payload"],
+      "properties": {
+        "type": { "const": "DESTINATION_RESULTS" },
+        "sessionId": { "type": "string" },
+        "serverTimeMs": { "type": "integer" },
+        "payload": {
+          "type": "object",
+          "required": ["results"],
+          "properties": {
+            "results": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["playerId", "playerName", "answerText", "isCorrect", "pointsAwarded", "lockedAtLevelPoints"],
+                "properties": {
+                  "playerId": { "type": "string" },
+                  "playerName": { "type": "string" },
+                  "answerText": { "type": "string" },
+                  "isCorrect": { "type": "boolean" },
+                  "pointsAwarded": { "type": "integer" },
+                  "lockedAtLevelPoints": { "type": "integer", "enum": [10, 8, 6, 4, 2] }
+                }
+              }
+            }
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+
+    {
+      "title": "SCOREBOARD_UPDATE",
+      "description": "Server → All: Updated standings after round",
+      "type": "object",
+      "required": ["type", "sessionId", "serverTimeMs", "payload"],
+      "properties": {
+        "type": { "const": "SCOREBOARD_UPDATE" },
+        "sessionId": { "type": "string" },
+        "serverTimeMs": { "type": "integer" },
+        "payload": {
+          "type": "object",
+          "required": ["scoreboard"],
+          "properties": {
+            "scoreboard": {
+              "type": "array",
+              "description": "Sorted by score descending",
+              "items": {
+                "type": "object",
+                "required": ["playerId", "name", "score"],
+                "properties": {
+                  "playerId": { "type": "string" },
+                  "name": { "type": "string" },
+                  "score": { "type": "integer" },
+                  "rank": { "type": "integer", "description": "1-indexed rank (ties share rank)" }
+                }
+              }
+            },
+            "isGameOver": { "type": "boolean", "description": "True if this is the final scoreboard" }
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+
+    {
+      "title": "FINAL_RESULTS_PRESENT",
+      "description": "Server → All: Winner reveal and final standings (Sprint 1.1)",
+      "type": "object",
+      "required": ["type", "sessionId", "serverTimeMs", "payload"],
+      "properties": {
+        "type": { "const": "FINAL_RESULTS_PRESENT" },
+        "sessionId": { "type": "string" },
+        "serverTimeMs": { "type": "integer" },
+        "payload": {
+          "type": "object",
+          "required": ["isTie", "scoreboard"],
+          "properties": {
+            "isTie": { "type": "boolean" },
+            "winnerPlayerId": { "type": "string", "description": "Single winner (null if tie)" },
+            "tieWinners": {
+              "type": "array",
+              "description": "Multiple winners if tie",
+              "items": {
+                "type": "object",
+                "required": ["playerId", "name", "score"],
+                "properties": {
+                  "playerId": { "type": "string" },
+                  "name": { "type": "string" },
+                  "score": { "type": "integer" }
+                }
+              }
+            },
+            "standingsTop3": {
+              "type": "array",
+              "description": "Top 3 for podium display",
+              "maxItems": 3,
+              "items": {
+                "type": "object",
+                "required": ["playerId", "name", "score", "rank"],
+                "properties": {
+                  "playerId": { "type": "string" },
+                  "name": { "type": "string" },
+                  "score": { "type": "integer" },
+                  "rank": { "type": "integer" }
+                }
+              }
+            },
+            "scoreboard": {
+              "type": "array",
+              "description": "Full standings",
+              "items": {
+                "type": "object",
+                "required": ["playerId", "name", "score", "rank"],
+                "properties": {
+                  "playerId": { "type": "string" },
+                  "name": { "type": "string" },
+                  "score": { "type": "integer" },
+                  "rank": { "type": "integer" }
+                }
+              }
+            },
+            "timelineStartMs": { "type": "integer", "description": "Server time for 10-12s finale timeline sync" }
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+
+    {
+      "title": "MUSIC_SET",
+      "description": "Server → TV: Start playing background music (Sprint 1.1)",
+      "type": "object",
+      "required": ["type", "sessionId", "serverTimeMs", "payload"],
+      "properties": {
+        "type": { "const": "MUSIC_SET" },
+        "sessionId": { "type": "string" },
+        "serverTimeMs": { "type": "integer" },
+        "payload": {
+          "type": "object",
+          "required": ["trackId", "mode", "startAtServerMs"],
+          "properties": {
+            "trackId": { "type": "string", "description": "e.g. music_travel_loop" },
+            "mode": { "type": "string", "enum": ["loop", "once"], "default": "loop" },
+            "startAtServerMs": { "type": "integer", "description": "Sync point for playback start" },
+            "gainDb": { "type": "number", "minimum": -40, "maximum": 6, "default": 0 },
+            "fadeInMs": { "type": "integer", "minimum": 0, "default": 300 }
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+
+    {
+      "title": "MUSIC_STOP",
+      "description": "Server → TV: Stop background music (Sprint 1.1)",
+      "type": "object",
+      "required": ["type", "sessionId", "serverTimeMs", "payload"],
+      "properties": {
+        "type": { "const": "MUSIC_STOP" },
+        "sessionId": { "type": "string" },
+        "serverTimeMs": { "type": "integer" },
+        "payload": {
+          "type": "object",
+          "properties": {
+            "fadeOutMs": { "type": "integer", "minimum": 0, "default": 600 }
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+
+    {
+      "title": "MUSIC_GAIN_SET",
+      "description": "Server → TV: Adjust music volume (Sprint 1.1)",
+      "type": "object",
+      "required": ["type", "sessionId", "serverTimeMs", "payload"],
+      "properties": {
+        "type": { "const": "MUSIC_GAIN_SET" },
+        "sessionId": { "type": "string" },
+        "serverTimeMs": { "type": "integer" },
+        "payload": {
+          "type": "object",
+          "required": ["gainDb"],
+          "properties": {
+            "gainDb": { "type": "number", "minimum": -40, "maximum": 6 },
+            "transitionMs": { "type": "integer", "minimum": 0, "default": 300 }
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+
+    {
+      "title": "SFX_PLAY",
+      "description": "Server → TV: Play sound effect (Sprint 1.1)",
+      "type": "object",
+      "required": ["type", "sessionId", "serverTimeMs", "payload"],
+      "properties": {
+        "type": { "const": "SFX_PLAY" },
+        "sessionId": { "type": "string" },
+        "serverTimeMs": { "type": "integer" },
+        "payload": {
+          "type": "object",
+          "required": ["sfxId", "startAtServerMs"],
+          "properties": {
+            "sfxId": { "type": "string", "description": "e.g. sfx_brake, sfx_lock, sfx_reveal, sfx_sting_build, sfx_drumroll, sfx_winner_fanfare" },
+            "startAtServerMs": { "type": "integer", "description": "Sync point for playback" },
+            "volume": { "type": "number", "minimum": 0, "maximum": 1, "default": 1.0 }
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+
+    {
+      "title": "UI_EFFECT_TRIGGER",
+      "description": "Server → TV: Trigger visual effect (Sprint 1.1)",
+      "type": "object",
+      "required": ["type", "sessionId", "serverTimeMs", "payload"],
+      "properties": {
+        "type": { "const": "UI_EFFECT_TRIGGER" },
+        "sessionId": { "type": "string" },
+        "serverTimeMs": { "type": "integer" },
+        "payload": {
+          "type": "object",
+          "required": ["effectId"],
+          "properties": {
+            "effectId": { "type": "string", "enum": ["confetti", "flash", "spotlight"] },
+            "intensity": { "type": "string", "enum": ["low", "med", "high"], "default": "med" },
+            "durationMs": { "type": "integer", "minimum": 0, "default": 2500 },
+            "params": { "type": "object", "description": "Effect-specific parameters" }
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+
+    {
+      "title": "HOST_MUSIC_GAIN_SET",
+      "description": "Host → Server: Adjust music volume (Sprint 1.1)",
+      "type": "object",
+      "required": ["type", "sessionId", "serverTimeMs", "payload"],
+      "properties": {
+        "type": { "const": "HOST_MUSIC_GAIN_SET" },
+        "sessionId": { "type": "string" },
+        "serverTimeMs": { "type": "integer" },
+        "payload": {
+          "type": "object",
+          "required": ["gainDb"],
+          "properties": {
+            "gainDb": { "type": "number", "minimum": -40, "maximum": 6 }
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+
+    {
+      "title": "ERROR",
+      "description": "Server → Client: Error notification",
+      "type": "object",
+      "required": ["type", "sessionId", "serverTimeMs", "payload"],
+      "properties": {
+        "type": { "const": "ERROR" },
+        "sessionId": { "type": "string" },
+        "serverTimeMs": { "type": "integer" },
+        "payload": {
+          "type": "object",
+          "required": ["errorCode", "message"],
+          "properties": {
+            "errorCode": { "type": "string", "enum": ["INVALID_SESSION", "UNAUTHORIZED", "RATE_LIMITED", "INVALID_PHASE", "VALIDATION_ERROR", "INTERNAL_ERROR"] },
+            "message": { "type": "string" },
+            "details": { "type": "object" }
+          },
+          "additionalProperties": false
+        }
+      }
+    }
+  ]
+}

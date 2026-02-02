@@ -1,0 +1,163 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "På Spåret Party Edition - Game State v1.1.0",
+  "description": "Complete game state structure for Sprint 1 and Sprint 1.1",
+  "type": "object",
+  "required": ["version", "phase", "sessionId", "joinCode", "players", "scoreboard"],
+  "properties": {
+    "version": {
+      "type": "integer",
+      "description": "State schema version"
+    },
+    "phase": {
+      "type": "string",
+      "enum": [
+        "LOBBY",
+        "PREPARING_ROUND",
+        "ROUND_INTRO",
+        "CLUE_LEVEL",
+        "PAUSED_FOR_BRAKE",
+        "REVEAL_DESTINATION",
+        "FOLLOWUP_QUESTION",
+        "SCOREBOARD",
+        "FINAL_RESULTS",
+        "ROUND_END"
+      ],
+      "description": "Current game phase"
+    },
+    "sessionId": {
+      "type": "string",
+      "description": "Unique session identifier"
+    },
+    "joinCode": {
+      "type": "string",
+      "description": "4-6 character code for players to join"
+    },
+    "players": {
+      "type": "array",
+      "description": "All players in the session",
+      "items": {
+        "type": "object",
+        "required": ["playerId", "name", "role", "isConnected", "joinedAtMs", "score"],
+        "properties": {
+          "playerId": { "type": "string" },
+          "name": { "type": "string" },
+          "role": { "type": "string", "enum": ["PLAYER", "HOST", "TV"] },
+          "isConnected": { "type": "boolean" },
+          "joinedAtMs": { "type": "integer" },
+          "score": { "type": "integer", "minimum": 0 }
+        },
+        "additionalProperties": false
+      }
+    },
+    "roundIndex": {
+      "type": "integer",
+      "description": "0-indexed round number",
+      "minimum": 0
+    },
+    "destination": {
+      "type": "object",
+      "description": "Current destination (role-aware projection)",
+      "properties": {
+        "name": {
+          "type": ["string", "null"],
+          "description": "Correct answer - HOST only until reveal"
+        },
+        "country": {
+          "type": ["string", "null"],
+          "description": "Destination country - HOST only until reveal"
+        },
+        "aliases": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Accepted alternative names - HOST only until reveal"
+        },
+        "revealed": {
+          "type": "boolean",
+          "description": "True after DESTINATION_REVEAL"
+        }
+      },
+      "additionalProperties": false
+    },
+    "clueLevelPoints": {
+      "type": ["integer", "null"],
+      "enum": [10, 8, 6, 4, 2, null],
+      "description": "Current clue level point value"
+    },
+    "clueText": {
+      "type": ["string", "null"],
+      "description": "Current clue text being displayed"
+    },
+    "brakeOwnerPlayerId": {
+      "type": ["string", "null"],
+      "description": "Player who has the brake (in PAUSED_FOR_BRAKE phase)"
+    },
+    "lockedAnswers": {
+      "type": "array",
+      "description": "All submitted answers (role-aware projection)",
+      "items": {
+        "type": "object",
+        "required": ["playerId", "answerText", "lockedAtLevelPoints", "lockedAtMs"],
+        "properties": {
+          "playerId": { "type": "string" },
+          "answerText": {
+            "type": "string",
+            "description": "Answer text - HOST sees all, PLAYER sees only own, TV sees count only"
+          },
+          "lockedAtLevelPoints": { "type": "integer", "enum": [10, 8, 6, 4, 2] },
+          "lockedAtMs": { "type": "integer" },
+          "isCorrect": {
+            "type": "boolean",
+            "description": "Only present after DESTINATION_REVEAL"
+          },
+          "pointsAwarded": {
+            "type": "integer",
+            "description": "Only present after DESTINATION_REVEAL"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "scoreboard": {
+      "type": "array",
+      "description": "Current standings (sorted by score descending)",
+      "items": {
+        "type": "object",
+        "required": ["playerId", "name", "score"],
+        "properties": {
+          "playerId": { "type": "string" },
+          "name": { "type": "string" },
+          "score": { "type": "integer", "minimum": 0 },
+          "rank": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "1-indexed rank (ties share rank)"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "timer": {
+      "type": ["object", "null"],
+      "description": "Active server-side timer",
+      "properties": {
+        "timerId": { "type": "string" },
+        "startAtServerMs": { "type": "integer" },
+        "durationMs": { "type": "integer", "minimum": 0 }
+      },
+      "required": ["timerId", "startAtServerMs", "durationMs"],
+      "additionalProperties": false
+    },
+    "audioState": {
+      "type": "object",
+      "description": "Current audio state (Sprint 1.1)",
+      "properties": {
+        "currentTrackId": { "type": ["string", "null"] },
+        "isPlaying": { "type": "boolean" },
+        "gainDb": { "type": "number", "minimum": -40, "maximum": 6 }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

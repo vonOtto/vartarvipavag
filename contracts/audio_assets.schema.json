@@ -1,0 +1,125 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Audio Assets Manifest v1.1.0",
+  "description": "Schema for audio asset references and metadata",
+  "type": "object",
+  "required": ["version", "assets"],
+  "properties": {
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "description": "Manifest version"
+    },
+    "assets": {
+      "type": "array",
+      "description": "List of all audio assets",
+      "items": {
+        "type": "object",
+        "required": ["id", "type", "filename", "durationMs"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique asset identifier (e.g., music_travel_loop, sfx_brake)",
+            "pattern": "^(music|sfx|voice)_[a-z0-9_]+$"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["music_loop", "music_once", "sfx", "voice"],
+            "description": "Asset type for audio engine routing"
+          },
+          "filename": {
+            "type": "string",
+            "description": "File name in asset bundle (e.g., travel_loop.m4a)"
+          },
+          "durationMs": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Duration in milliseconds"
+          },
+          "loopable": {
+            "type": "boolean",
+            "description": "True if asset can be seamlessly looped",
+            "default": false
+          },
+          "lufs": {
+            "type": "number",
+            "description": "Loudness level in LUFS (for future normalization)"
+          },
+          "sampleRate": {
+            "type": "integer",
+            "enum": [44100, 48000],
+            "description": "Sample rate in Hz",
+            "default": 48000
+          },
+          "channels": {
+            "type": "integer",
+            "enum": [1, 2],
+            "description": "Number of audio channels (1=mono, 2=stereo)",
+            "default": 2
+          },
+          "licenseMeta": {
+            "type": "object",
+            "description": "Licensing information for asset",
+            "properties": {
+              "source": { "type": "string", "description": "Source or creator" },
+              "license": { "type": "string", "description": "License type (e.g., CC0, royalty-free)" },
+              "url": { "type": "string", "format": "uri", "description": "Source URL if applicable" }
+            }
+          },
+          "tags": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Searchable tags (e.g., upbeat, dramatic, travel)"
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false,
+  "examples": [
+    {
+      "version": "1.1.0",
+      "assets": [
+        {
+          "id": "music_travel_loop",
+          "type": "music_loop",
+          "filename": "travel_loop.m4a",
+          "durationMs": 45000,
+          "loopable": true,
+          "lufs": -16,
+          "sampleRate": 48000,
+          "channels": 2,
+          "licenseMeta": {
+            "source": "Placeholder - freesound.org",
+            "license": "CC0",
+            "url": "https://freesound.org/example"
+          },
+          "tags": ["upbeat", "travel", "journey"]
+        },
+        {
+          "id": "sfx_brake",
+          "type": "sfx",
+          "filename": "brake.m4a",
+          "durationMs": 500,
+          "loopable": false,
+          "lufs": -12,
+          "sampleRate": 48000,
+          "channels": 2,
+          "tags": ["action", "brake", "stop"]
+        },
+        {
+          "id": "sfx_winner_fanfare",
+          "type": "sfx",
+          "filename": "winner_fanfare.m4a",
+          "durationMs": 2500,
+          "loopable": false,
+          "lufs": -10,
+          "sampleRate": 48000,
+          "channels": 2,
+          "tags": ["celebration", "winner", "finale"]
+        }
+      ]
+    }
+  ]
+}
