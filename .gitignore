@@ -1,0 +1,6 @@
+
+# Never commit dependencies/build artifacts
+node_modules/
+**/node_modules/
+dist/
+**/dist/
