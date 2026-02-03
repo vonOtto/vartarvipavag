@@ -6,6 +6,7 @@ import { Router, Request, Response } from 'express';
 import { sessionStore } from '../store/session-store';
 import { signToken } from '../utils/auth';
 import { logger } from '../utils/logger';
+import { buildLobbyUpdatedEvent } from '../utils/lobby-events';
 
 const router = Router();
 
@@ -120,6 +121,21 @@ router.post('/v1/sessions/:id/join', (req: Request, res: Response) => {
       playerId: player.playerId,
       name: player.name,
     });
+
+    // Broadcast LOBBY_UPDATED to all connected clients
+    const updatedSession = sessionStore.getSession(sessionId);
+    if (updatedSession) {
+      const lobbyEvent = buildLobbyUpdatedEvent(
+        sessionId,
+        updatedSession.joinCode,
+        updatedSession.state
+      );
+      sessionStore.broadcastEventToSession(sessionId, lobbyEvent);
+      logger.info('Broadcasted LOBBY_UPDATED after player join', {
+        sessionId,
+        playerId: player.playerId,
+      });
+    }
 
     return res.status(200).json({
       playerId: player.playerId,

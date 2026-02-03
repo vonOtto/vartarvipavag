@@ -225,12 +225,31 @@ See `/docs/api-examples.md` for detailed examples and complete flow documentatio
 ws://localhost:3000/ws
 ```
 
-**Phase 1 Status:** Basic echo server for testing. Full game event handling will be implemented in subsequent phases.
+**Authentication Required:** All WebSocket connections must include a valid JWT token.
 
-**Connection Flow (to be implemented):**
-1. Client connects with JWT token in query param: `?token=<jwt>`
+**Authentication Methods:**
+1. Query parameter: `ws://localhost:3000/ws?token=<jwt>`
+2. HTTP header: `Authorization: Bearer <jwt>`
+
+**Connection Flow:**
+1. Client connects with JWT token (obtained from REST API)
 2. Server validates token and sends WELCOME event
-3. Client can send/receive game events per `contracts/events.schema.json`
+3. Server immediately sends STATE_SNAPSHOT with current game state
+4. Client can send/receive game events per `contracts/events.schema.json`
+
+**Error Codes:**
+- `4001` - Invalid token
+- `4002` - Token expired
+- `4003` - Session not found
+
+**Events Implemented:**
+- `WELCOME` - Connection confirmed
+- `STATE_SNAPSHOT` - Full state sync (role-filtered)
+- `RESUME_SESSION` - Reconnect flow
+- `PLAYER_LEFT` - Player disconnect notification
+- `ERROR` - Error notifications
+
+**See `/docs/websocket-authentication.md` for detailed documentation.**
 
 ## Environment Variables
 
@@ -250,22 +269,28 @@ ws://localhost:3000/ws
 **Completed:**
 - ✅ Project setup with TypeScript
 - ✅ Express server with health endpoint
-- ✅ Basic WebSocket server
+- ✅ WebSocket server with authentication
 - ✅ Logging utility with timestamps
 - ✅ Type definitions from contracts
 - ✅ Environment configuration
 - ✅ CORS support
 - ✅ Graceful shutdown handling
-- ✅ REST endpoints for session management (TASK-202)
+- ✅ REST endpoints for session management
 - ✅ JWT authentication utilities
-- ✅ In-memory session store
+- ✅ In-memory session store with connection tracking
 - ✅ Join code generation
+- ✅ WebSocket authentication (header + query param)
+- ✅ WELCOME event on connect
+- ✅ STATE_SNAPSHOT with role-based filtering
+- ✅ RESUME_SESSION for reconnection
+- ✅ Connection management (connect/disconnect tracking)
+- ✅ State projection by role (HOST/PLAYER/TV)
 
 **Next Steps:**
-- WebSocket authentication with JWT
-- HELLO/WELCOME handshake
-- STATE_SNAPSHOT on connect/reconnect
-- Lobby state management
+- Game event handlers (BRAKE_PULL, BRAKE_ANSWER_SUBMIT, etc.)
+- State machine implementation
+- Brake fairness logic
+- Timer management
 
 ### Phase 2 - Game Logic (Upcoming)
 
@@ -277,7 +302,22 @@ ws://localhost:3000/ws
 
 ## Testing
 
-### Quick Test Script
+### WebSocket Smoke Test
+
+Run the automated WebSocket smoke test:
+
+```bash
+npm run dev  # Start server in another terminal
+npx tsx scripts/ws-smoke-test.ts
+```
+
+This test verifies:
+- Invalid token rejection
+- Valid connection flow (WELCOME + STATE_SNAPSHOT)
+- Player connection with filtered state
+- RESUME_SESSION functionality
+
+### REST Endpoints Test
 
 Run the automated test script to verify all REST endpoints:
 
@@ -318,15 +358,28 @@ This script will:
 4. Test WebSocket connection (using wscat):
    ```bash
    npm install -g wscat
-   wscat -c ws://localhost:3000/ws
+
+   # Connect with token from session creation
+   wscat -c "ws://localhost:3000/ws?token=<jwt-token>"
+
+   # Or with header
+   wscat -c "ws://localhost:3000/ws" -H "Authorization: Bearer <jwt-token>"
    ```
 
-   Send a test message:
+   Send a RESUME_SESSION event:
    ```json
-   {"type":"TEST","data":"hello"}
+   {
+     "type": "RESUME_SESSION",
+     "sessionId": "your-session-id",
+     "serverTimeMs": 1234567890,
+     "payload": {
+       "playerId": "your-player-id",
+       "lastReceivedEventId": "event-id"
+     }
+   }
    ```
 
-See `/docs/api-examples.md` for comprehensive examples and full test results.
+See `/docs/api-examples.md` and `/docs/websocket-authentication.md` for comprehensive documentation.
 
 ## Architecture Notes
 
