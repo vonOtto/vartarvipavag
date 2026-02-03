@@ -234,6 +234,102 @@ $ git log --all --full-history -- "services/backend/.env"
 
 ---
 
+### Commit 4: Game Flow with HOST_START_GAME and Clue Progression
+**Hash:** `dd75340792b8b084e8264078818469808a6ea83a`
+**Date:** 2026-02-03 14:47 CET
+**Message:** `feat(backend): add game flow with HOST_START_GAME and clue progression`
+**Author:** vonOtto <oskar@tupac.se>
+
+**Files Committed (8 files, 1883 insertions, 3 deletions):**
+
+**Backend Implementation:**
+- `services/backend/src/game/state-machine.ts` (243 lines) - Game state transitions and logic
+- `services/backend/src/game/content-hardcoded.ts` (151 lines) - 3 destinations with 5 clues each
+- `services/backend/src/server.ts` (283 lines added) - HOST_START_GAME and HOST_NEXT_CLUE handlers
+- `services/backend/src/utils/event-builder.ts` (74 lines added) - CLUE_PRESENT, DESTINATION_REVEAL builders
+
+**Testing:**
+- `services/backend/scripts/game-flow-test.ts` (331 lines) - Integration test (19/19 passing)
+
+**Documentation:**
+- `docs/game-flow-test.md` (385 lines) - Test scenarios and checklist
+- `docs/game-flow-implementation-summary.md` (331 lines) - Complete implementation guide
+- `docs/ws-quick-reference.md` (88 lines added) - Game flow examples
+
+**Safety Checks:**
+- ✅ No secrets committed (only hardcoded game content)
+- ✅ No API keys or tokens
+- ✅ All content is game data (destinations, clues)
+- ✅ Test scripts use generated tokens only
+- ✅ Role-based filtering prevents information leaks
+
+**Features Implemented:**
+
+1. **Game Flow State Machine:**
+   - LOBBY → CLUE_LEVEL (10/8/6/4/2 points) → REVEAL_DESTINATION
+   - State transitions with validation
+   - Phase-based game logic
+
+2. **HOST_START_GAME Event:**
+   - Only host can start game
+   - Loads random hardcoded destination
+   - Broadcasts STATE_SNAPSHOT + CLUE_PRESENT
+   - Error handling for unauthorized attempts
+
+3. **HOST_NEXT_CLUE Event:**
+   - Advances through clue levels (10→8→6→4→2)
+   - Automatic reveal after final clue
+   - Broadcasts STATE_SNAPSHOT + CLUE_PRESENT or DESTINATION_REVEAL
+
+4. **Hardcoded Content:**
+   - Paris (5 clues, French landmarks)
+   - Tokyo (5 clues, Japanese culture)
+   - New York (5 clues, American icons)
+   - Answer validation with aliases
+
+5. **Event Broadcasting:**
+   - CLUE_PRESENT: Current clue text and points
+   - DESTINATION_REVEAL: Destination name and country
+   - DESTINATION_RESULTS: Top players and destination info
+   - SCOREBOARD_UPDATE: Current rankings
+
+6. **Role-Based Security:**
+   - HOST sees destination during clues (for monitoring)
+   - PLAYER/TV never see destination before reveal
+   - Follows contracts/projections.md
+
+**Test Results:**
+- ✅ game-flow-test.ts: 19/19 tests passing
+  - Game start and phase transitions
+  - Clue progression through all 5 levels
+  - Destination reveal flow
+  - Role-based projections verified (HOST sees, PLAYER/TV don't)
+  - Authorization checks (non-host cannot control game)
+  - State synchronization across all clients
+
+**Example Game Flow:**
+```
+1. Host sends HOST_START_GAME
+   → State: LOBBY → CLUE_LEVEL (10 points)
+   → Broadcast: STATE_SNAPSHOT + CLUE_PRESENT
+
+2. Host sends HOST_NEXT_CLUE (x4)
+   → Clues: 10 → 8 → 6 → 4 → 2 points
+   → Each: STATE_SNAPSHOT + CLUE_PRESENT
+
+3. Host sends HOST_NEXT_CLUE (after 2-point clue)
+   → State: CLUE_LEVEL → REVEAL_DESTINATION
+   → Broadcast: STATE_SNAPSHOT + DESTINATION_REVEAL + RESULTS + SCOREBOARD
+```
+
+**Contracts Compliance:**
+- ✅ contracts/events.schema.json - Event structures
+- ✅ contracts/state.schema.json - State phases and fields
+- ✅ contracts/projections.md - Role-based filtering
+- ✅ contracts/scoring.md - Point values per clue level
+
+---
+
 ## Security Verification Summary
 
 ### All Commits
@@ -261,7 +357,8 @@ $ git log --all --full-history -- "**/secrets*"
 | 2e5867f (git agent) | 3 | 186 | 0 | ✅ |
 | 53105a4 (REST API) | 16 | 2028 | 14 | ✅ |
 | ca6726d (WS + lobby) | 17 | 2912 | 40 | ✅ |
-| **Total** | **36** | **5126** | **54** | **✅** |
+| dd75340 (game flow) | 8 | 1883 | 3 | ✅ |
+| **Total** | **44** | **8009** | **57** | **✅** |
 
 ---
 
@@ -272,14 +369,18 @@ $ git log --all --full-history -- "**/secrets*"
 3. ✅ Lobby realtime updates implemented
 4. ✅ Connection tracking functional
 5. ✅ Role-based state projection working
-6. 🔜 Implement HOST_START_GAME event
-7. 🔜 Implement clue flow (CLUE_PRESENT, CLUE_ADVANCE)
-8. 🔜 Implement brake mechanism (BRAKE_PULL, BRAKE_ACCEPTED)
-9. 🔜 Build web player client
-10. 🔜 Build tvOS client
+6. ✅ HOST_START_GAME event implemented
+7. ✅ Clue flow implemented (10→8→6→4→2 points)
+8. ✅ Destination reveal working
+9. 🔜 Implement brake mechanism (BRAKE_PULL, BRAKE_ACCEPTED, BRAKE_REJECTED)
+10. 🔜 Implement answer submission (BRAKE_ANSWER_SUBMIT, BRAKE_ANSWER_LOCKED)
+11. 🔜 Implement scoring with locked answers
+12. 🔜 Build web player client
+13. 🔜 Build tvOS client
+14. 🔜 Build iOS host client
 
 ---
 
-**Report Generated:** 2026-02-03 14:11 CET
+**Report Generated:** 2026-02-03 14:47 CET
 **Git Manager:** claude-code git agent
 **Status:** ✅ ALL SAFETY CHECKS PASSED
