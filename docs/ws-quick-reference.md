@@ -120,6 +120,81 @@ ws.addEventListener('message', (event) => {
 - Cannot see destination until revealed
 - Cannot see any answer text until revealed
 
+## Game Flow Examples
+
+### Starting a Game (Host)
+
+```javascript
+// Host sends HOST_START_GAME
+ws.send(JSON.stringify({
+  type: 'HOST_START_GAME',
+  sessionId: 'your-session-id',
+  serverTimeMs: Date.now(),
+  payload: {}
+}));
+
+// All clients receive:
+// 1. STATE_SNAPSHOT with phase: "CLUE_LEVEL", clueLevelPoints: 10
+// 2. CLUE_PRESENT with first clue
+```
+
+### Advancing Clues (Host)
+
+```javascript
+// Host sends HOST_NEXT_CLUE
+ws.send(JSON.stringify({
+  type: 'HOST_NEXT_CLUE',
+  sessionId: 'your-session-id',
+  serverTimeMs: Date.now(),
+  payload: {}
+}));
+
+// All clients receive:
+// 1. STATE_SNAPSHOT with updated clueLevelPoints
+// 2. CLUE_PRESENT with next clue (or DESTINATION_REVEAL if last clue)
+```
+
+### Handling CLUE_PRESENT (All Clients)
+
+```javascript
+ws.addEventListener('message', (event) => {
+  const message = JSON.parse(event.data);
+
+  if (message.type === 'CLUE_PRESENT') {
+    const { clueText, clueLevelPoints, roundIndex, clueIndex } = message.payload;
+    console.log(`Clue ${clueIndex + 1} (${clueLevelPoints} points): ${clueText}`);
+    // Update UI with new clue
+  }
+});
+```
+
+### Handling DESTINATION_REVEAL (All Clients)
+
+```javascript
+ws.addEventListener('message', (event) => {
+  const message = JSON.parse(event.data);
+
+  if (message.type === 'DESTINATION_REVEAL') {
+    const { destinationName, country, aliases } = message.payload;
+    console.log(`The answer is: ${destinationName}, ${country}`);
+    // Show reveal animation
+  }
+
+  if (message.type === 'DESTINATION_RESULTS') {
+    const { results } = message.payload;
+    results.forEach(result => {
+      console.log(`${result.playerName}: ${result.answerText} - ${result.isCorrect ? 'Correct' : 'Wrong'} (+${result.pointsAwarded} points)`);
+    });
+  }
+
+  if (message.type === 'SCOREBOARD_UPDATE') {
+    const { scoreboard } = message.payload;
+    console.log('Current standings:', scoreboard);
+    // Update scoreboard UI
+  }
+});
+```
+
 ## Common Patterns
 
 ### Reconnection
@@ -168,11 +243,22 @@ npx tsx scripts/ws-smoke-test.ts
 
 ## Event Types (Implemented)
 
+### Connection & Lobby
 - ✅ `WELCOME` - Server → Client
 - ✅ `STATE_SNAPSHOT` - Server → Client
 - ✅ `RESUME_SESSION` - Client → Server
+- ✅ `PLAYER_JOINED` - Server → All
 - ✅ `PLAYER_LEFT` - Server → All
+- ✅ `LOBBY_UPDATED` - Server → All
 - ✅ `ERROR` - Server → Client
+
+### Game Flow
+- ✅ `HOST_START_GAME` - Host → Server
+- ✅ `HOST_NEXT_CLUE` - Host → Server (not in schema yet)
+- ✅ `CLUE_PRESENT` - Server → All
+- ✅ `DESTINATION_REVEAL` - Server → All
+- ✅ `DESTINATION_RESULTS` - Server → All
+- ✅ `SCOREBOARD_UPDATE` - Server → All
 
 ## Event Types (Coming Soon)
 
@@ -181,8 +267,6 @@ npx tsx scripts/ws-smoke-test.ts
 - `BRAKE_REJECTED` - Server → Client
 - `BRAKE_ANSWER_SUBMIT` - Client → Server
 - `BRAKE_ANSWER_LOCKED` - Server → All
-- `DESTINATION_REVEAL` - Server → All
-- `SCOREBOARD_UPDATE` - Server → All
 
 ## Full Documentation
 

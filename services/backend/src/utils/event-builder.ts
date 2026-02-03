@@ -99,3 +99,77 @@ export function buildPlayerLeftEvent(
     reason,
   });
 }
+
+/**
+ * Creates a CLUE_PRESENT event
+ */
+export function buildCluePresentEvent(
+  sessionId: string,
+  clueText: string,
+  clueLevelPoints: 10 | 8 | 6 | 4 | 2,
+  roundIndex: number,
+  clueIndex: number
+): EventEnvelope {
+  return buildEvent('CLUE_PRESENT', sessionId, {
+    clueText,
+    clueLevelPoints,
+    roundIndex,
+    clueIndex,
+  });
+}
+
+/**
+ * Creates a DESTINATION_REVEAL event
+ */
+export function buildDestinationRevealEvent(
+  sessionId: string,
+  destinationName: string,
+  country: string,
+  aliases: string[],
+  revealDelayMs: number = 1500
+): EventEnvelope {
+  return buildEvent('DESTINATION_REVEAL', sessionId, {
+    destinationName,
+    country,
+    aliases,
+    revealDelayMs,
+  });
+}
+
+/**
+ * Creates a DESTINATION_RESULTS event
+ */
+export function buildDestinationResultsEvent(
+  sessionId: string,
+  results: Array<{
+    playerId: string;
+    playerName: string;
+    answerText: string;
+    isCorrect: boolean;
+    pointsAwarded: number;
+    lockedAtLevelPoints: 10 | 8 | 6 | 4 | 2;
+  }>
+): EventEnvelope {
+  return buildEvent('DESTINATION_RESULTS', sessionId, {
+    results,
+  });
+}
+
+/**
+ * Creates a SCOREBOARD_UPDATE event
+ */
+export function buildScoreboardUpdateEvent(
+  sessionId: string,
+  scoreboard: Array<{
+    playerId: string;
+    name: string;
+    score: number;
+    rank?: number;
+  }>,
+  isGameOver: boolean = false
+): EventEnvelope {
+  return buildEvent('SCOREBOARD_UPDATE', sessionId, {
+    scoreboard,
+    isGameOver,
+  });
+}

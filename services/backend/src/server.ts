@@ -15,10 +15,15 @@ import {
   buildStateSnapshotEvent,
   buildErrorEvent,
   buildPlayerLeftEvent,
+  buildCluePresentEvent,
+  buildDestinationRevealEvent,
+  buildDestinationResultsEvent,
+  buildScoreboardUpdateEvent,
 } from './utils/event-builder';
 import { projectState } from './utils/state-projection';
 import { buildLobbyUpdatedEvent } from './utils/lobby-events';
 import sessionRoutes from './routes/sessions';
+import { startGame, nextClue } from './game/state-machine';
 
 export function createServer() {
   const app = express();
@@ -255,10 +260,17 @@ function handleClientMessage(
       handleResumeSession(ws, sessionId, playerId, role, payload);
       break;
 
+    case 'HOST_START_GAME':
+      handleHostStartGame(ws, sessionId, playerId, role);
+      break;
+
+    case 'HOST_NEXT_CLUE':
+      handleHostNextClue(ws, sessionId, playerId, role);
+      break;
+
     // Future event handlers will be added here
     case 'BRAKE_PULL':
     case 'BRAKE_ANSWER_SUBMIT':
-    case 'HOST_START_GAME':
       logger.warn('Event handler not yet implemented', { type, sessionId, playerId });
       const errorEvent = buildErrorEvent(
         sessionId,
@@ -330,4 +342,273 @@ function handleResumeSession(
   const projectedState = projectState(session.state, role as any, playerId);
   const snapshotEvent = buildStateSnapshotEvent(sessionId, projectedState);
   ws.send(JSON.stringify(snapshotEvent));
+}
+
+/**
+ * Handles HOST_START_GAME event
+ */
+function handleHostStartGame(
+  ws: WebSocket,
+  sessionId: string,
+  playerId: string,
+  role: string
+): void {
+  // Only host can start game
+  if (role !== 'host') {
+    logger.warn('HOST_START_GAME: Non-host attempted to start game', {
+      sessionId,
+      playerId,
+      role,
+    });
+    const errorEvent = buildErrorEvent(
+      sessionId,
+      'UNAUTHORIZED',
+      'Only host can start game'
+    );
+    ws.send(JSON.stringify(errorEvent));
+    return;
+  }
+
+  // Get session
+  const session = sessionStore.getSession(sessionId);
+  if (!session) {
+    logger.error('HOST_START_GAME: Session not found', { sessionId, playerId });
+    const errorEvent = buildErrorEvent(
+      sessionId,
+      'INVALID_SESSION',
+      'Session not found'
+    );
+    ws.send(JSON.stringify(errorEvent));
+    return;
+  }
+
+  // Validate session is in LOBBY phase
+  if (session.state.phase !== 'LOBBY') {
+    logger.warn('HOST_START_GAME: Game already started', {
+      sessionId,
+      phase: session.state.phase,
+    });
+    const errorEvent = buildErrorEvent(
+      sessionId,
+      'INVALID_PHASE',
+      'Game already started'
+    );
+    ws.send(JSON.stringify(errorEvent));
+    return;
+  }
+
+  try {
+    // Start game - this loads destination and first clue
+    const gameData = startGame(session);
+
+    logger.info('Game started successfully', {
+      sessionId,
+      destinationId: gameData.destination.id,
+      destinationName: gameData.destination.name,
+      firstCluePoints: gameData.clueLevelPoints,
+    });
+
+    // Broadcast STATE_SNAPSHOT to all clients (with role-based projection)
+    broadcastStateSnapshot(sessionId);
+
+    // Broadcast CLUE_PRESENT event
+    const clueEvent = buildCluePresentEvent(
+      sessionId,
+      gameData.clueText,
+      gameData.clueLevelPoints,
+      session.state.roundIndex || 0,
+      gameData.clueIndex
+    );
+    sessionStore.broadcastEventToSession(sessionId, clueEvent);
+
+    logger.info('Broadcasted CLUE_PRESENT event', {
+      sessionId,
+      clueLevelPoints: gameData.clueLevelPoints,
+    });
+  } catch (error: any) {
+    logger.error('HOST_START_GAME: Failed to start game', {
+      sessionId,
+      error: error.message,
+    });
+    const errorEvent = buildErrorEvent(
+      sessionId,
+      'INTERNAL_ERROR',
+      `Failed to start game: ${error.message}`
+    );
+    ws.send(JSON.stringify(errorEvent));
+  }
+}
+
+/**
+ * Handles HOST_NEXT_CLUE event
+ */
+function handleHostNextClue(
+  ws: WebSocket,
+  sessionId: string,
+  playerId: string,
+  role: string
+): void {
+  // Only host can advance clues
+  if (role !== 'host') {
+    logger.warn('HOST_NEXT_CLUE: Non-host attempted to advance clue', {
+      sessionId,
+      playerId,
+      role,
+    });
+    const errorEvent = buildErrorEvent(
+      sessionId,
+      'UNAUTHORIZED',
+      'Only host can advance clues'
+    );
+    ws.send(JSON.stringify(errorEvent));
+    return;
+  }
+
+  // Get session
+  const session = sessionStore.getSession(sessionId);
+  if (!session) {
+    logger.error('HOST_NEXT_CLUE: Session not found', { sessionId, playerId });
+    const errorEvent = buildErrorEvent(
+      sessionId,
+      'INVALID_SESSION',
+      'Session not found'
+    );
+    ws.send(JSON.stringify(errorEvent));
+    return;
+  }
+
+  // Validate session is in CLUE_LEVEL phase
+  if (session.state.phase !== 'CLUE_LEVEL') {
+    logger.warn('HOST_NEXT_CLUE: Not in clue phase', {
+      sessionId,
+      phase: session.state.phase,
+    });
+    const errorEvent = buildErrorEvent(
+      sessionId,
+      'INVALID_PHASE',
+      'Not in clue phase'
+    );
+    ws.send(JSON.stringify(errorEvent));
+    return;
+  }
+
+  try {
+    // Advance to next clue or reveal
+    const result = nextClue(session);
+
+    if (result.isReveal) {
+      // Destination revealed
+      logger.info('Revealing destination', {
+        sessionId,
+        destinationName: result.destinationName,
+      });
+
+      // Broadcast STATE_SNAPSHOT to all clients
+      broadcastStateSnapshot(sessionId);
+
+      // Broadcast DESTINATION_REVEAL event
+      const revealEvent = buildDestinationRevealEvent(
+        sessionId,
+        result.destinationName!,
+        result.country!,
+        result.aliases || []
+      );
+      sessionStore.broadcastEventToSession(sessionId, revealEvent);
+
+      // Build and broadcast DESTINATION_RESULTS event
+      const results = session.state.lockedAnswers.map((answer) => {
+        const player = session.state.players.find(
+          (p) => p.playerId === answer.playerId
+        );
+        return {
+          playerId: answer.playerId,
+          playerName: player?.name || 'Unknown',
+          answerText: answer.answerText,
+          isCorrect: answer.isCorrect || false,
+          pointsAwarded: answer.pointsAwarded || 0,
+          lockedAtLevelPoints: answer.lockedAtLevelPoints,
+        };
+      });
+
+      const resultsEvent = buildDestinationResultsEvent(sessionId, results);
+      sessionStore.broadcastEventToSession(sessionId, resultsEvent);
+
+      // Broadcast SCOREBOARD_UPDATE event
+      const scoreboardEvent = buildScoreboardUpdateEvent(
+        sessionId,
+        session.state.scoreboard,
+        false // Not game over yet (could have follow-up questions in future sprints)
+      );
+      sessionStore.broadcastEventToSession(sessionId, scoreboardEvent);
+
+      logger.info('Broadcasted destination reveal and results', {
+        sessionId,
+        resultsCount: results.length,
+      });
+    } else {
+      // Next clue presented
+      logger.info('Advanced to next clue', {
+        sessionId,
+        clueLevelPoints: result.clueLevelPoints,
+      });
+
+      // Broadcast STATE_SNAPSHOT to all clients
+      broadcastStateSnapshot(sessionId);
+
+      // Broadcast CLUE_PRESENT event
+      const clueEvent = buildCluePresentEvent(
+        sessionId,
+        result.clueText!,
+        result.clueLevelPoints!,
+        session.state.roundIndex || 0,
+        result.clueIndex!
+      );
+      sessionStore.broadcastEventToSession(sessionId, clueEvent);
+
+      logger.info('Broadcasted CLUE_PRESENT event', {
+        sessionId,
+        clueLevelPoints: result.clueLevelPoints,
+      });
+    }
+  } catch (error: any) {
+    logger.error('HOST_NEXT_CLUE: Failed to advance clue', {
+      sessionId,
+      error: error.message,
+    });
+    const errorEvent = buildErrorEvent(
+      sessionId,
+      'INTERNAL_ERROR',
+      `Failed to advance clue: ${error.message}`
+    );
+    ws.send(JSON.stringify(errorEvent));
+  }
+}
+
+/**
+ * Helper: Broadcasts STATE_SNAPSHOT to all connected clients with role-based projection
+ */
+function broadcastStateSnapshot(sessionId: string): void {
+  const session = sessionStore.getSession(sessionId);
+  if (!session) {
+    logger.error('broadcastStateSnapshot: Session not found', { sessionId });
+    return;
+  }
+
+  // Send projected state to each connected client based on their role
+  session.connections.forEach((connection, connPlayerId) => {
+    if (connection.ws.readyState === 1) { // WebSocket.OPEN
+      const projectedState = projectState(
+        session.state,
+        connection.role as any,
+        connPlayerId
+      );
+      const snapshotEvent = buildStateSnapshotEvent(sessionId, projectedState);
+      connection.ws.send(JSON.stringify(snapshotEvent));
+    }
+  });
+
+  logger.debug('Broadcasted STATE_SNAPSHOT to all clients', {
+    sessionId,
+    clientCount: session.connections.size,
+  });
 }
