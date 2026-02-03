@@ -4,7 +4,16 @@ node_modules/
 **/node_modules/
 dist/
 **/dist/
+build/
+**/build/
 
 # macOS junk
 .DS_Store
 **/.DS_Store
+
+# Secrets and environment files
+.env
+.env.*
+**/.env
+**/.env.*
+!**/.env.example
