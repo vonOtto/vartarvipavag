@@ -2,7 +2,7 @@
  * Event types and payloads based on contracts/events.schema.json
  */
 
-export type Role = 'HOST' | 'PLAYER' | 'TV';
+export type Role = 'host' | 'player' | 'tv';
 
 /**
  * Base envelope for all WebSocket events

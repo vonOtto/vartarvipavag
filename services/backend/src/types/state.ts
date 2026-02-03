@@ -17,7 +17,7 @@ export type GamePhase =
 export interface Player {
   playerId: string;
   name: string;
-  role: 'PLAYER' | 'HOST' | 'TV';
+  role: 'player' | 'host' | 'tv';
   isConnected: boolean;
   joinedAtMs: number;
   score: number;

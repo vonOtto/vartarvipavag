@@ -8,6 +8,7 @@ import { WebSocketServer } from 'ws';
 import { Server as HTTPServer } from 'http';
 import { logger } from './utils/logger';
 import { getServerTimeMs, getUptimeSeconds } from './utils/time';
+import sessionRoutes from './routes/sessions';
 
 export function createServer() {
   const app = express();
@@ -37,9 +38,16 @@ export function createServer() {
       endpoints: {
         health: 'GET /health',
         websocket: 'WS /ws',
+        sessions: 'POST /v1/sessions',
+        join: 'POST /v1/sessions/:id/join',
+        tvJoin: 'POST /v1/sessions/:id/tv',
+        byCode: 'GET /v1/sessions/by-code/:joinCode',
       },
     });
   });
+
+  // API Routes
+  app.use(sessionRoutes);
 
   return app;
 }
