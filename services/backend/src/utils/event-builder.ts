@@ -207,3 +207,22 @@ export function buildBrakeRejectedEvent(
     ...(winnerPlayerId ? { winnerPlayerId } : {}),
   });
 }
+
+/**
+ * Creates a BRAKE_ANSWER_LOCKED event.
+ * Per projections.md: answerText is HOST-only — caller must strip it for PLAYER/TV.
+ */
+export function buildBrakeAnswerLockedEvent(
+  sessionId: string,
+  playerId: string,
+  lockedAtLevelPoints: 10 | 8 | 6 | 4 | 2,
+  remainingClues: boolean,
+  answerText?: string
+): EventEnvelope {
+  return buildEvent('BRAKE_ANSWER_LOCKED', sessionId, {
+    playerId,
+    lockedAtLevelPoints,
+    remainingClues,
+    ...(answerText !== undefined ? { answerText } : {}),
+  });
+}

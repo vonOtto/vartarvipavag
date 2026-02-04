@@ -264,12 +264,46 @@ ws.addEventListener('message', (event) => {
 });
 ```
 
+### Submitting Answer (Brake Owner)
+
+```javascript
+// Only the brake owner can submit — after receiving BRAKE_ACCEPTED
+ws.send(JSON.stringify({
+  type: 'BRAKE_ANSWER_SUBMIT',
+  sessionId: 'your-session-id',
+  serverTimeMs: Date.now(),
+  payload: {
+    playerId: 'your-player-id',   // must match brakeOwnerPlayerId
+    answerText: 'Paris'           // 1-200 chars
+  }
+}));
+
+// Server responds to ALL clients:
+// 1. STATE_SNAPSHOT  — phase back to CLUE_LEVEL, lockedAnswers updated
+// 2. BRAKE_ANSWER_LOCKED — see projection rules below
+```
+
+### BRAKE_ANSWER_LOCKED Projections
+
+| Role | `answerText` | `playerId` | `lockedAtLevelPoints` | `remainingClues` |
+|------|:---:|:---:|:---:|:---:|
+| HOST | ✅ present | ✅ | ✅ | ✅ |
+| PLAYER | ❌ omitted | ✅ | ✅ | ✅ |
+| TV | ❌ omitted | ✅ | ✅ | ✅ |
+
+### Host Override
+
+The host can release a brake (without an answer) by sending `HOST_NEXT_CLUE`
+while the game is in `PAUSED_FOR_BRAKE`. This advances to the next clue level
+and clears `brakeOwnerPlayerId`.
+
 ### Brake Fairness Rules
 
 1. **First brake wins**: Server uses `serverTimeMs` to determine first brake per clue level
 2. **Rate limiting**: Max 1 brake per player per 2 seconds
 3. **Phase restriction**: Can only brake during `CLUE_LEVEL` phase
 4. **One brake per clue**: Only first brake is accepted for each clue level (10/8/6/4/2)
+5. **One answer per destination**: A player who already locked an answer cannot brake again for the same destination
 
 ## Common Patterns
 
@@ -340,12 +374,11 @@ npx tsx scripts/ws-smoke-test.ts
 - ✅ `BRAKE_PULL` - Player → Server
 - ✅ `BRAKE_ACCEPTED` - Server → All
 - ✅ `BRAKE_REJECTED` - Server → Player
-- ⏳ `BRAKE_ANSWER_SUBMIT` - Player → Server (Sprint 1 - Task 207)
-- ⏳ `BRAKE_ANSWER_LOCKED` - Server → All (Sprint 1 - Task 207)
+- ✅ `BRAKE_ANSWER_SUBMIT` - Player → Server
+- ✅ `BRAKE_ANSWER_LOCKED` - Server → All (answerText: HOST only)
 
 ## Event Types (Coming Soon)
 
-- `BRAKE_RELEASED` - Host → Server (Sprint 1 - Task 207)
 - `CLUE_ADVANCE` - Server → All (auto-advance with timer)
 - Followup questions (Sprint 1.1)
 - Audio timeline events (Sprint 1.1)

@@ -21,11 +21,12 @@ import {
   buildScoreboardUpdateEvent,
   buildBrakeAcceptedEvent,
   buildBrakeRejectedEvent,
+  buildBrakeAnswerLockedEvent,
 } from './utils/event-builder';
 import { projectState } from './utils/state-projection';
 import { buildLobbyUpdatedEvent } from './utils/lobby-events';
 import sessionRoutes from './routes/sessions';
-import { startGame, nextClue, pullBrake } from './game/state-machine';
+import { startGame, nextClue, pullBrake, submitAnswer, releaseBrake } from './game/state-machine';
 
 export function createServer() {
   const app = express();
@@ -274,15 +275,8 @@ function handleClientMessage(
       handleBrakePull(ws, sessionId, playerId, role, payload);
       break;
 
-    // Future event handlers will be added here
     case 'BRAKE_ANSWER_SUBMIT':
-      logger.warn('Event handler not yet implemented', { type, sessionId, playerId });
-      const errorEvent = buildErrorEvent(
-        sessionId,
-        'INTERNAL_ERROR',
-        `Handler for ${type} not yet implemented`
-      );
-      ws.send(JSON.stringify(errorEvent));
+      handleBrakeAnswerSubmit(ws, sessionId, playerId, role, payload);
       break;
 
     default:
@@ -482,9 +476,9 @@ function handleHostNextClue(
     return;
   }
 
-  // Validate session is in CLUE_LEVEL phase
-  if (session.state.phase !== 'CLUE_LEVEL') {
-    logger.warn('HOST_NEXT_CLUE: Not in clue phase', {
+  // Allow in CLUE_LEVEL or PAUSED_FOR_BRAKE (host override releases brake)
+  if (session.state.phase !== 'CLUE_LEVEL' && session.state.phase !== 'PAUSED_FOR_BRAKE') {
+    logger.warn('HOST_NEXT_CLUE: Not in clue or brake phase', {
       sessionId,
       phase: session.state.phase,
     });
@@ -498,6 +492,15 @@ function handleHostNextClue(
   }
 
   try {
+    // If host overrides during brake, release it first
+    if (session.state.phase === 'PAUSED_FOR_BRAKE') {
+      logger.info('HOST_NEXT_CLUE: Host overriding brake', {
+        sessionId,
+        brakeOwner: session.state.brakeOwnerPlayerId,
+      });
+      releaseBrake(session);
+    }
+
     // Advance to next clue or reveal
     const result = nextClue(session);
 
@@ -690,6 +693,101 @@ function handleBrakePull(
     );
     ws.send(JSON.stringify(errorEvent));
   }
+}
+
+/**
+ * Handles BRAKE_ANSWER_SUBMIT event
+ */
+function handleBrakeAnswerSubmit(
+  ws: WebSocket,
+  sessionId: string,
+  playerId: string,
+  role: string,
+  payload: any
+): void {
+  // Only players can submit answers
+  if (role !== 'player') {
+    ws.send(JSON.stringify(buildErrorEvent(sessionId, 'UNAUTHORIZED', 'Only players can submit answers')));
+    return;
+  }
+
+  const session = sessionStore.getSession(sessionId);
+  if (!session) {
+    ws.send(JSON.stringify(buildErrorEvent(sessionId, 'INVALID_SESSION', 'Session not found')));
+    return;
+  }
+
+  // Must be in PAUSED_FOR_BRAKE
+  if (session.state.phase !== 'PAUSED_FOR_BRAKE') {
+    ws.send(JSON.stringify(buildErrorEvent(sessionId, 'INVALID_PHASE', 'Game is not paused for brake')));
+    return;
+  }
+
+  // Must be the brake owner
+  if (session.state.brakeOwnerPlayerId !== playerId) {
+    logger.warn('BRAKE_ANSWER_SUBMIT: Not brake owner', { sessionId, playerId, brakeOwner: session.state.brakeOwnerPlayerId });
+    ws.send(JSON.stringify(buildErrorEvent(sessionId, 'UNAUTHORIZED', 'Only the brake owner can submit an answer')));
+    return;
+  }
+
+  // Validate payload
+  const answerText = payload?.answerText;
+  if (!answerText || typeof answerText !== 'string' || answerText.trim().length === 0 || answerText.length > 200) {
+    ws.send(JSON.stringify(buildErrorEvent(sessionId, 'VALIDATION_ERROR', 'answerText must be 1-200 characters')));
+    return;
+  }
+
+  try {
+    const { lockedAtLevelPoints, remainingClues } = submitAnswer(session, playerId, answerText);
+
+    logger.info('Answer locked successfully', {
+      sessionId,
+      playerId,
+      lockedAtLevelPoints,
+      remainingClues,
+    });
+
+    // Broadcast STATE_SNAPSHOT (phase now back to CLUE_LEVEL)
+    broadcastStateSnapshot(sessionId);
+
+    // Broadcast BRAKE_ANSWER_LOCKED per-connection with role-based projection:
+    // HOST gets answerText, PLAYER and TV do not
+    broadcastBrakeAnswerLocked(sessionId, playerId, lockedAtLevelPoints, remainingClues, answerText);
+
+  } catch (error: any) {
+    logger.error('BRAKE_ANSWER_SUBMIT: Failed', { sessionId, playerId, error: error.message });
+    ws.send(JSON.stringify(buildErrorEvent(sessionId, 'INTERNAL_ERROR', error.message)));
+  }
+}
+
+/**
+ * Helper: Broadcasts BRAKE_ANSWER_LOCKED with per-role answerText filtering
+ */
+function broadcastBrakeAnswerLocked(
+  sessionId: string,
+  playerId: string,
+  lockedAtLevelPoints: 10 | 8 | 6 | 4 | 2,
+  remainingClues: boolean,
+  answerText: string
+): void {
+  const session = sessionStore.getSession(sessionId);
+  if (!session) return;
+
+  session.connections.forEach((connection) => {
+    if (connection.ws.readyState !== 1) return;
+
+    // Only HOST sees answerText per projections.md
+    const event = buildBrakeAnswerLockedEvent(
+      sessionId,
+      playerId,
+      lockedAtLevelPoints,
+      remainingClues,
+      connection.role === 'host' ? answerText : undefined
+    );
+    connection.ws.send(JSON.stringify(event));
+  });
+
+  logger.info('Broadcasted BRAKE_ANSWER_LOCKED', { sessionId, playerId, lockedAtLevelPoints });
 }
 
 /**

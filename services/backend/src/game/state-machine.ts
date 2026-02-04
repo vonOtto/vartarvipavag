@@ -373,3 +373,71 @@ export function releaseBrake(session: Session): void {
   session.state.phase = 'CLUE_LEVEL';
   session.state.brakeOwnerPlayerId = null;
 }
+
+// ============================================================================
+// ANSWER SUBMISSION
+// ============================================================================
+
+/**
+ * Checks whether a player has already locked an answer for the current destination.
+ */
+export function hasLockedAnswerForDestination(session: Session, playerId: string): boolean {
+  return session.state.lockedAnswers.some((a) => a.playerId === playerId);
+}
+
+/**
+ * Submits and locks an answer from the brake owner.
+ * Returns the locked answer entry and whether remaining clues exist.
+ */
+export function submitAnswer(
+  session: Session,
+  playerId: string,
+  answerText: string
+): {
+  lockedAtLevelPoints: 10 | 8 | 6 | 4 | 2;
+  remainingClues: boolean;
+} {
+  if (session.state.phase !== 'PAUSED_FOR_BRAKE') {
+    throw new Error(`Cannot submit answer in phase: ${session.state.phase}`);
+  }
+
+  if (session.state.brakeOwnerPlayerId !== playerId) {
+    throw new Error('Only the brake owner can submit an answer');
+  }
+
+  if (hasLockedAnswerForDestination(session, playerId)) {
+    throw new Error('Player already has a locked answer for this destination');
+  }
+
+  const clueLevelPoints = session.state.clueLevelPoints;
+  if (!clueLevelPoints) {
+    throw new Error('No active clue level');
+  }
+
+  const lockedAtMs = Date.now();
+
+  // Store the locked answer
+  session.state.lockedAnswers.push({
+    playerId,
+    answerText: answerText.trim(),
+    lockedAtLevelPoints: clueLevelPoints,
+    lockedAtMs,
+  });
+
+  // Determine if there are remaining clue levels after this one
+  const clueOrder: Array<10 | 8 | 6 | 4 | 2> = [10, 8, 6, 4, 2];
+  const currentIndex = clueOrder.indexOf(clueLevelPoints);
+  const remainingClues = currentIndex < clueOrder.length - 1;
+
+  logger.info('Answer submitted and locked', {
+    sessionId: session.sessionId,
+    playerId,
+    lockedAtLevelPoints: clueLevelPoints,
+    remainingClues,
+  });
+
+  // Release the brake — transitions back to CLUE_LEVEL
+  releaseBrake(session);
+
+  return { lockedAtLevelPoints: clueLevelPoints, remainingClues };
+}

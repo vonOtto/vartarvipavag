@@ -212,22 +212,28 @@ This forward-compatible design means Sprint 1 teams can safely ignore audio even
 
 ---
 
-#### TASK-207: Implement answer submission and locking
+#### TASK-207: ✅ Implement answer submission and locking
 **Owner**: Backend Agent
 **Scope**: Players lock destination answers, stored per level
-**Acceptance Criteria**:
-- BRAKE_ANSWER_SUBMIT from brake owner
-- Answer stored with playerId, levelPoints, answerText, timestamp
-- BRAKE_ANSWER_LOCKED broadcast
-- Players can only lock one answer per destination
-- State returns to CLUE_LEVEL(next) or continues current level
+**Status**: ✅ COMPLETED (2026-02-03)
 
-**Files**:
-- /Users/oskar/pa-sparet-party/services/backend/src/game/answers.ts
+**Acceptance Criteria**: ✅ ALL MET
+- ✅ BRAKE_ANSWER_SUBMIT accepted only from brakeOwnerPlayerId
+- ✅ Answer stored in lockedAnswers with playerId, lockedAtLevelPoints, answerText, lockedAtMs
+- ✅ BRAKE_ANSWER_LOCKED broadcast with per-role projection (answerText HOST-only)
+- ✅ Players can only lock one answer per destination (hasLockedAnswerForDestination guard)
+- ✅ Phase returns to CLUE_LEVEL after lock (releaseBrake called internally)
+- ✅ Host override: HOST_NEXT_CLUE works in PAUSED_FOR_BRAKE (releases brake, advances clue)
 
-**Dependencies**: TASK-206
-**Estimate**: 1 day
-**Test/Check**: Player brakes at level 8, submits answer, answer is locked
+**Implemented in**:
+- ✅ services/backend/src/game/state-machine.ts — `submitAnswer()`, `hasLockedAnswerForDestination()`
+- ✅ services/backend/src/server.ts — `handleBrakeAnswerSubmit()`, `broadcastBrakeAnswerLocked()`, HOST_NEXT_CLUE override
+- ✅ services/backend/src/utils/event-builder.ts — `buildBrakeAnswerLockedEvent()`
+- ✅ services/backend/scripts/answer-submission-test.ts — 8/8 assertions pass
+
+**Dependencies**: TASK-206 ✅
+**Estimate**: 1 day → Actual: < 1 day
+**Test/Check**: ✅ answer-submission-test.ts passes all 8 assertions
 
 ---
 
