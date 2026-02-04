@@ -11,8 +11,10 @@ class AppState: ObservableObject {
     @Published var players     : [Player]          = []
     @Published var clueText    : String?
     @Published var levelPoints : Int?
-    @Published var scoreboard  : [ScoreboardEntry] = []
-    @Published var joinCode    : String?
+    @Published var scoreboard        : [ScoreboardEntry] = []
+    @Published var joinCode          : String?
+    @Published var lockedAnswersCount: Int     = 0
+    @Published var brakeOwnerName    : String?
 
     // MARK: – connection status
     @Published var isConnected : Bool   = false
@@ -106,7 +108,8 @@ class AppState: ObservableObject {
             guard let payload = json["payload"] as? [String: Any] else { break }
             if let t = payload["clueText"]        as? String { clueText    = t }
             if let p = payload["clueLevelPoints"] as? Int    { levelPoints = p }
-            phase = "CLUE_LEVEL"
+            phase          = "CLUE_LEVEL"
+            brakeOwnerName = nil
 
         case "LOBBY_UPDATED":
             guard let payload = json["payload"]  as? [String: Any],
@@ -118,6 +121,16 @@ class AppState: ObservableObject {
                 return Player(playerId: id, name: name,
                               isConnected: d["isConnected"] as? Bool ?? true)
             }
+
+        case "BRAKE_ACCEPTED":
+            guard let payload = json["payload"] as? [String: Any] else { break }
+            brakeOwnerName = payload["playerName"] as? String
+            phase          = "PAUSED_FOR_BRAKE"
+
+        case "BRAKE_ANSWER_LOCKED":
+            lockedAnswersCount += 1
+            brakeOwnerName      = nil
+            phase               = "CLUE_LEVEL"
 
         default:
             break
@@ -146,13 +159,15 @@ class AppState: ObservableObject {
     // MARK: – helpers ─────────────────────────────────────────────────────────
 
     private func applyState(_ state: GameState) {
-        sessionReady = true
-        phase        = state.phase
-        players     = state.players
-        clueText    = state.clueText
-        levelPoints = state.levelPoints
-        scoreboard  = state.scoreboard
-        if let jc   = state.joinCode { joinCode = jc }
+        sessionReady        = true
+        phase               = state.phase
+        players             = state.players
+        clueText            = state.clueText
+        levelPoints         = state.levelPoints
+        scoreboard          = state.scoreboard
+        lockedAnswersCount  = state.lockedAnswersCount
+        brakeOwnerName      = state.brakeOwnerName
+        if let jc           = state.joinCode { joinCode = jc }
     }
 
     /// Exponential-backoff reconnect (1 s … 10 s, max 10 attempts).

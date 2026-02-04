@@ -20,6 +20,7 @@ struct RootView: View {
     @EnvironmentObject var appState: AppState
 
     private static let lobbyPhases: Set<String> = ["LOBBY", "PREPARING_ROUND", "ROUND_INTRO"]
+    private static let cluePhases : Set<String> = ["CLUE_LEVEL", "PAUSED_FOR_BRAKE"]
 
     var body: some View {
         if appState.sessionId == nil {
@@ -28,6 +29,8 @@ struct RootView: View {
             ConnectingView()
         } else if Self.lobbyPhases.contains(appState.phase) {
             LobbyView()
+        } else if Self.cluePhases.contains(appState.phase) {
+            TVClueView()
         } else {
             LiveView()
         }
