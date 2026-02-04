@@ -19,12 +19,14 @@ export function buildLobbyUpdatedEvent(
   joinCode: string,
   state: GameState
 ): EventEnvelope {
-  // Extract player information from state
-  const players = state.players.map((player) => ({
-    playerId: player.playerId,
-    name: player.name,
-    isConnected: player.isConnected,
-  }));
+  // Extract player information from state (exclude host/tv roles)
+  const players = state.players
+    .filter((player) => player.role === 'player')
+    .map((player) => ({
+      playerId: player.playerId,
+      name: player.name,
+      isConnected: player.isConnected,
+    }));
 
   return buildEvent('LOBBY_UPDATED', sessionId, {
     players,

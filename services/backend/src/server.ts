@@ -108,8 +108,8 @@ export function createWebSocketServer(server: HTTPServer) {
       return;
     }
 
-    // Use playerId from JWT or hostId for host
-    const actualPlayerId = playerId || (role === 'host' ? session.hostId : undefined);
+    // Use playerId from JWT; fall back to synthetic IDs for host and TV roles
+    const actualPlayerId = playerId || (role === 'host' ? session.hostId : role === 'tv' ? 'tv' : undefined);
     if (!actualPlayerId) {
       logger.warn('WebSocket connection rejected: No player ID', {
         sessionId,

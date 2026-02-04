@@ -42,9 +42,14 @@ export function projectState(
     };
   }
 
+  // Filter players: TV and PLAYER only see role=player entries
+  if (role === 'tv' || role === 'player') {
+    projected.players = fullState.players.filter((p) => p.role === 'player');
+  }
+
   // Filter locked answers based on role
   if (role === 'player') {
-    // PLAYER: only see own answers
+    // PLAYER: only see own answers (answerText visible for own entries)
     if (!playerId) {
       logger.warn('projectState: PLAYER role but no playerId provided');
       projected.lockedAnswers = [];
@@ -56,8 +61,11 @@ export function projectState(
   } else if (role === 'tv') {
     // TV: hide all answer text until destination is revealed
     if (projected.destination?.revealed) {
-      // After reveal, TV can see all answers
-      projected.lockedAnswers = fullState.lockedAnswers;
+      // After reveal, TV can see answers but never answerText
+      projected.lockedAnswers = fullState.lockedAnswers.map(({ answerText: _, ...rest }) => ({
+        ...rest,
+        answerText: undefined,
+      }));
     } else {
       // Before reveal, hide answer text (but could show count)
       projected.lockedAnswers = [];
