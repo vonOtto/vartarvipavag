@@ -300,6 +300,28 @@ ws://localhost:3000/ws
 - Scoring and reveal logic
 - Reconnect with STATE_SNAPSHOT
 
+## Pre-merge checks
+
+Before merging any backend change, run the full CI suite against a live server:
+
+```bash
+npm run dev          # terminal 1 — server must be up on localhost:3000
+npm run test:ci      # terminal 2 — runs all suites, fail-fast
+```
+
+The runner (`scripts/run-ci-tests.ts`) executes the following scripts **in order**, stopping at the first failure:
+
+| # | Script | What it covers |
+|---|--------|----------------|
+| 1 | `game-flow-test.ts` | Full clue-level loop, brake, reveal, destination scoring |
+| 2 | `brake-concurrency-test.ts` | Simultaneous brake pulls — only one accepted |
+| 3 | `reconnect-test.ts` | Mid-game WS drop + RESUME_SESSION state restore |
+| 4 | `e2e-followups-test.ts` | Destination → FQ1 (MC) → FQ2 (open-text) → scoreboard; reconnect mid-timer; HOST-only projection safety (6 assertions) |
+
+All scripts exit 0 on success and non-zero on any failure.  The runner inherits each script's stdout/stderr so individual assertion output is visible inline.
+
+---
+
 ## Testing
 
 ### WebSocket Smoke Test
