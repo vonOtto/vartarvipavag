@@ -64,11 +64,31 @@ export function projectState(
       // After reveal, TV can see answers but never answerText
       projected.lockedAnswers = fullState.lockedAnswers.map(({ answerText: _, ...rest }) => ({
         ...rest,
-        answerText: undefined,
+        answerText: '',
       }));
     } else {
       // Before reveal, hide answer text (but could show count)
       projected.lockedAnswers = [];
+    }
+  }
+
+  // Filter followupQuestion secrets
+  if (fullState.followupQuestion) {
+    if (role === 'player') {
+      projected.followupQuestion = {
+        ...fullState.followupQuestion,
+        correctAnswer: null,
+        answersByPlayer: [],
+        answeredByMe: playerId
+          ? fullState.followupQuestion.answersByPlayer.some((a) => a.playerId === playerId)
+          : false,
+      };
+    } else if (role === 'tv') {
+      projected.followupQuestion = {
+        ...fullState.followupQuestion,
+        correctAnswer: null,
+        answersByPlayer: [],
+      };
     }
   }
 

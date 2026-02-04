@@ -22,11 +22,14 @@ import {
   buildBrakeAcceptedEvent,
   buildBrakeRejectedEvent,
   buildBrakeAnswerLockedEvent,
+  buildFollowupQuestionPresentEvent,
+  buildFollowupAnswersLockedEvent,
+  buildFollowupResultsEvent,
 } from './utils/event-builder';
 import { projectState } from './utils/state-projection';
 import { buildLobbyUpdatedEvent } from './utils/lobby-events';
 import sessionRoutes from './routes/sessions';
-import { startGame, nextClue, pullBrake, submitAnswer, releaseBrake } from './game/state-machine';
+import { startGame, nextClue, pullBrake, submitAnswer, releaseBrake, startFollowupSequence, submitFollowupAnswer, lockFollowupAnswers, scoreFollowupQuestion } from './game/state-machine';
 
 export function createServer() {
   const app = express();
@@ -277,6 +280,10 @@ function handleClientMessage(
 
     case 'BRAKE_ANSWER_SUBMIT':
       handleBrakeAnswerSubmit(ws, sessionId, playerId, role, payload);
+      break;
+
+    case 'FOLLOWUP_ANSWER_SUBMIT':
+      handleFollowupAnswerSubmit(ws, sessionId, playerId, role, payload);
       break;
 
     default:
@@ -541,13 +548,20 @@ function handleHostNextClue(
       const resultsEvent = buildDestinationResultsEvent(sessionId, results);
       sessionStore.broadcastEventToSession(sessionId, resultsEvent);
 
-      // Broadcast SCOREBOARD_UPDATE event
-      const scoreboardEvent = buildScoreboardUpdateEvent(
-        sessionId,
-        session.state.scoreboard,
-        false // Not game over yet (could have follow-up questions in future sprints)
-      );
-      sessionStore.broadcastEventToSession(sessionId, scoreboardEvent);
+      // Try to start follow-up questions; fall back to scoreboard if none
+      const followupStart = startFollowupSequence(session);
+      if (followupStart) {
+        broadcastStateSnapshot(sessionId);
+        broadcastFollowupQuestionPresent(sessionId, followupStart);
+        scheduleFollowupTimer(sessionId, followupStart.timerDurationMs);
+      } else {
+        const scoreboardEvent = buildScoreboardUpdateEvent(
+          sessionId,
+          session.state.scoreboard,
+          false
+        );
+        sessionStore.broadcastEventToSession(sessionId, scoreboardEvent);
+      }
 
       logger.info('Broadcasted destination reveal and results', {
         sessionId,
@@ -600,7 +614,7 @@ function handleBrakePull(
   sessionId: string,
   playerId: string,
   role: string,
-  payload: any
+  _payload: any
 ): void {
   // Only players can pull brake
   if (role !== 'player') {
@@ -817,4 +831,178 @@ function broadcastStateSnapshot(sessionId: string): void {
     sessionId,
     clientCount: session.connections.size,
   });
+}
+
+// ============================================================================
+// FOLLOW-UP QUESTION HANDLERS
+// ============================================================================
+
+/**
+ * Handles FOLLOWUP_ANSWER_SUBMIT event from a player
+ */
+function handleFollowupAnswerSubmit(
+  ws: WebSocket,
+  sessionId: string,
+  playerId: string,
+  role: string,
+  payload: any
+): void {
+  if (role !== 'player') {
+    ws.send(JSON.stringify(buildErrorEvent(sessionId, 'UNAUTHORIZED', 'Only players can submit answers')));
+    return;
+  }
+
+  const session = sessionStore.getSession(sessionId);
+  if (!session) {
+    ws.send(JSON.stringify(buildErrorEvent(sessionId, 'INVALID_SESSION', 'Session not found')));
+    return;
+  }
+
+  if (session.state.phase !== 'FOLLOWUP_QUESTION') {
+    ws.send(JSON.stringify(buildErrorEvent(sessionId, 'INVALID_PHASE', 'Not in follow-up question phase')));
+    return;
+  }
+
+  const answerText = payload?.answerText;
+  if (!answerText || typeof answerText !== 'string' || answerText.trim().length === 0 || answerText.length > 200) {
+    ws.send(JSON.stringify(buildErrorEvent(sessionId, 'VALIDATION_ERROR', 'answerText must be 1-200 characters')));
+    return;
+  }
+
+  const accepted = submitFollowupAnswer(session, playerId, answerText);
+  if (!accepted) {
+    ws.send(JSON.stringify(buildErrorEvent(sessionId, 'VALIDATION_ERROR', 'Answer already submitted or timer expired')));
+    return;
+  }
+
+  // Send updated STATE_SNAPSHOT only to this player so they see answeredByMe = true
+  const projectedState = projectState(session.state, 'player', playerId);
+  const snapshotEvent = buildStateSnapshotEvent(sessionId, projectedState);
+  ws.send(JSON.stringify(snapshotEvent));
+
+  logger.info('FOLLOWUP_ANSWER_SUBMIT accepted', {
+    sessionId,
+    playerId,
+    currentQuestionIndex: session.state.followupQuestion?.currentQuestionIndex,
+  });
+}
+
+/**
+ * Broadcasts FOLLOWUP_QUESTION_PRESENT per-connection:
+ * HOST gets correctAnswer, TV and PLAYER do not.
+ */
+function broadcastFollowupQuestionPresent(
+  sessionId: string,
+  data: {
+    question: { questionText: string; options: string[] | null; correctAnswer: string };
+    currentQuestionIndex: number;
+    totalQuestions: number;
+    timerDurationMs: number;
+    startAtServerMs: number;
+  }
+): void {
+  const session = sessionStore.getSession(sessionId);
+  if (!session) return;
+
+  session.connections.forEach((connection) => {
+    if (connection.ws.readyState !== 1) return;
+
+    const event = buildFollowupQuestionPresentEvent(
+      sessionId,
+      data.question.questionText,
+      data.question.options,
+      data.currentQuestionIndex,
+      data.totalQuestions,
+      data.timerDurationMs,
+      connection.role === 'host' ? data.question.correctAnswer : undefined
+    );
+    connection.ws.send(JSON.stringify(event));
+  });
+
+  logger.info('Broadcasted FOLLOWUP_QUESTION_PRESENT', {
+    sessionId,
+    currentQuestionIndex: data.currentQuestionIndex,
+  });
+}
+
+/**
+ * Broadcasts FOLLOWUP_ANSWERS_LOCKED per-connection:
+ * HOST gets answersByPlayer, TV and PLAYER do not.
+ */
+function broadcastFollowupAnswersLocked(sessionId: string, currentQuestionIndex: number): void {
+  const session = sessionStore.getSession(sessionId);
+  if (!session) return;
+
+  const fq = session.state.followupQuestion;
+  const lockedCount = fq?.answersByPlayer.length || 0;
+  const answersByPlayer = fq?.answersByPlayer;
+
+  session.connections.forEach((connection) => {
+    if (connection.ws.readyState !== 1) return;
+
+    const event = buildFollowupAnswersLockedEvent(
+      sessionId,
+      currentQuestionIndex,
+      lockedCount,
+      connection.role === 'host' ? answersByPlayer : undefined
+    );
+    connection.ws.send(JSON.stringify(event));
+  });
+
+  logger.info('Broadcasted FOLLOWUP_ANSWERS_LOCKED', { sessionId, currentQuestionIndex, lockedCount });
+}
+
+/**
+ * Schedules the follow-up timer. When it fires: lock → score → broadcast results → next or scoreboard.
+ */
+function scheduleFollowupTimer(sessionId: string, durationMs: number): void {
+  const session = sessionStore.getSession(sessionId);
+  if (!session) return;
+
+  const timeoutId = setTimeout(() => {
+    const sess = sessionStore.getSession(sessionId);
+    if (!sess || !sess.state.followupQuestion) return;
+
+    const currentIdx = sess.state.followupQuestion.currentQuestionIndex;
+
+    // Lock answers
+    lockFollowupAnswers(sess);
+    broadcastFollowupAnswersLocked(sessionId, currentIdx);
+
+    // Score and get results
+    const { results, correctAnswer, nextQuestionIndex } = scoreFollowupQuestion(sess);
+
+    // Broadcast FOLLOWUP_RESULTS (same payload to all roles)
+    const resultsEvent = buildFollowupResultsEvent(sessionId, currentIdx, correctAnswer, results, nextQuestionIndex);
+    sessionStore.broadcastEventToSession(sessionId, resultsEvent);
+
+    // Broadcast updated scoreboard state
+    broadcastStateSnapshot(sessionId);
+
+    if (nextQuestionIndex !== null && sess.state.followupQuestion) {
+      // Next question — broadcast it and start new timer
+      const nextFq = sess.state.followupQuestion;
+      broadcastFollowupQuestionPresent(sessionId, {
+        question: {
+          questionText: nextFq.questionText,
+          options: nextFq.options,
+          correctAnswer: nextFq.correctAnswer!,
+        },
+        currentQuestionIndex: nextFq.currentQuestionIndex,
+        totalQuestions: nextFq.totalQuestions,
+        timerDurationMs: nextFq.timer!.durationMs,
+        startAtServerMs: nextFq.timer!.startAtServerMs,
+      });
+      scheduleFollowupTimer(sessionId, nextFq.timer!.durationMs);
+    } else {
+      // Sequence done — broadcast SCOREBOARD_UPDATE
+      const scoreboardEvent = buildScoreboardUpdateEvent(sessionId, sess.state.scoreboard, false);
+      sessionStore.broadcastEventToSession(sessionId, scoreboardEvent);
+    }
+  }, durationMs);
+
+  // Store handle so we could cancel on session teardown if needed
+  (sessionStore.getSession(sessionId) as any)._followupTimer = timeoutId;
+
+  logger.info('Followup timer scheduled', { sessionId, durationMs });
 }

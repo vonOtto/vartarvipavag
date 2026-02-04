@@ -58,6 +58,27 @@ export interface AudioState {
   gainDb: number;
 }
 
+export interface FollowupPlayerAnswer {
+  playerId: string;
+  playerName: string;
+  answerText: string;
+}
+
+export interface FollowupQuestionState {
+  questionText: string;
+  options: string[] | null;
+  currentQuestionIndex: number;
+  totalQuestions: number;
+  correctAnswer: string | null;       // HOST only until FOLLOWUP_RESULTS
+  answersByPlayer: FollowupPlayerAnswer[]; // HOST only until FOLLOWUP_RESULTS
+  timer: {
+    timerId: string;
+    startAtServerMs: number;
+    durationMs: number;
+  } | null;
+  answeredByMe?: boolean;             // PLAYER projection helper — computed per connection
+}
+
 export interface GameState {
   version: number;
   phase: GamePhase;
@@ -70,6 +91,7 @@ export interface GameState {
   clueText: string | null;
   brakeOwnerPlayerId: string | null;
   lockedAnswers: LockedAnswer[];
+  followupQuestion: FollowupQuestionState | null;
   scoreboard: ScoreboardEntry[];
   timer?: Timer | null;
   audioState?: AudioState;

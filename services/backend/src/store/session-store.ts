@@ -62,6 +62,7 @@ class SessionStore {
       clueText: null,
       brakeOwnerPlayerId: null,
       lockedAnswers: [],
+      followupQuestion: null,
       scoreboard: [],
     };
 

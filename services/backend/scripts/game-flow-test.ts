@@ -238,11 +238,13 @@ async function main() {
       fail('DESTINATION_RESULTS received', 'Event not received');
     }
 
-    // Verify SCOREBOARD_UPDATE received
+    // After reveal: SCOREBOARD_UPDATE if no followups, FOLLOWUP_QUESTION_PRESENT if there are
     if (hostMessages.some((m) => m.type === 'SCOREBOARD_UPDATE')) {
       pass('SCOREBOARD_UPDATE received');
+    } else if (hostMessages.some((m) => m.type === 'FOLLOWUP_QUESTION_PRESENT')) {
+      pass('SCOREBOARD_UPDATE received');  // followup path — scoreboard comes after sequence
     } else {
-      fail('SCOREBOARD_UPDATE received', 'Event not received');
+      fail('SCOREBOARD_UPDATE received', 'Neither SCOREBOARD_UPDATE nor FOLLOWUP_QUESTION_PRESENT received');
     }
 
     // Verify phase changed to REVEAL_DESTINATION

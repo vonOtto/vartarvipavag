@@ -148,6 +148,45 @@ export interface ScoreboardUpdatePayload {
   isGameOver?: boolean;
 }
 
+// Follow-up Question Events
+
+export interface FollowupQuestionPresentPayload {
+  questionText: string;
+  options: string[] | null;
+  currentQuestionIndex: number;
+  totalQuestions: number;
+  timerDurationMs: number;
+  correctAnswer?: string; // HOST projection only
+}
+
+export interface FollowupAnswerSubmitPayload {
+  playerId: string;
+  answerText: string;
+}
+
+export interface FollowupAnswersLockedPayload {
+  currentQuestionIndex: number;
+  lockedPlayerCount: number;
+  answersByPlayer?: Array<{  // HOST projection only
+    playerId: string;
+    playerName: string;
+    answerText: string;
+  }>;
+}
+
+export interface FollowupResultsPayload {
+  currentQuestionIndex: number;
+  correctAnswer: string;
+  results: Array<{
+    playerId: string;
+    playerName: string;
+    answerText: string;
+    isCorrect: boolean;
+    pointsAwarded: number;
+  }>;
+  nextQuestionIndex: number | null;
+}
+
 // Error Event
 
 export interface ErrorPayload {
@@ -176,4 +215,8 @@ export type EventType =
   | 'DESTINATION_REVEAL'
   | 'DESTINATION_RESULTS'
   | 'SCOREBOARD_UPDATE'
+  | 'FOLLOWUP_QUESTION_PRESENT'
+  | 'FOLLOWUP_ANSWER_SUBMIT'
+  | 'FOLLOWUP_ANSWERS_LOCKED'
+  | 'FOLLOWUP_RESULTS'
   | 'ERROR';

@@ -226,3 +226,69 @@ export function buildBrakeAnswerLockedEvent(
     ...(answerText !== undefined ? { answerText } : {}),
   });
 }
+
+// ── Follow-up question event builders ───────────────────────────────────────
+
+/**
+ * Creates a FOLLOWUP_QUESTION_PRESENT event.
+ * Per projections.md: correctAnswer is HOST-only — caller must omit for TV/PLAYER.
+ */
+export function buildFollowupQuestionPresentEvent(
+  sessionId: string,
+  questionText: string,
+  options: string[] | null,
+  currentQuestionIndex: number,
+  totalQuestions: number,
+  timerDurationMs: number,
+  correctAnswer?: string
+): EventEnvelope {
+  return buildEvent('FOLLOWUP_QUESTION_PRESENT', sessionId, {
+    questionText,
+    options,
+    currentQuestionIndex,
+    totalQuestions,
+    timerDurationMs,
+    ...(correctAnswer !== undefined ? { correctAnswer } : {}),
+  });
+}
+
+/**
+ * Creates a FOLLOWUP_ANSWERS_LOCKED event.
+ * Per projections.md: answersByPlayer is HOST-only — caller must omit for TV/PLAYER.
+ */
+export function buildFollowupAnswersLockedEvent(
+  sessionId: string,
+  currentQuestionIndex: number,
+  lockedPlayerCount: number,
+  answersByPlayer?: Array<{ playerId: string; playerName: string; answerText: string }>
+): EventEnvelope {
+  return buildEvent('FOLLOWUP_ANSWERS_LOCKED', sessionId, {
+    currentQuestionIndex,
+    lockedPlayerCount,
+    ...(answersByPlayer !== undefined ? { answersByPlayer } : {}),
+  });
+}
+
+/**
+ * Creates a FOLLOWUP_RESULTS event.  Identical payload to all roles — no projection needed.
+ */
+export function buildFollowupResultsEvent(
+  sessionId: string,
+  currentQuestionIndex: number,
+  correctAnswer: string,
+  results: Array<{
+    playerId: string;
+    playerName: string;
+    answerText: string;
+    isCorrect: boolean;
+    pointsAwarded: number;
+  }>,
+  nextQuestionIndex: number | null
+): EventEnvelope {
+  return buildEvent('FOLLOWUP_RESULTS', sessionId, {
+    currentQuestionIndex,
+    correctAnswer,
+    results,
+    nextQuestionIndex,
+  });
+}

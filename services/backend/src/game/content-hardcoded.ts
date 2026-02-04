@@ -8,12 +8,20 @@ export interface Clue {
   text: string;
 }
 
+export interface FollowupQuestion {
+  questionText: string;
+  options: string[] | null;          // null = open-text
+  correctAnswer: string;
+  aliases?: string[];                // accepted alternative answers (open-text only)
+}
+
 export interface Destination {
   id: string;
   name: string;
   country: string;
   aliases: string[];
   clues: Clue[];
+  followupQuestions: FollowupQuestion[];
 }
 
 export const HARDCODED_DESTINATIONS: Destination[] = [
@@ -44,6 +52,19 @@ export const HARDCODED_DESTINATIONS: Destination[] = [
         text: 'Huvudstad i Frankrike, berömd för Champs-Élysées och Notre-Dame.',
       },
     ],
+    followupQuestions: [
+      {
+        questionText: 'Vilket år byggdes Eiffel Tower?',
+        options: ['1869', '1889', '1909', '1929'],
+        correctAnswer: '1889',
+      },
+      {
+        questionText: 'Vilken flod flödar genom Paris?',
+        options: null,
+        correctAnswer: 'Seine',
+        aliases: ['seine'],
+      },
+    ],
   },
   {
     id: 'tokyo',
@@ -72,6 +93,19 @@ export const HARDCODED_DESTINATIONS: Destination[] = [
         text: 'Huvudstad i Japan och en av världens största metropoler.',
       },
     ],
+    followupQuestions: [
+      {
+        questionText: 'I vilken stadsdel (ward) ligger Imperial Palace?',
+        options: ['Chiyoda', 'Shinjuku', 'Shibuya', 'Minato'],
+        correctAnswer: 'Chiyoda',
+      },
+      {
+        questionText: 'Vad heter den gamla namn som Tokyo hade innan 1868?',
+        options: null,
+        correctAnswer: 'Edo',
+        aliases: ['edo'],
+      },
+    ],
   },
   {
     id: 'new-york',
@@ -98,6 +132,19 @@ export const HARDCODED_DESTINATIONS: Destination[] = [
       {
         points: 2,
         text: 'Största stad i USA, ofta kallad "The Big Apple".',
+      },
+    ],
+    followupQuestions: [
+      {
+        questionText: 'Hur många stadsdelar (boroughs) har New York City?',
+        options: ['3', '4', '5', '6'],
+        correctAnswer: '5',
+      },
+      {
+        questionText: 'Vad heter den stora parken mitt i Manhattan?',
+        options: null,
+        correctAnswer: 'Central Park',
+        aliases: ['central park'],
       },
     ],
   },
@@ -146,6 +193,31 @@ export function isAnswerCorrect(
 
   // Check aliases
   return destination.aliases.some(
+    (alias) => normalizeAnswer(alias) === normalizedAnswer
+  );
+}
+
+/**
+ * Checks if an answer matches a follow-up question.
+ * Multiple-choice: exact option match (case-insensitive).
+ * Open-text: match against correctAnswer + aliases.
+ */
+export function isFollowupAnswerCorrect(
+  answerText: string,
+  question: FollowupQuestion
+): boolean {
+  const normalizedAnswer = normalizeAnswer(answerText);
+
+  if (question.options) {
+    // Multiple-choice: must match one of the options exactly AND be the correct one
+    return normalizedAnswer === normalizeAnswer(question.correctAnswer);
+  }
+
+  // Open-text: check correctAnswer + aliases
+  if (normalizedAnswer === normalizeAnswer(question.correctAnswer)) {
+    return true;
+  }
+  return (question.aliases || []).some(
     (alias) => normalizeAnswer(alias) === normalizedAnswer
   );
 }

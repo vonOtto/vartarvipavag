@@ -7,9 +7,12 @@ import { Session } from '../store/session-store';
 import { logger } from '../utils/logger';
 import {
   Destination,
+  FollowupQuestion,
   getRandomDestination,
   isAnswerCorrect,
+  isFollowupAnswerCorrect,
 } from './content-hardcoded';
+import { getServerTimeMs } from '../utils/time';
 
 /**
  * Validates that a session is in LOBBY phase
@@ -440,4 +443,220 @@ export function submitAnswer(
   releaseBrake(session);
 
   return { lockedAtLevelPoints: clueLevelPoints, remainingClues };
+}
+
+// ============================================================================
+// FOLLOW-UP QUESTIONS
+// ============================================================================
+
+const FOLLOWUP_TIMER_MS = 15000; // 15 s per question
+
+/**
+ * Starts the follow-up question sequence for the current destination.
+ * Must be called after DESTINATION_REVEAL scoring is complete.
+ * Returns the first question or null if the destination has none.
+ */
+export function startFollowupSequence(session: Session): {
+  question: FollowupQuestion;
+  currentQuestionIndex: number;
+  totalQuestions: number;
+  timerDurationMs: number;
+  startAtServerMs: number;
+} | null {
+  const destination = (session as any)._currentDestination as Destination;
+  if (!destination || destination.followupQuestions.length === 0) {
+    return null;
+  }
+
+  const question = destination.followupQuestions[0];
+  const now = getServerTimeMs();
+
+  session.state.phase = 'FOLLOWUP_QUESTION';
+  session.state.followupQuestion = {
+    questionText: question.questionText,
+    options: question.options,
+    currentQuestionIndex: 0,
+    totalQuestions: destination.followupQuestions.length,
+    correctAnswer: question.correctAnswer,
+    answersByPlayer: [],
+    timer: {
+      timerId: `fq-0-${session.sessionId}`,
+      startAtServerMs: now,
+      durationMs: FOLLOWUP_TIMER_MS,
+    },
+  };
+
+  logger.info('Follow-up sequence started', {
+    sessionId: session.sessionId,
+    currentQuestionIndex: 0,
+    totalQuestions: destination.followupQuestions.length,
+  });
+
+  return {
+    question,
+    currentQuestionIndex: 0,
+    totalQuestions: destination.followupQuestions.length,
+    timerDurationMs: FOLLOWUP_TIMER_MS,
+    startAtServerMs: now,
+  };
+}
+
+/**
+ * Submit a player's answer to the current follow-up question.
+ * Returns false if the player already answered or the timer has expired.
+ */
+export function submitFollowupAnswer(
+  session: Session,
+  playerId: string,
+  answerText: string
+): boolean {
+  const fq = session.state.followupQuestion;
+  if (!fq || session.state.phase !== 'FOLLOWUP_QUESTION') {
+    return false;
+  }
+
+  // Already answered this question?
+  if (fq.answersByPlayer.some((a) => a.playerId === playerId)) {
+    return false;
+  }
+
+  // Timer expired?
+  if (fq.timer) {
+    const deadline = fq.timer.startAtServerMs + fq.timer.durationMs;
+    if (getServerTimeMs() > deadline) {
+      return false;
+    }
+  }
+
+  const player = session.state.players.find((p) => p.playerId === playerId);
+  if (!player) {
+    return false;
+  }
+
+  fq.answersByPlayer.push({
+    playerId,
+    playerName: player.name,
+    answerText: answerText.trim(),
+  });
+
+  logger.info('Follow-up answer submitted', {
+    sessionId: session.sessionId,
+    playerId,
+    currentQuestionIndex: fq.currentQuestionIndex,
+  });
+
+  return true;
+}
+
+/**
+ * Lock all answers (timer fired).  Idempotent — safe to call multiple times.
+ * Returns the locked count.
+ */
+export function lockFollowupAnswers(session: Session): number {
+  const fq = session.state.followupQuestion;
+  if (!fq) return 0;
+
+  // Clear timer so it can't fire again
+  fq.timer = null;
+
+  logger.info('Follow-up answers locked', {
+    sessionId: session.sessionId,
+    currentQuestionIndex: fq.currentQuestionIndex,
+    lockedCount: fq.answersByPlayer.length,
+  });
+
+  return fq.answersByPlayer.length;
+}
+
+/**
+ * Score the current follow-up question and advance to next or end sequence.
+ * Returns results + whether there is a next question.
+ */
+export function scoreFollowupQuestion(session: Session): {
+  results: Array<{
+    playerId: string;
+    playerName: string;
+    answerText: string;
+    isCorrect: boolean;
+    pointsAwarded: number;
+  }>;
+  correctAnswer: string;
+  currentQuestionIndex: number;
+  nextQuestionIndex: number | null;
+} {
+  const fq = session.state.followupQuestion;
+  if (!fq) {
+    throw new Error('No active followup question');
+  }
+
+  const destination = (session as any)._currentDestination as Destination;
+  const question = destination.followupQuestions[fq.currentQuestionIndex];
+
+  // Score every player — those who didn't answer get answerText=""
+  const allPlayers = session.state.players.filter((p) => p.role === 'player');
+  const results = allPlayers.map((player) => {
+    const submitted = fq.answersByPlayer.find((a) => a.playerId === player.playerId);
+    const answerText = submitted?.answerText || '';
+    const isCorrect = answerText.length > 0 && isFollowupAnswerCorrect(answerText, question);
+    const pointsAwarded = isCorrect ? 2 : 0;
+
+    // Update scores
+    if (isCorrect) {
+      player.score += 2;
+      const scoreEntry = session.state.scoreboard.find((s) => s.playerId === player.playerId);
+      if (scoreEntry) scoreEntry.score += 2;
+    }
+
+    return { playerId: player.playerId, playerName: player.name, answerText, isCorrect, pointsAwarded };
+  });
+
+  // Re-sort scoreboard and re-rank
+  session.state.scoreboard.sort((a, b) => b.score - a.score);
+  let rank = 1;
+  let prevScore: number | null = null;
+  session.state.scoreboard.forEach((entry, i) => {
+    if (prevScore !== null && entry.score < prevScore) rank = i + 1;
+    entry.rank = rank;
+    prevScore = entry.score;
+  });
+
+  // Advance or clear
+  const nextIdx = fq.currentQuestionIndex + 1;
+  const hasNext = nextIdx < destination.followupQuestions.length;
+
+  if (hasNext) {
+    const nextQ = destination.followupQuestions[nextIdx];
+    const now = getServerTimeMs();
+    session.state.followupQuestion = {
+      questionText: nextQ.questionText,
+      options: nextQ.options,
+      currentQuestionIndex: nextIdx,
+      totalQuestions: destination.followupQuestions.length,
+      correctAnswer: nextQ.correctAnswer,
+      answersByPlayer: [],
+      timer: {
+        timerId: `fq-${nextIdx}-${session.sessionId}`,
+        startAtServerMs: now,
+        durationMs: FOLLOWUP_TIMER_MS,
+      },
+    };
+  } else {
+    // Sequence complete — clear and move to SCOREBOARD
+    session.state.followupQuestion = null;
+    session.state.phase = 'SCOREBOARD';
+  }
+
+  logger.info('Follow-up question scored', {
+    sessionId: session.sessionId,
+    currentQuestionIndex: fq.currentQuestionIndex,
+    hasNext,
+    correctAnswer: question.correctAnswer,
+  });
+
+  return {
+    results,
+    correctAnswer: question.correctAnswer,
+    currentQuestionIndex: fq.currentQuestionIndex,
+    nextQuestionIndex: hasNext ? nextIdx : null,
+  };
 }
