@@ -32,6 +32,8 @@ struct RootView: View {
             LobbyHostView()
         } else if Self.cluePhases.contains(state.phase) {
             GameHostView()
+        } else if state.phase == "FOLLOWUP_QUESTION" {
+            FollowupHostView()
         } else if Self.scoreboardPhases.contains(state.phase) {
             ScoreboardHostView()
         } else {
@@ -501,6 +503,255 @@ struct ScoreboardHostView: View {
         case 2: return Color(red: 0.7,  green: 0.75, blue: 0.8)
         case 3: return Color(red: 0.8,  green: 0.5,  blue: 0.2)
         default: return .gray.opacity(0.4)
+        }
+    }
+
+    private var reconnectBanner: some View {
+        Text("○ Reconnecting…")
+            .font(.caption)
+            .foregroundColor(.red)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 4)
+            .background(Color.black.opacity(0.6))
+            .cornerRadius(6)
+            .padding(.top, 8)
+    }
+}
+
+// MARK: – followup host (pro) screen ─────────────────────────────────────────
+
+/// Host pro-view during FOLLOWUP_QUESTION phase.
+/// Shows: question text, correct answer (HOST-only), live timer countdown,
+/// options (if MC), incoming answers as they arrive, and the results overlay
+/// once the server scores the round.  The followup loop is fully server-driven;
+/// this view is read-only.
+struct FollowupHostView: View {
+    @EnvironmentObject var state: HostState
+
+    var body: some View {
+        VStack(spacing: 0) {
+            // ── header: progress + status ──
+            HStack {
+                if let fq = state.followupQuestion {
+                    Text("Fråga \(fq.currentQuestionIndex + 1) / \(fq.totalQuestions)")
+                        .font(.system(size: 17, weight: .semibold))
+                }
+                Spacer()
+                statusBadge
+            }
+            .padding(.horizontal)
+            .padding(.top, 12)
+
+            Divider()
+
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+
+                    // ── correct-answer card (HOST secret) ──
+                    if let fq = state.followupQuestion {
+                        correctAnswerCard(fq.correctAnswer)
+                    }
+
+                    // ── question text ──
+                    if let fq = state.followupQuestion {
+                        questionCard(fq.questionText)
+                    }
+
+                    // ── options badges (MC only) ──
+                    if let fq = state.followupQuestion, let opts = fq.options {
+                        optionsBadges(opts)
+                    }
+
+                    // ── live timer ──
+                    if let fq = state.followupQuestion {
+                        timerCard(fq)
+                    }
+
+                    // ── results overlay (replaces answers once scored) ──
+                    if let res = state.followupResults {
+                        resultsSection(res)
+                    } else if let fq = state.followupQuestion, !fq.answersByPlayer.isEmpty {
+                        // ── incoming answers (HOST-only, pre-results) ──
+                        answersSection(fq.answersByPlayer)
+                    }
+                }
+                .padding()
+            }
+
+            Spacer()
+        }
+        .overlay(alignment: .top) {
+            if !state.isConnected { reconnectBanner }
+        }
+    }
+
+    // ── sub-views ──────────────────────────────────────────────────────────
+
+    private var statusBadge: some View {
+        Text(state.isConnected ? "● Connected" : "○ Reconnecting…")
+            .font(.caption)
+            .foregroundColor(state.isConnected ? .green : .red)
+    }
+
+    /// Green card: the correct answer — visible to HOST immediately.
+    private func correctAnswerCard(_ answer: String) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("RÄTT SVAR (secret)")
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .textCase(.uppercase)
+            Text(answer)
+                .font(.system(size: 22, weight: .bold))
+                .foregroundColor(.green)
+        }
+        .padding()
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.green.opacity(0.1))
+        .cornerRadius(12)
+    }
+
+    /// Gray card: the question text.
+    private func questionCard(_ text: String) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("Question")
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .textCase(.uppercase)
+            Text(text)
+                .font(.system(size: 18))
+        }
+        .padding()
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.secondary.opacity(0.1))
+        .cornerRadius(12)
+    }
+
+    /// Horizontal row of option badges (read-only display).
+    private func optionsBadges(_ options: [String]) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Options")
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .textCase(.uppercase)
+            HStack(spacing: 8) {
+                ForEach(options, id: \.self) { opt in
+                    Text(opt)
+                        .font(.system(size: 14, weight: .medium))
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(Color.secondary.opacity(0.12))
+                        .cornerRadius(20)
+                }
+            }
+        }
+    }
+
+    /// Live countdown derived from server timestamps.  Ticks via TimelineView.
+    private func timerCard(_ fq: HostFollowupQuestion) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Timer")
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .textCase(.uppercase)
+            if let startMs = fq.timerStartMs, let durMs = fq.timerDurationMs {
+                let deadline  = Date(timeIntervalSince1970: Double(startMs + durMs) / 1000.0)
+                let duration  = Double(durMs) / 1000.0
+                let startDate = Date(timeIntervalSince1970: Double(startMs) / 1000.0)
+                TimelineView(.periodic(from: Date(), by: 0.5)) { timeline in
+                    let elapsed  = timeline.date.timeIntervalSince(startDate)
+                    let fraction = max(0, min(1, 1 - elapsed / duration))
+                    let secs     = max(0, Int(deadline.timeIntervalSince(timeline.date)))
+                    let urgent   = fraction < 0.2
+
+                    HStack(spacing: 12) {
+                        GeometryReader { geo in
+                            ZStack(alignment: .leading) {
+                                Capsule().fill(Color.secondary.opacity(0.15)).frame(height: 8)
+                                Capsule()
+                                    .fill(urgent ? Color.red : Color.blue)
+                                    .frame(width: geo.size.width * fraction, height: 8)
+                            }
+                        }
+                        .frame(height: 8)
+
+                        Text("\(secs) s")
+                            .font(.system(size: 15, weight: .bold))
+                            .foregroundColor(urgent ? .red : .primary)
+                            .frame(width: 38, alignment: .trailing)
+                    }
+                }
+            } else {
+                Text("—").foregroundColor(.secondary)
+            }
+        }
+        .padding()
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.secondary.opacity(0.06))
+        .cornerRadius(12)
+    }
+
+    /// Per-player answers as they trickle in (HOST-only, pre-results).
+    private func answersSection(_ answers: [HostFollowupAnswerByPlayer]) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Answers (\(answers.count))")
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .textCase(.uppercase)
+            ForEach(answers) { a in
+                HStack {
+                    Text(a.playerName)
+                        .font(.system(size: 15, weight: .semibold))
+                    Spacer()
+                    Text("\"\(a.answerText)\"")
+                        .font(.system(size: 15))
+                        .foregroundColor(.secondary)
+                }
+                .padding(.vertical, 6)
+                .padding(.horizontal, 10)
+                .background(Color.secondary.opacity(0.08))
+                .cornerRadius(8)
+            }
+        }
+    }
+
+    /// Results overlay: correct answer recap + per-player ✓/✗ + points.
+    private func resultsSection(_ res: (correctAnswer: String, rows: [HostFollowupResultRow])) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 8) {
+                Text("Rätt svar:")
+                    .font(.system(size: 15))
+                    .foregroundColor(.secondary)
+                Text(res.correctAnswer)
+                    .font(.system(size: 15, weight: .bold))
+                    .foregroundColor(.green)
+            }
+            .padding(.vertical, 6)
+            .padding(.horizontal, 10)
+            .background(Color.green.opacity(0.08))
+            .cornerRadius(8)
+
+            Text("Results")
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .textCase(.uppercase)
+            ForEach(res.rows) { row in
+                HStack(spacing: 10) {
+                    Text(row.isCorrect ? "✓" : "✗")
+                        .font(.system(size: 17, weight: .bold))
+                        .foregroundColor(row.isCorrect ? .green : .red)
+                        .frame(width: 20)
+                    Text(row.playerName)
+                        .font(.system(size: 15, weight: .semibold))
+                    Spacer()
+                    Text("+\(row.pointsAwarded)")
+                        .font(.system(size: 15, weight: .bold))
+                        .foregroundColor(.yellow)
+                }
+                .padding(.vertical, 6)
+                .padding(.horizontal, 10)
+                .background(Color.secondary.opacity(row.isCorrect ? 0.1 : 0.04))
+                .cornerRadius(8)
+            }
         }
     }
 

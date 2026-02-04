@@ -84,6 +84,41 @@ struct PlayerResult: Decodable, Identifiable {
     var id: String { playerId }
 }
 
+// MARK: – Followup models (HOST projection) ─────────────────────────────────
+
+/// One entry inside answersByPlayer — HOST-only.
+struct HostFollowupAnswerByPlayer: Identifiable {
+    let playerId   : String
+    let playerName : String
+    let answerText : String
+
+    var id: String { playerId }
+}
+
+/// Active followup-question state as seen by HOST.
+/// HOST receives correctAnswer immediately; answersByPlayer populates on
+/// FOLLOWUP_ANSWERS_LOCKED.
+struct HostFollowupQuestion {
+    let questionText         : String
+    let options              : [String]?          // nil = open-text
+    let currentQuestionIndex : Int
+    let totalQuestions       : Int
+    let correctAnswer        : String            // HOST-only secret
+    var  answersByPlayer     : [HostFollowupAnswerByPlayer] = []
+    let timerStartMs         : Int?
+    let timerDurationMs      : Int?
+}
+
+/// One row inside FOLLOWUP_RESULTS.
+struct HostFollowupResultRow: Identifiable {
+    let playerId      : String
+    let playerName    : String
+    let isCorrect     : Bool
+    let pointsAwarded : Int
+
+    var id: String { playerId }
+}
+
 // MARK: – Full STATE_SNAPSHOT payload (HOST projection) ───────────────────────
 
 struct HostGameState: Decodable {
@@ -97,6 +132,7 @@ struct HostGameState: Decodable {
     let destinationName    : String?     // HOST sees this even before reveal
     let destinationCountry : String?
     let brakeOwnerPlayerId : String?
+    let followupQuestion   : HostFollowupQuestion?
 
     init(from decoder: Decoder) throws {
         let c                  = try  decoder.container(keyedBy: CodingKeys.self)
@@ -116,12 +152,52 @@ struct HostGameState: Decodable {
             self.destinationName   = nil
             self.destinationCountry = nil
         }
+        // followupQuestion is a nested object; decode via helper then lift fields
+        if let fqDict = try? c.decode(RawFollowup.self, forKey: .followupQuestion) {
+            self.followupQuestion = HostFollowupQuestion(
+                questionText:         fqDict.questionText,
+                options:              fqDict.options,
+                currentQuestionIndex: fqDict.currentQuestionIndex,
+                totalQuestions:       fqDict.totalQuestions,
+                correctAnswer:        fqDict.correctAnswer ?? "",
+                answersByPlayer:      fqDict.answersByPlayer.map {
+                    HostFollowupAnswerByPlayer(playerId: $0.playerId,
+                                               playerName: $0.playerName,
+                                               answerText: $0.answerText)
+                },
+                timerStartMs:         fqDict.timer?.startAtServerMs,
+                timerDurationMs:      fqDict.timer?.durationMs
+            )
+        } else {
+            self.followupQuestion = nil
+        }
     }
 
     private enum CodingKeys: String, CodingKey {
         case phase, players, clueText, scoreboard, joinCode
         case levelPoints = "clueLevelPoints"
-        case lockedAnswers, destination, brakeOwnerPlayerId
+        case lockedAnswers, destination, brakeOwnerPlayerId, followupQuestion
+    }
+
+    /// Thin Decodable wrapper for the followupQuestion object in STATE_SNAPSHOT.
+    private struct RawFollowup: Decodable {
+        let questionText         : String
+        let options              : [String]?
+        let currentQuestionIndex : Int
+        let totalQuestions       : Int
+        let correctAnswer        : String?   // HOST gets this; others get null
+        let answersByPlayer      : [RawAnswer]
+        let timer                : TimerObj?
+
+        struct RawAnswer: Decodable {
+            let playerId   : String
+            let playerName : String
+            let answerText : String
+        }
+        struct TimerObj: Decodable {
+            let startAtServerMs : Int
+            let durationMs      : Int
+        }
     }
 
     private struct Destination: Decodable {

@@ -25,6 +25,8 @@ class HostState: ObservableObject {
     @Published var destinationCountry : String?
     @Published var brakeOwnerPlayerId : String?
     @Published var results            : [PlayerResult]    = []
+    @Published var followupQuestion   : HostFollowupQuestion?
+    @Published var followupResults    : (correctAnswer: String, rows: [HostFollowupResultRow])?
 
     // MARK: – connection status
     @Published var isConnected : Bool   = false
@@ -172,6 +174,55 @@ class HostState: ObservableObject {
                 return ScoreboardEntry(playerId: pid, name: name, totalScore: sc)
             }
 
+        case "FOLLOWUP_QUESTION_PRESENT":
+            guard let payload = json["payload"] as? [String: Any],
+                  let qText   = payload["questionText"] as? String
+            else { break }
+            let options      = payload["options"]              as? [String]
+            let currentIdx   = payload["currentQuestionIndex"] as? Int ?? 0
+            let total        = payload["totalQuestions"]       as? Int ?? 1
+            let correct      = payload["correctAnswer"]        as? String ?? ""
+            let duration     = payload["timerDurationMs"]      as? Int
+            followupQuestion = HostFollowupQuestion(
+                questionText:         qText,
+                options:              options,
+                currentQuestionIndex: currentIdx,
+                totalQuestions:       total,
+                correctAnswer:        correct,
+                timerStartMs:         Int(Date().timeIntervalSince1970 * 1000),
+                timerDurationMs:      duration)
+            followupResults  = nil
+            phase            = "FOLLOWUP_QUESTION"
+
+        case "FOLLOWUP_ANSWERS_LOCKED":
+            guard let payload = json["payload"] as? [String: Any] else { break }
+            // HOST projection: answersByPlayer array present
+            if let raw = payload["answersByPlayer"] as? [[String: Any]] {
+                let answers = raw.compactMap { d -> HostFollowupAnswerByPlayer? in
+                    guard let pid  = d["playerId"]   as? String,
+                          let name = d["playerName"] as? String,
+                          let ans  = d["answerText"] as? String
+                    else { return nil }
+                    return HostFollowupAnswerByPlayer(playerId: pid, playerName: name, answerText: ans)
+                }
+                followupQuestion?.answersByPlayer = answers
+            }
+
+        case "FOLLOWUP_RESULTS":
+            guard let payload = json["payload"] as? [String: Any],
+                  let correct = payload["correctAnswer"] as? String,
+                  let raw     = payload["results"]       as? [[String: Any]]
+            else { break }
+            let rows = raw.compactMap { d -> HostFollowupResultRow? in
+                guard let pid  = d["playerId"]      as? String,
+                      let name = d["playerName"]    as? String,
+                      let ok   = d["isCorrect"]     as? Bool,
+                      let pts  = d["pointsAwarded"] as? Int
+                else { return nil }
+                return HostFollowupResultRow(playerId: pid, playerName: name, isCorrect: ok, pointsAwarded: pts)
+            }
+            followupResults = (correctAnswer: correct, rows: rows)
+
         default:
             break
         }
@@ -235,6 +286,8 @@ class HostState: ObservableObject {
         destinationCountry  = state.destinationCountry
         brakeOwnerPlayerId  = state.brakeOwnerPlayerId
         if let jc           = state.joinCode { joinCode = jc }
+        followupQuestion    = state.followupQuestion
+        if state.phase != "FOLLOWUP_QUESTION" { followupResults = nil }
     }
 
     private func scheduleReconnect() async {
