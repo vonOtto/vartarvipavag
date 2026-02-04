@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "På Spåret Party Edition - Events v1.1.0",
-  "description": "WebSocket event schemas for Sprint 1 (game flow) and Sprint 1.1 (audio)",
+  "title": "På Spåret Party Edition - Events v1.2.0",
+  "description": "WebSocket event schemas for Sprint 1 (game flow), Sprint 1.1 (audio), and Sprint 1.2 (follow-up questions)",
 
   "definitions": {
     "Envelope": {
@@ -651,6 +651,127 @@
           "required": ["gainDb"],
           "properties": {
             "gainDb": { "type": "number", "minimum": -40, "maximum": 6 }
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+
+    {
+      "title": "FOLLOWUP_QUESTION_PRESENT",
+      "description": "Server → All: Present a follow-up question after destination reveal. Timer starts server-side at serverTimeMs.",
+      "type": "object",
+      "required": ["type", "sessionId", "serverTimeMs", "payload"],
+      "properties": {
+        "type": { "const": "FOLLOWUP_QUESTION_PRESENT" },
+        "sessionId": { "type": "string" },
+        "serverTimeMs": { "type": "integer" },
+        "payload": {
+          "type": "object",
+          "required": ["questionText", "currentQuestionIndex", "totalQuestions", "timerDurationMs"],
+          "properties": {
+            "questionText": { "type": "string", "description": "The question shown to all players" },
+            "options": {
+              "type": ["array", "null"],
+              "description": "Multiple-choice options. null = open-text answer.",
+              "items": { "type": "string" }
+            },
+            "currentQuestionIndex": { "type": "integer", "minimum": 0, "description": "0-indexed position in the followup sequence" },
+            "totalQuestions": { "type": "integer", "minimum": 1, "description": "Total follow-up questions for this destination" },
+            "timerDurationMs": { "type": "integer", "minimum": 1000, "description": "Countdown duration. Server locks answers at serverTimeMs + timerDurationMs." },
+            "correctAnswer": { "type": "string", "description": "HOST projection only — never sent to TV or PLAYER" }
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+
+    {
+      "title": "FOLLOWUP_ANSWER_SUBMIT",
+      "description": "Player → Server: Submit answer to current follow-up question. Ignored after timer expiry.",
+      "type": "object",
+      "required": ["type", "sessionId", "serverTimeMs", "payload"],
+      "properties": {
+        "type": { "const": "FOLLOWUP_ANSWER_SUBMIT" },
+        "sessionId": { "type": "string" },
+        "serverTimeMs": { "type": "integer" },
+        "payload": {
+          "type": "object",
+          "required": ["playerId", "answerText"],
+          "properties": {
+            "playerId": { "type": "string" },
+            "answerText": { "type": "string", "minLength": 1, "maxLength": 200, "description": "Selected option text (MC) or free-text answer" }
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+
+    {
+      "title": "FOLLOWUP_ANSWERS_LOCKED",
+      "description": "Server → All: Timer expired, all answers are locked. Sent before results. Payload is role-projected: HOST sees answersByPlayer, TV and PLAYER do not.",
+      "type": "object",
+      "required": ["type", "sessionId", "serverTimeMs", "payload"],
+      "properties": {
+        "type": { "const": "FOLLOWUP_ANSWERS_LOCKED" },
+        "sessionId": { "type": "string" },
+        "serverTimeMs": { "type": "integer" },
+        "payload": {
+          "type": "object",
+          "required": ["currentQuestionIndex", "lockedPlayerCount"],
+          "properties": {
+            "currentQuestionIndex": { "type": "integer", "minimum": 0 },
+            "lockedPlayerCount": { "type": "integer", "minimum": 0, "description": "How many players submitted before timeout" },
+            "answersByPlayer": {
+              "type": "array",
+              "description": "HOST projection only — never sent to TV or PLAYER.",
+              "items": {
+                "type": "object",
+                "required": ["playerId", "playerName", "answerText"],
+                "properties": {
+                  "playerId": { "type": "string" },
+                  "playerName": { "type": "string" },
+                  "answerText": { "type": "string" }
+                }
+              }
+            }
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+
+    {
+      "title": "FOLLOWUP_RESULTS",
+      "description": "Server → All: Reveal correct answer and per-player scoring for one follow-up question. Sent to all roles with identical payload (correctAnswer is now public).",
+      "type": "object",
+      "required": ["type", "sessionId", "serverTimeMs", "payload"],
+      "properties": {
+        "type": { "const": "FOLLOWUP_RESULTS" },
+        "sessionId": { "type": "string" },
+        "serverTimeMs": { "type": "integer" },
+        "payload": {
+          "type": "object",
+          "required": ["currentQuestionIndex", "correctAnswer", "results"],
+          "properties": {
+            "currentQuestionIndex": { "type": "integer", "minimum": 0 },
+            "correctAnswer": { "type": "string", "description": "The correct answer — now public for all roles" },
+            "results": {
+              "type": "array",
+              "description": "Per-player outcome. Sorted by playerId for deterministic rendering.",
+              "items": {
+                "type": "object",
+                "required": ["playerId", "playerName", "answerText", "isCorrect", "pointsAwarded"],
+                "properties": {
+                  "playerId": { "type": "string" },
+                  "playerName": { "type": "string" },
+                  "answerText": { "type": "string", "description": "Empty string if player did not submit before timeout" },
+                  "isCorrect": { "type": "boolean" },
+                  "pointsAwarded": { "type": "integer", "minimum": 0, "description": "+2 if correct, 0 otherwise (scoring.md)" }
+                }
+              }
+            },
+            "nextQuestionIndex": { "type": ["integer", "null"], "description": "Index of next followup, or null if this was the last one" }
           },
           "additionalProperties": false
         }

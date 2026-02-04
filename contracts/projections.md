@@ -210,6 +210,48 @@ Or if showing count:
 
 ---
 
+### FOLLOWUP_QUESTION_PRESENT
+- `payload.correctAnswer`:
+  - ✅ HOST: sees correct answer immediately
+  - ❌ PLAYER: field omitted
+  - ❌ TV: field omitted
+
+### FOLLOWUP_ANSWERS_LOCKED
+- `payload.answersByPlayer` array:
+  - ✅ HOST: full array (playerId, playerName, answerText)
+  - ❌ PLAYER: field omitted
+  - ❌ TV: field omitted
+- `payload.lockedPlayerCount`: visible to all roles
+
+### FOLLOWUP_RESULTS
+- Identical payload to all roles — `correctAnswer` and all `results[].answerText`
+  are now public.  This is the reveal moment for follow-up questions.
+
+---
+
+## Follow-up Question Projection (STATE_SNAPSHOT)
+
+The `followupQuestion` object in STATE_SNAPSHOT follows the same
+secret-until-reveal pattern used by `destination` and `lockedAnswers`.
+
+| Field | HOST | PLAYER | TV |
+|-------|------|--------|----|
+| `questionText` | visible | visible | visible |
+| `options` | visible | visible | visible |
+| `currentQuestionIndex` | visible | visible | visible |
+| `totalQuestions` | visible | visible | visible |
+| `correctAnswer` | visible | **null** | **null** |
+| `answersByPlayer` | full array | **empty array** | **empty array** |
+| `timer` | visible | visible | visible |
+| `answeredByMe` | — | visible | — |
+
+`correctAnswer` and `answersByPlayer` become public only after
+`FOLLOWUP_RESULTS` is broadcast; at that point the phase advances past
+`FOLLOWUP_QUESTION` and the object is cleared or replaced by the next
+question.
+
+---
+
 ## After DESTINATION_REVEAL
 
 Once `destination.revealed = true`, all projections receive full destination data:

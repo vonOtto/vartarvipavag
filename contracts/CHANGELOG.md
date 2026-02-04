@@ -163,11 +163,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.2.0] - 2026-02-04
+
+### Added - Sprint 1.2 (Follow-up Questions)
+
+**New Events (4)**:
+- `FOLLOWUP_QUESTION_PRESENT` — Server → All: present question + start timer.
+  HOST sees `correctAnswer`; TV and PLAYER do not.
+- `FOLLOWUP_ANSWER_SUBMIT` — Player → Server: submit answer before timer expiry.
+- `FOLLOWUP_ANSWERS_LOCKED` — Server → All: timer fired, answers locked.
+  HOST sees `answersByPlayer`; TV and PLAYER see `lockedPlayerCount` only.
+- `FOLLOWUP_RESULTS` — Server → All: reveal correct answer + per-player scoring.
+  Identical payload to all roles (correctAnswer now public).
+
+**State Updates**:
+- Added `followupQuestion` object to `state.schema.json`:
+  `questionText`, `options`, `currentQuestionIndex`, `totalQuestions`,
+  `correctAnswer` (HOST-only until results), `answersByPlayer` (HOST-only),
+  `timer`, `answeredByMe` (PLAYER helper).
+
+**Projection Updates** (`projections.md` → v1.2.0):
+- Added "Follow-up Question Projection" table: correctAnswer and
+  answersByPlayer are stripped for TV and PLAYER in STATE_SNAPSHOT until
+  FOLLOWUP_RESULTS is broadcast.
+- Added per-event projection notes for the 3 new server→client events.
+- Previously added (same version): Projection Safety Checklist with
+  Rule 1 (answerText) and Rule 2 (lobby player filter) + 3 pre-merge
+  test points.
+
+**Documentation**:
+- Created `docs/followup-flow.md`: full event sequence diagram,
+  projection summary table, 7 example payloads (HOST / TV / PLAYER
+  variants), timer policy, open-text vs MC matching rules.
+
+**Breaking Changes**: None.
+- `followupQuestion` is nullable; clients that do not handle it yet
+  can ignore it safely.
+- All 4 new events are additive.
+
+---
+
 ## Future Versions (Planned)
 
-### [1.2.0] - Sprint 2 (TTS & Followups)
+### [1.3.0] - Sprint 2+ (TTS & Voice)
 - Add `AUDIO_PLAY` event for voice narration
-- Add followup question events (FOLLOWUP_PRESENT, FOLLOWUP_ANSWER_SUBMIT, etc.)
 - ElevenLabs TTS integration
 - Voice ducking implementation
 
@@ -192,4 +231,4 @@ Deprecated features will be marked in this changelog with:
 ---
 
 **Maintained by**: Architect Agent (contracts/ owner)
-**Last Updated**: 2026-02-02
+**Last Updated**: 2026-02-04

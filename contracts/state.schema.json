@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "På Spåret Party Edition - Game State v1.1.0",
-  "description": "Complete game state structure for Sprint 1 and Sprint 1.1",
+  "title": "På Spåret Party Edition - Game State v1.2.0",
+  "description": "Complete game state structure for Sprint 1, Sprint 1.1 (audio), and Sprint 1.2 (follow-up questions)",
   "type": "object",
   "required": ["version", "phase", "sessionId", "joinCode", "players", "scoreboard"],
   "properties": {
@@ -117,6 +117,65 @@
         },
         "additionalProperties": false
       }
+    },
+    "followupQuestion": {
+      "type": ["object", "null"],
+      "description": "Active follow-up question state. Present only during FOLLOWUP_QUESTION phase; null otherwise. Fields marked HOST-only are stripped by projectState for TV and PLAYER.",
+      "properties": {
+        "questionText": {
+          "type": "string",
+          "description": "Question text shown to all roles"
+        },
+        "options": {
+          "type": ["array", "null"],
+          "description": "Multiple-choice options. null = open-text.",
+          "items": { "type": "string" }
+        },
+        "currentQuestionIndex": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "0-indexed position in the followup sequence for this destination"
+        },
+        "totalQuestions": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Total follow-up questions for this destination"
+        },
+        "correctAnswer": {
+          "type": ["string", "null"],
+          "description": "Correct answer — HOST projection only. null in TV and PLAYER STATE_SNAPSHOT until FOLLOWUP_RESULTS is sent."
+        },
+        "answersByPlayer": {
+          "type": "array",
+          "description": "Per-player submitted answers — HOST projection only. Empty array in TV and PLAYER STATE_SNAPSHOT.",
+          "items": {
+            "type": "object",
+            "required": ["playerId", "playerName", "answerText"],
+            "properties": {
+              "playerId": { "type": "string" },
+              "playerName": { "type": "string" },
+              "answerText": { "type": "string" }
+            }
+          }
+        },
+        "timer": {
+          "type": ["object", "null"],
+          "description": "Server-side countdown for this question. Reuses the top-level timer shape.",
+          "properties": {
+            "timerId": { "type": "string" },
+            "startAtServerMs": { "type": "integer" },
+            "durationMs": { "type": "integer", "minimum": 1000 }
+          },
+          "required": ["timerId", "startAtServerMs", "durationMs"],
+          "additionalProperties": false
+        },
+        "answeredByMe": {
+          "type": "boolean",
+          "description": "PLAYER projection helper: true if this player has already submitted for this question. Not present in HOST or TV projection."
+        }
+      },
+      "required": ["questionText", "currentQuestionIndex", "totalQuestions", "correctAnswer", "answersByPlayer", "timer"],
+      "additionalProperties": false
     },
     "scoreboard": {
       "type": "array",
