@@ -310,6 +310,35 @@ button:disabled {
   opacity: 0.8;
 }
 
+/* Own answer result */
+.my-result {
+  padding: 1rem;
+  border-radius: 8px;
+  text-align: center;
+}
+
+.my-result-answer {
+  font-size: 1rem;
+  margin-bottom: 0.25rem;
+}
+
+.my-result-verdict {
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.result-correct {
+  background: rgba(74, 222, 128, 0.2);
+  border: 1px solid #4ade80;
+  color: #86efac;
+}
+
+.result-incorrect {
+  background: rgba(248, 113, 113, 0.15);
+  border: 1px solid rgba(248, 113, 113, 0.4);
+  color: #fca5a5;
+}
+
 /* Scoreboard */
 .scoreboard {
   display: flex;
@@ -341,6 +370,11 @@ button:disabled {
   content: counter(rank) ". ";
   font-weight: bold;
   margin-right: 0.5rem;
+}
+
+.scoreboard li.my-entry {
+  background: rgba(100, 108, 255, 0.15);
+  border-left: 3px solid #646cff;
 }
 
 .player-name {

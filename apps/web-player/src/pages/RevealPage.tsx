@@ -2,12 +2,21 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useWebSocket } from '../hooks/useWebSocket';
 import { loadSession } from '../services/storage';
-import type { DestinationRevealPayload, ScoreboardUpdatePayload } from '../types/game';
+import type { DestinationRevealPayload, DestinationResultsPayload, ScoreboardUpdatePayload, ClueLevelPoints } from '../types/game';
+import { Scoreboard } from '../components/Scoreboard';
+
+interface MyResult {
+  answerText: string;
+  isCorrect: boolean;
+  pointsAwarded: number;
+  lockedAtLevelPoints: ClueLevelPoints;
+}
 
 export const RevealPage: React.FC = () => {
   const navigate = useNavigate();
   const session = loadSession();
   const [destination, setDestination] = useState<{ name: string; country: string } | null>(null);
+  const [myResult, setMyResult] = useState<MyResult | null>(null);
 
   const { isConnected, lastEvent, gameState, error } = useWebSocket(
     session?.wsUrl || null,
@@ -46,7 +55,37 @@ export const RevealPage: React.FC = () => {
     }
   }, [lastEvent, gameState]);
 
-  // Get scoreboard
+  // Capture own result from DESTINATION_RESULTS
+  useEffect(() => {
+    if (lastEvent?.type === 'DESTINATION_RESULTS') {
+      const payload = lastEvent.payload as DestinationResultsPayload;
+      const own = payload.results.find(r => r.playerId === session?.playerId);
+      if (own) {
+        setMyResult({
+          answerText: own.answerText,
+          isCorrect: own.isCorrect,
+          pointsAwarded: own.pointsAwarded,
+          lockedAtLevelPoints: own.lockedAtLevelPoints,
+        });
+      }
+    }
+  }, [lastEvent, session?.playerId]);
+
+  // Fallback: derive own result from gameState after reveal (reconnect scenario)
+  useEffect(() => {
+    if (myResult || !gameState?.destination?.revealed) return;
+    const own = gameState?.lockedAnswers?.find(a => a.playerId === session?.playerId);
+    if (own && own.isCorrect !== undefined) {
+      setMyResult({
+        answerText: own.answerText,
+        isCorrect: own.isCorrect,
+        pointsAwarded: own.pointsAwarded ?? 0,
+        lockedAtLevelPoints: own.lockedAtLevelPoints,
+      });
+    }
+  }, [gameState, myResult, session?.playerId]);
+
+  // Scoreboard
   const scoreboard = React.useMemo(() => {
     if (lastEvent?.type === 'SCOREBOARD_UPDATE') {
       return (lastEvent.payload as ScoreboardUpdatePayload).scoreboard;
@@ -81,18 +120,19 @@ export const RevealPage: React.FC = () => {
           <div className="waiting-message">Revealing destination...</div>
         )}
 
-        {scoreboard.length > 0 && (
-          <div className="scoreboard">
-            <h3>Scoreboard</h3>
-            <ol>
-              {scoreboard.map((entry) => (
-                <li key={entry.playerId}>
-                  <span className="player-name">{entry.name}</span>
-                  <span className="player-score">{entry.score} points</span>
-                </li>
-              ))}
-            </ol>
+        {/* Own answer result */}
+        {myResult && (
+          <div className={`my-result ${myResult.isCorrect ? 'result-correct' : 'result-incorrect'}`}>
+            <div className="my-result-answer">Your answer: <strong>{myResult.answerText}</strong></div>
+            <div className="my-result-verdict">
+              {myResult.isCorrect ? 'Correct!' : 'Incorrect'} — +{myResult.pointsAwarded} points (locked at {myResult.lockedAtLevelPoints})
+            </div>
           </div>
+        )}
+
+        {/* Scoreboard */}
+        {scoreboard.length > 0 && (
+          <Scoreboard entries={scoreboard} myPlayerId={session.playerId} />
         )}
 
         {gameState?.phase === 'FINAL_RESULTS' && (
