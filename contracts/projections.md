@@ -113,7 +113,7 @@ The server maintains ONE authoritative state but sends DIFFERENT projections to 
 - ❌ `destination.country` = `null` (until `revealed: true`)
 - ❌ `destination.aliases` = `[]` (until `revealed: true`)
 - ✅ `destination.revealed` - visible
-- ✅ `players` - all player names and scores
+- ✅ `players` - players with `role === 'player'` only (host/tv entries filtered out)
 - ✅ `scoreboard` - full standings
 - ⚠️ `lockedAnswers` - **ONLY OWN ANSWER** visible
   - Filter to `lockedAnswers.filter(a => a.playerId === currentPlayerId)`
@@ -154,11 +154,11 @@ Player2 would see ONLY their own answer in `lockedAnswers`, not player1's.
 - ❌ `destination.country` = `null` (until `revealed: true`)
 - ❌ `destination.aliases` = `[]` (until `revealed: true`)
 - ✅ `destination.revealed` - visible
-- ✅ `players` - all player names and scores
+- ✅ `players` - players with `role === 'player'` only (host/tv entries filtered out)
 - ✅ `scoreboard` - full standings
 - ⚠️ `lockedAnswers` - **COUNT ONLY, NO TEXT**
   - Show `lockedAnswers.length` or hide array entirely
-  - Only show answer details after `DESTINATION_REVEAL`
+  - `answerText` is **NEVER** included for TV, regardless of reveal state
 
 **Example**:
 ```json
@@ -218,9 +218,14 @@ Once `destination.revealed = true`, all projections receive full destination dat
 - ✅ `destination.name`
 - ✅ `destination.country`
 - ✅ `destination.aliases`
-- ✅ All `lockedAnswers` with `isCorrect` and `pointsAwarded`
 
-This ensures dramatic reveal moment is synchronized across all clients.
+**lockedAnswers after reveal**:
+- ✅ HOST: full array including `answerText`
+- ✅ PLAYER: own entry only, including `answerText`
+- ❌ TV: array entries present (for `isCorrect` / `pointsAwarded` display) but `answerText` is **always omitted**; answers are revealed to the room via `DESTINATION_RESULTS` instead
+
+This ensures the dramatic reveal moment is synchronized across all clients
+while TV never caches or displays raw answer text.
 
 ---
 
@@ -267,6 +272,54 @@ Clients MUST:
 - ✅ Handle `null` values gracefully
 - ❌ NEVER try to guess or compute secrets locally
 - ❌ NEVER cache sensitive data across states
+
+---
+
+## Projection Safety Checklist
+
+These rules are **mandatory invariants**.  Any change to
+`state-projection.ts`, `lobby-events.ts`, or the broadcast helpers in
+`server.ts` MUST be validated against all three before merge.
+
+### Rule 1 — TV and PLAYER never receive `answerText` in STATE_SNAPSHOT
+
+`answerText` is the single most sensitive field in the state.  The
+per-event `BRAKE_ANSWER_LOCKED` broadcast already strips it for
+non-HOST roles; the STATE_SNAPSHOT projection **must do the same**, in
+every code-path and regardless of `destination.revealed`.
+
+- HOST: `answerText` visible on every `lockedAnswers` entry, always.
+- PLAYER: `answerText` visible **only on own entry** (`playerId` match).
+- TV: `answerText` **never** present — not before reveal, not after.
+
+### Rule 2 — Lobby player list is filtered to `role === 'player'`
+
+The authoritative `state.players` array contains a host entry (and
+potentially a synthetic TV entry).  Neither must appear in any lobby
+view.  Both the `LOBBY_UPDATED` event payload and the `players` array
+inside every STATE_SNAPSHOT sent to TV or PLAYER roles must be filtered
+to entries where `role === 'player'`.
+
+### Pre-merge test points
+
+Before any projection-related change lands on `main`, run these three
+checks:
+
+1. **`answer-submission-test.ts`** — asserts HOST receives `answerText`
+   and PLAYER does not, both in the `BRAKE_ANSWER_LOCKED` event and in
+   the subsequent STATE_SNAPSHOT.  *(8 assertions)*
+
+2. **E2E sofa test** (`/tmp/e2e-sofa-test.ts`) — step 12 asserts that
+   the TV's final STATE_SNAPSHOT contains a `lockedAnswers` array with
+   **zero** `answerText` fields, even though `destination.revealed` is
+   `true` at that point; steps 3–4 assert lobby player counts are
+   exactly the number of joined players (no host/tv leak).  *(49
+   assertions, focus steps 3, 4, 12)*
+
+3. **`game-flow-test.ts`** — assertion "Player does not see destination
+   name" confirms the destination projection gate still fires; used as a
+   smoke-check that the projection function itself has not regressed.
+   *(19 assertions)*
 
 ---
 
@@ -328,6 +381,7 @@ A: Use `lockedAnswersCount` or `lockedAnswers.length` before filtering array.
 
 - **v1.0.0**: Initial projection rules for Sprint 1
 - **v1.1.0**: Added audioState field, clarified FINAL_RESULTS phase (Sprint 1.1)
+- **v1.2.0**: Added Projection Safety Checklist (Rule 1: TV/PLAYER never get answerText in STATE_SNAPSHOT; Rule 2: lobby players filtered to role=player). Corrected post-reveal TV lockedAnswers rule. Added 3 mandatory pre-merge test points.
 
 ---
 
