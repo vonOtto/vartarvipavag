@@ -176,23 +176,39 @@ This forward-compatible design means Sprint 1 teams can safely ignore audio even
 
 ---
 
-#### TASK-206: Implement brake fairness with distributed lock
+#### TASK-206: ✅ Implement brake fairness with distributed lock
 **Owner**: Backend Agent
-**Scope**: BRAKE_PULL handling with Redis lock (or in-memory for Sprint 1)
-**Acceptance Criteria**:
-- BRAKE_PULL event from player
-- First brake wins (in-memory lock for Sprint 1, Redis-ready structure)
-- Broadcast BRAKE_ACCEPTED with brakeOwnerPlayerId
-- State -> PAUSED_FOR_BRAKE
-- Rate limit: 1 brake per player per 2 seconds
-- Other brakes rejected with BRAKE_REJECTED
+**Scope**: BRAKE_PULL handling with in-memory fairness (Redis-ready structure)
+**Status**: ✅ COMPLETED (2026-02-03)
 
-**Files**:
-- /Users/oskar/pa-sparet-party/services/backend/src/game/brake.ts
+**Acceptance Criteria**: ✅ ALL MET
+- ✅ BRAKE_PULL event from player
+- ✅ First brake wins (in-memory fairness tracking per clue level)
+- ✅ Broadcast BRAKE_ACCEPTED with brakeOwnerPlayerId to ALL clients
+- ✅ State -> PAUSED_FOR_BRAKE
+- ✅ Rate limit: 1 brake per player per 2 seconds
+- ✅ Other brakes rejected with BRAKE_REJECTED (reason: "too_late" or "already_paused")
 
-**Dependencies**: TASK-205
-**Estimate**: 1.5 days
-**Test/Check**: Multiple players brake simultaneously, only first wins
+**Implemented Files**:
+- ✅ /Users/oskar/pa-sparet-party/services/backend/src/game/state-machine.ts (pullBrake, releaseBrake)
+- ✅ /Users/oskar/pa-sparet-party/services/backend/src/server.ts (handleBrakePull)
+- ✅ /Users/oskar/pa-sparet-party/services/backend/src/utils/event-builder.ts (buildBrakeAcceptedEvent, buildBrakeRejectedEvent)
+- ✅ /Users/oskar/pa-sparet-party/services/backend/src/store/session-store.ts (_brakeTimestamps, _brakeFairness)
+- ✅ /Users/oskar/pa-sparet-party/services/backend/scripts/brake-concurrency-test.ts
+
+**Implementation Details**:
+- In-memory fairness: `session._brakeFairness` Map tracks first brake per clue level (key: "clue_10", "clue_8", etc.)
+- Rate limiting: `session._brakeTimestamps` Map tracks last brake time per player
+- Rejection reasons:
+  - `too_late`: Another player already pulled brake for this clue level
+  - `already_paused`: Phase is already PAUSED_FOR_BRAKE
+  - `rate_limited`: Player pulled brake < 2 seconds ago
+  - `invalid_phase`: Not in CLUE_LEVEL phase
+- Only player who got BRAKE_ACCEPTED can submit answer (brakeOwnerPlayerId)
+
+**Dependencies**: TASK-205 ✅
+**Estimate**: 1.5 days → Actual: 1 day
+**Test/Check**: ✅ brake-concurrency-test.ts passes (5 simultaneous brakes, only 1 accepted)
 
 ---
 

@@ -25,6 +25,9 @@ export interface Session {
   state: GameState;
   createdAt: number;
   connections: Map<string, WSConnection>; // playerId -> connection
+  // Internal state for brake fairness and rate limiting
+  _brakeTimestamps?: Map<string, number>; // playerId -> last brake timestamp
+  _brakeFairness?: Map<string, { playerId: string; timestamp: number }>; // clue_key -> first brake
 }
 
 class SessionStore {

@@ -19,11 +19,13 @@ import {
   buildDestinationRevealEvent,
   buildDestinationResultsEvent,
   buildScoreboardUpdateEvent,
+  buildBrakeAcceptedEvent,
+  buildBrakeRejectedEvent,
 } from './utils/event-builder';
 import { projectState } from './utils/state-projection';
 import { buildLobbyUpdatedEvent } from './utils/lobby-events';
 import sessionRoutes from './routes/sessions';
-import { startGame, nextClue } from './game/state-machine';
+import { startGame, nextClue, pullBrake } from './game/state-machine';
 
 export function createServer() {
   const app = express();
@@ -268,8 +270,11 @@ function handleClientMessage(
       handleHostNextClue(ws, sessionId, playerId, role);
       break;
 
-    // Future event handlers will be added here
     case 'BRAKE_PULL':
+      handleBrakePull(ws, sessionId, playerId, role, payload);
+      break;
+
+    // Future event handlers will be added here
     case 'BRAKE_ANSWER_SUBMIT':
       logger.warn('Event handler not yet implemented', { type, sessionId, playerId });
       const errorEvent = buildErrorEvent(
@@ -579,6 +584,109 @@ function handleHostNextClue(
       sessionId,
       'INTERNAL_ERROR',
       `Failed to advance clue: ${error.message}`
+    );
+    ws.send(JSON.stringify(errorEvent));
+  }
+}
+
+/**
+ * Handles BRAKE_PULL event
+ */
+function handleBrakePull(
+  ws: WebSocket,
+  sessionId: string,
+  playerId: string,
+  role: string,
+  payload: any
+): void {
+  // Only players can pull brake
+  if (role !== 'player') {
+    logger.warn('BRAKE_PULL: Non-player attempted to pull brake', {
+      sessionId,
+      playerId,
+      role,
+    });
+    const errorEvent = buildErrorEvent(
+      sessionId,
+      'UNAUTHORIZED',
+      'Only players can pull brake'
+    );
+    ws.send(JSON.stringify(errorEvent));
+    return;
+  }
+
+  // Get session
+  const session = sessionStore.getSession(sessionId);
+  if (!session) {
+    logger.error('BRAKE_PULL: Session not found', { sessionId, playerId });
+    const errorEvent = buildErrorEvent(
+      sessionId,
+      'INVALID_SESSION',
+      'Session not found'
+    );
+    ws.send(JSON.stringify(errorEvent));
+    return;
+  }
+
+  try {
+    const serverTimeMs = getServerTimeMs();
+    const result = pullBrake(session, playerId, serverTimeMs);
+
+    if (result.accepted) {
+      // Brake accepted!
+      logger.info('Brake accepted', {
+        sessionId,
+        playerId,
+        playerName: result.playerName,
+        clueLevelPoints: result.clueLevelPoints,
+      });
+
+      // Broadcast STATE_SNAPSHOT to all clients
+      broadcastStateSnapshot(sessionId);
+
+      // Broadcast BRAKE_ACCEPTED event to ALL clients
+      const acceptedEvent = buildBrakeAcceptedEvent(
+        sessionId,
+        playerId,
+        result.playerName!,
+        result.clueLevelPoints!,
+        30000 // 30 seconds timeout for answer submission (can be configured)
+      );
+      sessionStore.broadcastEventToSession(sessionId, acceptedEvent);
+
+      logger.info('Broadcasted BRAKE_ACCEPTED event', {
+        sessionId,
+        playerId,
+        playerName: result.playerName,
+      });
+    } else {
+      // Brake rejected
+      logger.info('Brake rejected', {
+        sessionId,
+        playerId,
+        reason: result.reason,
+        winnerPlayerId: result.winnerPlayerId,
+      });
+
+      // Send BRAKE_REJECTED event to ONLY this player
+      const rejectedEvent = buildBrakeRejectedEvent(
+        sessionId,
+        playerId,
+        result.reason!,
+        result.winnerPlayerId
+      );
+      ws.send(JSON.stringify(rejectedEvent));
+    }
+  } catch (error: any) {
+    logger.error('BRAKE_PULL: Failed to process brake', {
+      sessionId,
+      playerId,
+      error: error.message,
+    });
+    const errorEvent = buildErrorEvent(
+      sessionId,
+      'INTERNAL_ERROR',
+      `Failed to process brake: ${error.message}`
     );
     ws.send(JSON.stringify(errorEvent));
   }

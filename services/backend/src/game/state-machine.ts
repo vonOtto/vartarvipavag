@@ -241,3 +241,135 @@ export function getCurrentClueIndex(
   const clueOrder: Array<10 | 8 | 6 | 4 | 2> = [10, 8, 6, 4, 2];
   return clueOrder.indexOf(clueLevelPoints);
 }
+
+// ============================================================================
+// BRAKE MECHANISM
+// ============================================================================
+
+/**
+ * Validates that a session is in CLUE_LEVEL or PAUSED_FOR_BRAKE phase
+ */
+export function validateCanPullBrake(session: Session): void {
+  if (session.state.phase !== 'CLUE_LEVEL') {
+    throw new Error(`Cannot pull brake in phase: ${session.state.phase}`);
+  }
+}
+
+/**
+ * Attempts to pull the brake. Returns result indicating if accepted or rejected.
+ */
+export function pullBrake(
+  session: Session,
+  playerId: string,
+  serverTimeMs: number
+): {
+  accepted: boolean;
+  reason?: 'already_paused' | 'rate_limited' | 'invalid_phase' | 'too_late';
+  winnerPlayerId?: string;
+  playerName?: string;
+  clueLevelPoints?: 10 | 8 | 6 | 4 | 2;
+} {
+  // Validate phase
+  if (session.state.phase === 'PAUSED_FOR_BRAKE') {
+    return {
+      accepted: false,
+      reason: 'already_paused',
+      winnerPlayerId: session.state.brakeOwnerPlayerId || undefined,
+    };
+  }
+
+  if (session.state.phase !== 'CLUE_LEVEL') {
+    return {
+      accepted: false,
+      reason: 'invalid_phase',
+    };
+  }
+
+  // Check rate limiting (1 brake per player per 2 seconds)
+  const RATE_LIMIT_MS = 2000;
+  if (!session._brakeTimestamps) {
+    session._brakeTimestamps = new Map<string, number>();
+  }
+
+  const lastBrakeTime = session._brakeTimestamps.get(playerId);
+  if (lastBrakeTime && serverTimeMs - lastBrakeTime < RATE_LIMIT_MS) {
+    logger.warn('Brake rate limited', {
+      sessionId: session.sessionId,
+      playerId,
+      timeSinceLastBrake: serverTimeMs - lastBrakeTime,
+    });
+    return {
+      accepted: false,
+      reason: 'rate_limited',
+    };
+  }
+
+  // Check if this is the first brake for this clue level
+  // We store the first brake timestamp and owner for fairness
+  const clueKey = `clue_${session.state.clueLevelPoints}`;
+  if (!session._brakeFairness) {
+    session._brakeFairness = new Map<string, { playerId: string; timestamp: number }>();
+  }
+
+  const existingBrake = session._brakeFairness.get(clueKey);
+  if (existingBrake) {
+    // Someone already pulled brake for this clue level
+    logger.info('Brake rejected - too late', {
+      sessionId: session.sessionId,
+      playerId,
+      winnerPlayerId: existingBrake.playerId,
+      delta: serverTimeMs - existingBrake.timestamp,
+    });
+    return {
+      accepted: false,
+      reason: 'too_late',
+      winnerPlayerId: existingBrake.playerId,
+    };
+  }
+
+  // Accept the brake - this is the first one for this clue level
+  session._brakeFairness.set(clueKey, { playerId, timestamp: serverTimeMs });
+  session._brakeTimestamps.set(playerId, serverTimeMs);
+
+  // Get player name
+  const player = session.state.players.find((p) => p.playerId === playerId);
+  if (!player) {
+    throw new Error('Player not found');
+  }
+
+  // Transition to PAUSED_FOR_BRAKE
+  session.state.phase = 'PAUSED_FOR_BRAKE';
+  session.state.brakeOwnerPlayerId = playerId;
+
+  logger.info('Brake accepted', {
+    sessionId: session.sessionId,
+    playerId,
+    playerName: player.name,
+    clueLevelPoints: session.state.clueLevelPoints,
+  });
+
+  return {
+    accepted: true,
+    playerName: player.name,
+    clueLevelPoints: session.state.clueLevelPoints || undefined,
+  };
+}
+
+/**
+ * Releases the brake and returns to CLUE_LEVEL phase
+ * Called when host releases brake or when answer is locked
+ */
+export function releaseBrake(session: Session): void {
+  if (session.state.phase !== 'PAUSED_FOR_BRAKE') {
+    throw new Error(`Not in brake phase (phase: ${session.state.phase})`);
+  }
+
+  logger.info('Releasing brake', {
+    sessionId: session.sessionId,
+    brakeOwner: session.state.brakeOwnerPlayerId,
+  });
+
+  // Return to CLUE_LEVEL
+  session.state.phase = 'CLUE_LEVEL';
+  session.state.brakeOwnerPlayerId = null;
+}

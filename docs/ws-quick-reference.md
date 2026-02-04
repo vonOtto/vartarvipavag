@@ -195,6 +195,82 @@ ws.addEventListener('message', (event) => {
 });
 ```
 
+### Pulling Brake (Player)
+
+```javascript
+// Player sends BRAKE_PULL during CLUE_LEVEL phase
+ws.send(JSON.stringify({
+  type: 'BRAKE_PULL',
+  sessionId: 'your-session-id',
+  serverTimeMs: Date.now(),
+  payload: {
+    playerId: 'your-player-id',
+    clientTimeMs: Date.now()
+  }
+}));
+
+// If accepted, ALL clients receive:
+// 1. STATE_SNAPSHOT with phase: "PAUSED_FOR_BRAKE", brakeOwnerPlayerId: "player-id"
+// 2. BRAKE_ACCEPTED event
+
+// If rejected, ONLY this player receives:
+// BRAKE_REJECTED with reason: "too_late" | "rate_limited" | "already_paused" | "invalid_phase"
+```
+
+### Handling BRAKE_ACCEPTED (All Clients)
+
+```javascript
+ws.addEventListener('message', (event) => {
+  const message = JSON.parse(event.data);
+
+  if (message.type === 'BRAKE_ACCEPTED') {
+    const { playerId, playerName, clueLevelPoints, answerTimeoutMs } = message.payload;
+    console.log(`${playerName} pulled the brake at ${clueLevelPoints} points!`);
+    console.log(`Answer timeout: ${answerTimeoutMs}ms`);
+
+    // Update UI:
+    // - Show "BRAKE!" animation
+    // - Display who pulled brake
+    // - Show countdown timer for answer
+    // - Pause clue display
+  }
+});
+```
+
+### Handling BRAKE_REJECTED (Player)
+
+```javascript
+ws.addEventListener('message', (event) => {
+  const message = JSON.parse(event.data);
+
+  if (message.type === 'BRAKE_REJECTED') {
+    const { reason, winnerPlayerId } = message.payload;
+
+    switch (reason) {
+      case 'too_late':
+        console.log('Someone else pulled brake first!');
+        break;
+      case 'already_paused':
+        console.log('Game is already paused');
+        break;
+      case 'rate_limited':
+        console.log('Please wait before pulling brake again');
+        break;
+      case 'invalid_phase':
+        console.log('Cannot pull brake in current phase');
+        break;
+    }
+  }
+});
+```
+
+### Brake Fairness Rules
+
+1. **First brake wins**: Server uses `serverTimeMs` to determine first brake per clue level
+2. **Rate limiting**: Max 1 brake per player per 2 seconds
+3. **Phase restriction**: Can only brake during `CLUE_LEVEL` phase
+4. **One brake per clue**: Only first brake is accepted for each clue level (10/8/6/4/2)
+
 ## Common Patterns
 
 ### Reconnection
@@ -254,19 +330,25 @@ npx tsx scripts/ws-smoke-test.ts
 
 ### Game Flow
 - ✅ `HOST_START_GAME` - Host → Server
-- ✅ `HOST_NEXT_CLUE` - Host → Server (not in schema yet)
+- ✅ `HOST_NEXT_CLUE` - Host → Server
 - ✅ `CLUE_PRESENT` - Server → All
 - ✅ `DESTINATION_REVEAL` - Server → All
 - ✅ `DESTINATION_RESULTS` - Server → All
 - ✅ `SCOREBOARD_UPDATE` - Server → All
 
+### Brake Mechanism
+- ✅ `BRAKE_PULL` - Player → Server
+- ✅ `BRAKE_ACCEPTED` - Server → All
+- ✅ `BRAKE_REJECTED` - Server → Player
+- ⏳ `BRAKE_ANSWER_SUBMIT` - Player → Server (Sprint 1 - Task 207)
+- ⏳ `BRAKE_ANSWER_LOCKED` - Server → All (Sprint 1 - Task 207)
+
 ## Event Types (Coming Soon)
 
-- `BRAKE_PULL` - Client → Server
-- `BRAKE_ACCEPTED` - Server → All
-- `BRAKE_REJECTED` - Server → Client
-- `BRAKE_ANSWER_SUBMIT` - Client → Server
-- `BRAKE_ANSWER_LOCKED` - Server → All
+- `BRAKE_RELEASED` - Host → Server (Sprint 1 - Task 207)
+- `CLUE_ADVANCE` - Server → All (auto-advance with timer)
+- Followup questions (Sprint 1.1)
+- Audio timeline events (Sprint 1.1)
 
 ## Full Documentation
 

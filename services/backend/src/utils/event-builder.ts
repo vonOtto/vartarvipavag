@@ -173,3 +173,37 @@ export function buildScoreboardUpdateEvent(
     isGameOver,
   });
 }
+
+/**
+ * Creates a BRAKE_ACCEPTED event
+ */
+export function buildBrakeAcceptedEvent(
+  sessionId: string,
+  playerId: string,
+  playerName: string,
+  clueLevelPoints: 10 | 8 | 6 | 4 | 2,
+  answerTimeoutMs?: number
+): EventEnvelope {
+  return buildEvent('BRAKE_ACCEPTED', sessionId, {
+    playerId,
+    playerName,
+    clueLevelPoints,
+    ...(answerTimeoutMs ? { answerTimeoutMs } : {}),
+  });
+}
+
+/**
+ * Creates a BRAKE_REJECTED event
+ */
+export function buildBrakeRejectedEvent(
+  sessionId: string,
+  playerId: string,
+  reason: 'too_late' | 'rate_limited' | 'already_paused' | 'invalid_phase',
+  winnerPlayerId?: string
+): EventEnvelope {
+  return buildEvent('BRAKE_REJECTED', sessionId, {
+    playerId,
+    reason,
+    ...(winnerPlayerId ? { winnerPlayerId } : {}),
+  });
+}
