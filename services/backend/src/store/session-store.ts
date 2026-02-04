@@ -64,6 +64,11 @@ class SessionStore {
       lockedAnswers: [],
       followupQuestion: null,
       scoreboard: [],
+      audioState: {
+        currentTrackId: null,
+        isPlaying: false,
+        gainDb: 0,
+      },
     };
 
     const session: Session = {

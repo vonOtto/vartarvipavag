@@ -187,6 +187,60 @@ export interface FollowupResultsPayload {
   nextQuestionIndex: number | null;
 }
 
+// Audio Events
+
+export interface MusicSetPayload {
+  trackId: string;
+  mode: 'loop' | 'once';
+  startAtServerMs: number;
+  gainDb?: number;
+  fadeInMs?: number;
+}
+
+export interface MusicStopPayload {
+  fadeOutMs?: number;
+}
+
+export interface MusicGainSetPayload {
+  gainDb: number;
+  transitionMs?: number;
+}
+
+export interface SfxPlayPayload {
+  sfxId: string;
+  startAtServerMs: number;
+  volume?: number;
+}
+
+export interface AudioPlayPayload {
+  clipId: string;
+  url: string;
+  durationMs: number;
+  startAtServerMs: number;
+  text: string;
+  showText?: boolean;
+}
+
+export interface AudioStopPayload {
+  clipId: string;
+  fadeOutMs?: number;
+}
+
+export interface TtsPrefetchPayload {
+  clips: Array<{
+    clipId: string;
+    url: string;
+    durationMs: number;
+  }>;
+}
+
+export interface UiEffectTriggerPayload {
+  effectId: 'confetti' | 'flash' | 'spotlight';
+  intensity?: 'low' | 'med' | 'high';
+  durationMs?: number;
+  params?: Record<string, unknown>;
+}
+
 // Error Event
 
 export interface ErrorPayload {
@@ -219,4 +273,14 @@ export type EventType =
   | 'FOLLOWUP_ANSWER_SUBMIT'
   | 'FOLLOWUP_ANSWERS_LOCKED'
   | 'FOLLOWUP_RESULTS'
+  | 'MUSIC_SET'
+  | 'MUSIC_STOP'
+  | 'MUSIC_GAIN_SET'
+  | 'SFX_PLAY'
+  | 'AUDIO_PLAY'
+  | 'AUDIO_STOP'
+  | 'TTS_PREFETCH'
+  | 'UI_EFFECT_TRIGGER'
+  | 'HOST_MUSIC_GAIN_SET'
+  | 'FINAL_RESULTS_PRESENT'
   | 'ERROR';

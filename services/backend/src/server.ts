@@ -30,6 +30,18 @@ import { projectState } from './utils/state-projection';
 import { buildLobbyUpdatedEvent } from './utils/lobby-events';
 import sessionRoutes from './routes/sessions';
 import { startGame, nextClue, pullBrake, submitAnswer, releaseBrake, startFollowupSequence, submitFollowupAnswer, lockFollowupAnswers, scoreFollowupQuestion } from './game/state-machine';
+import {
+  onGameStart,
+  onClueAdvance,
+  onBrakeAccepted,
+  onAnswerLocked,
+  onRevealStart,
+  onDestinationReveal,
+  onDestinationResults,
+  onFollowupStart,
+  onFollowupQuestionPresent,
+  onFollowupSequenceEnd,
+} from './game/audio-director';
 
 export function createServer() {
   const app = express();
@@ -414,8 +426,14 @@ function handleHostStartGame(
       firstCluePoints: gameData.clueLevelPoints,
     });
 
+    // Audio: mutate audioState first so STATE_SNAPSHOT includes it
+    const audioEvents = onGameStart(session, gameData.clueText);
+
     // Broadcast STATE_SNAPSHOT to all clients (with role-based projection)
     broadcastStateSnapshot(sessionId);
+
+    // Broadcast audio events (MUSIC_SET, TTS_PREFETCH) before CLUE_PRESENT per audio-flow.md
+    audioEvents.forEach((e) => sessionStore.broadcastEventToSession(sessionId, e));
 
     // Broadcast CLUE_PRESENT event
     const clueEvent = buildCluePresentEvent(
@@ -518,6 +536,11 @@ function handleHostNextClue(
         destinationName: result.destinationName,
       });
 
+      // Audio: stop music + banter before reveal
+      onRevealStart(session).forEach((e) =>
+        sessionStore.broadcastEventToSession(sessionId, e)
+      );
+
       // Broadcast STATE_SNAPSHOT to all clients
       broadcastStateSnapshot(sessionId);
 
@@ -529,6 +552,11 @@ function handleHostNextClue(
         result.aliases || []
       );
       sessionStore.broadcastEventToSession(sessionId, revealEvent);
+
+      // Audio: reveal sting SFX
+      onDestinationReveal(session).forEach((e) =>
+        sessionStore.broadcastEventToSession(sessionId, e)
+      );
 
       // Build and broadcast DESTINATION_RESULTS event
       const results = session.state.lockedAnswers.map((answer) => {
@@ -548,11 +576,24 @@ function handleHostNextClue(
       const resultsEvent = buildDestinationResultsEvent(sessionId, results);
       sessionStore.broadcastEventToSession(sessionId, resultsEvent);
 
+      // Audio: correct/incorrect banter
+      const anyCorrect = results.some((r) => r.isCorrect);
+      onDestinationResults(session, anyCorrect).forEach((e) =>
+        sessionStore.broadcastEventToSession(sessionId, e)
+      );
+
       // Try to start follow-up questions; fall back to scoreboard if none
       const followupStart = startFollowupSequence(session);
       if (followupStart) {
+        // Audio: mutate audioState before snapshot so reconnect sees followup music
+        const fqAudioEvents = onFollowupStart(session, followupStart.question.questionText);
+
         broadcastStateSnapshot(sessionId);
         broadcastFollowupQuestionPresent(sessionId, followupStart);
+
+        // Broadcast audio events after snapshot
+        fqAudioEvents.forEach((e) => sessionStore.broadcastEventToSession(sessionId, e));
+
         scheduleFollowupTimer(sessionId, followupStart.timerDurationMs);
       } else {
         const scoreboardEvent = buildScoreboardUpdateEvent(
@@ -586,6 +627,11 @@ function handleHostNextClue(
         result.clueIndex!
       );
       sessionStore.broadcastEventToSession(sessionId, clueEvent);
+
+      // Audio: resume music if needed + optional clue TTS
+      onClueAdvance(session, result.clueText!).forEach((e) =>
+        sessionStore.broadcastEventToSession(sessionId, e)
+      );
 
       logger.info('Broadcasted CLUE_PRESENT event', {
         sessionId,
@@ -670,6 +716,11 @@ function handleBrakePull(
         30000 // 30 seconds timeout for answer submission (can be configured)
       );
       sessionStore.broadcastEventToSession(sessionId, acceptedEvent);
+
+      // Audio: stop music + sfx_brake + optional banter
+      onBrakeAccepted(session).forEach((e) =>
+        sessionStore.broadcastEventToSession(sessionId, e)
+      );
 
       logger.info('Broadcasted BRAKE_ACCEPTED event', {
         sessionId,
@@ -767,6 +818,11 @@ function handleBrakeAnswerSubmit(
     // Broadcast BRAKE_ANSWER_LOCKED per-connection with role-based projection:
     // HOST gets answerText, PLAYER and TV do not
     broadcastBrakeAnswerLocked(sessionId, playerId, lockedAtLevelPoints, remainingClues, answerText);
+
+    // Audio: resume travel music after answer lock
+    onAnswerLocked(session).forEach((e) =>
+      sessionStore.broadcastEventToSession(sessionId, e)
+    );
 
   } catch (error: any) {
     logger.error('BRAKE_ANSWER_SUBMIT: Failed', { sessionId, playerId, error: error.message });
@@ -993,8 +1049,21 @@ function scheduleFollowupTimer(sessionId: string, durationMs: number): void {
         timerDurationMs: nextFq.timer!.durationMs,
         startAtServerMs: nextFq.timer!.startAtServerMs,
       });
+
+      // Audio: seamless question TTS (music keeps playing)
+      onFollowupQuestionPresent(sess, nextFq.questionText).forEach((e) =>
+        sessionStore.broadcastEventToSession(sessionId, e)
+      );
+
       scheduleFollowupTimer(sessionId, nextFq.timer!.durationMs);
     } else {
+      // Audio: stop followup music (mutate audioState before snapshot)
+      const endAudioEvents = onFollowupSequenceEnd(sess);
+
+      // Broadcast updated state (audioState.isPlaying = false) then audio event
+      broadcastStateSnapshot(sessionId);
+      endAudioEvents.forEach((e) => sessionStore.broadcastEventToSession(sessionId, e));
+
       // Sequence done — broadcast SCOREBOARD_UPDATE
       const scoreboardEvent = buildScoreboardUpdateEvent(sessionId, sess.state.scoreboard, false);
       sessionStore.broadcastEventToSession(sessionId, scoreboardEvent);

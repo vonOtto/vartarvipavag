@@ -19,6 +19,7 @@ const SUITE: readonly string[] = [
   "brake-concurrency-test.ts",
   "reconnect-test.ts",
   "e2e-followups-test.ts",
+  "audio-flow-test.ts",
 ];
 
 const SEPARATOR = "─".repeat(60);

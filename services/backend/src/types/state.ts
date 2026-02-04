@@ -52,10 +52,28 @@ export interface Timer {
   durationMs: number;
 }
 
+export interface ActiveVoiceClip {
+  clipId: string;
+  url: string;
+  startAtServerMs: number;
+  durationMs: number;
+  text: string;
+}
+
+export interface TtsManifestEntry {
+  clipId: string;
+  phraseId: string;
+  url: string;
+  durationMs: number;
+  generatedAtMs: number;
+}
+
 export interface AudioState {
   currentTrackId: string | null;
   isPlaying: boolean;
   gainDb: number;
+  activeVoiceClip?: ActiveVoiceClip | null;
+  ttsManifest?: TtsManifestEntry[];
 }
 
 export interface FollowupPlayerAnswer {

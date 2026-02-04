@@ -292,3 +292,68 @@ export function buildFollowupResultsEvent(
     nextQuestionIndex,
   });
 }
+
+// ── Audio event builders ────────────────────────────────────────────────────
+
+export function buildMusicSetEvent(
+  sessionId: string,
+  trackId: string,
+  mode: 'loop' | 'once',
+  startAtServerMs: number,
+  gainDb: number = 0,
+  fadeInMs: number = 300
+): EventEnvelope {
+  return buildEvent('MUSIC_SET', sessionId, { trackId, mode, startAtServerMs, gainDb, fadeInMs });
+}
+
+export function buildMusicStopEvent(
+  sessionId: string,
+  fadeOutMs: number = 600
+): EventEnvelope {
+  return buildEvent('MUSIC_STOP', sessionId, { fadeOutMs });
+}
+
+export function buildSfxPlayEvent(
+  sessionId: string,
+  sfxId: string,
+  startAtServerMs: number,
+  volume: number = 1.0
+): EventEnvelope {
+  return buildEvent('SFX_PLAY', sessionId, { sfxId, startAtServerMs, volume });
+}
+
+export function buildAudioPlayEvent(
+  sessionId: string,
+  clipId: string,
+  url: string,
+  durationMs: number,
+  startAtServerMs: number,
+  text: string,
+  showText: boolean = false
+): EventEnvelope {
+  return buildEvent('AUDIO_PLAY', sessionId, { clipId, url, durationMs, startAtServerMs, text, showText });
+}
+
+export function buildAudioStopEvent(
+  sessionId: string,
+  clipId: string,
+  fadeOutMs: number = 150
+): EventEnvelope {
+  return buildEvent('AUDIO_STOP', sessionId, { clipId, fadeOutMs });
+}
+
+export function buildTtsPrefetchEvent(
+  sessionId: string,
+  clips: Array<{ clipId: string; url: string; durationMs: number }>
+): EventEnvelope {
+  return buildEvent('TTS_PREFETCH', sessionId, { clips });
+}
+
+export function buildUiEffectTriggerEvent(
+  sessionId: string,
+  effectId: 'confetti' | 'flash' | 'spotlight',
+  intensity: 'low' | 'med' | 'high' = 'med',
+  durationMs: number = 2500
+): EventEnvelope {
+  return buildEvent('UI_EFFECT_TRIGGER', sessionId, { effectId, intensity, durationMs });
+}

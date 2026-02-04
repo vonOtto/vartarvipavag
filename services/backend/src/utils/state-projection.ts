@@ -72,6 +72,14 @@ export function projectState(
     }
   }
 
+  // Filter audioState per projections.md §Audio State Projection
+  if (role === 'player') {
+    projected.audioState = undefined;
+  } else if (role === 'tv' && projected.audioState?.ttsManifest) {
+    const { ttsManifest: _, ...audioWithoutManifest } = projected.audioState;
+    projected.audioState = audioWithoutManifest;
+  }
+
   // Filter followupQuestion secrets
   if (fullState.followupQuestion) {
     if (role === 'player') {
