@@ -92,6 +92,16 @@ När "Kör TASK-xxx" ges, routa till agent enligt nummerserien:
 | 5xx | tvos | — |
 | 6xx | ceo | backend, web |
 
+### Task Execution Rule
+
+När någon skriver "kör TASK-XXX" måste agenten:
+
+1. Läsa `docs/sprint-1.md` och identifiera acceptance criteria och berörda filer för tasken.
+2. Implementera exakt enligt acceptance criteria. Inga extra features, refaktoreringar eller "improvements" som inte ingår.
+3. Om något är oklart eller blockerar — ställ en fråga eller flagga blocker *innan* kod skrivs.
+4. Avsluta alltid med testinstruktioner (eller skapa en test-checklista i `docs/`).
+5. Be om `/git-commit` och avsluta med en commit som täcker enbart tasken.
+
 ### Contract-First Rule
 
 Innan en agent börjar på en TASK som berör event- eller state-shape:
