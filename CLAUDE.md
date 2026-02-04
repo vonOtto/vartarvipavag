@@ -26,6 +26,64 @@ Bygg en spelplattform:
 - services/backend/ -> WS + state engine + DB/Redis (backend-agent)
 - services/ai-content/ -> AI pipeline + verifiering + TTS jobs (ai-content-agent)
 
+## Routing & Ownership Rules
+
+### Ownership Map
+
+Varje path har en utsedd ägaragent. Code-ändringar till en path kräver ägaren som reviewer eller instruktion.
+
+| Path | Ägaragent |
+|------|-----------|
+| `contracts/` | architect |
+| `services/backend/` | backend |
+| `services/ai-content/` | ai-content |
+| `apps/web-player/` | web |
+| `apps/ios-host/` | ios-host |
+| `apps/tvos/` | tvos |
+| `docs/` | ceo |
+
+### TASK → Agent
+
+Routing-tabell för löpande och planerade tasks. Nummerserier: 2xx = backend, 3xx = web, 4xx = ios-host, 5xx = tvos.
+
+| TASK | Agent | Scope | Status |
+|------|-------|-------|--------|
+| TASK-206 | backend | Brake fairness + rate-limit | ✅ |
+| TASK-207 | backend | Answer submission + locking | ✅ |
+| TASK-210 | backend | Scoring engine (`contracts/scoring.md`) | queued |
+| TASK-211 | backend | Answer normalization + matching | queued |
+| TASK-304 | web | Brake + answer UI | ✅ |
+| TASK-305 | web | Reveal + scoreboard view | queued |
+
+### Contract-First Rule
+
+Innan en agent börjar på en TASK som berör event- eller state-shape:
+
+1. Läs `contracts/` — schema (`events.schema.json`, `state.schema.json`), `projections.md`, `scoring.md`.
+2. Om shape saknar stöd → diskutera med architect *innan* kod skrivs.
+3. Backend implementerar exakt enligt schema; klienter konsumerar enligt projections.
+4. Ingen agent ändrar `contracts/` unilateralt — architect approvar alltid.
+
+### Conflict Rule
+
+Om två agenter behöver ändra samma path:
+
+1. Agenten som äger pathen (ownership map) har prioritet.
+2. Den andra agenten formulerar ett handoff-request: vad som behövs, varför, och förslag på event/state-ändring.
+3. Ägare (eller architect om `contracts/` berörs) granskar och approvar.
+4. Ingen agent mergar kod i en path som de inte äger utan explicit godkännande.
+
+### Handoff Standard
+
+När arbete skiftar från en agent till en annan skickas:
+
+1. **Kontraktspackage** — exakta events och states som berörs (hämta från `contracts/`).
+2. **Input / Output** — vad mottagaren konsumerar (event shape) och producerar (UI, logic, test).
+3. **Testkriterier** — hur mottagaren verifierar (test-script, curl, checklista).
+4. **Referensdok** — länk till spec i `docs/` (ex. `ws-quick-reference.md`, `sprint-1.md`).
+
+---
+
 ## Definition of Done (DoD)
 En feature är klar när:
 - contracts uppdaterade + validerade
