@@ -44,16 +44,53 @@ Varje path har en utsedd ägaragent. Code-ändringar till en path kräver ägare
 
 ### TASK → Agent
 
-Routing-tabell för löpande och planerade tasks. Nummerserier: 2xx = backend, 3xx = web, 4xx = ios-host, 5xx = tvos.
+Status spåras i `docs/status.md` och `docs/sprint-1.md`.
 
-| TASK | Agent | Scope | Status |
-|------|-------|-------|--------|
-| TASK-206 | backend | Brake fairness + rate-limit | ✅ |
-| TASK-207 | backend | Answer submission + locking | ✅ |
-| TASK-210 | backend | Scoring engine (`contracts/scoring.md`) | queued |
-| TASK-211 | backend | Answer normalization + matching | queued |
-| TASK-304 | web | Brake + answer UI | ✅ |
-| TASK-305 | web | Reveal + scoreboard view | queued |
+| TASK | Agent | Scope |
+|------|-------|-------|
+| TASK-101 | architect | Events specification |
+| TASK-102 | architect | State schema |
+| TASK-201 | backend | Backend project setup |
+| TASK-202 | backend | REST API — sessions + join |
+| TASK-203 | backend | WebSocket connection handler |
+| TASK-204 | backend | Lobby state management |
+| TASK-205 | backend | State machine core |
+| TASK-206 | backend | Brake fairness + rate-limit |
+| TASK-207 | backend | Answer submission + locking |
+| TASK-208 | backend | Reveal + scoring |
+| TASK-209 | backend | Reconnect (STATE_SNAPSHOT) |
+| TASK-210 | backend | Scoring engine (`contracts/scoring.md`) |
+| TASK-211 | backend | Answer normalization + matching |
+| TASK-301 | web | Web player project setup |
+| TASK-302 | web | Join flow |
+| TASK-303 | web | Lobby view |
+| TASK-304 | web | Brake + answer UI |
+| TASK-305 | web | Reveal + scoreboard view |
+| TASK-306 | web | Reconnect handling |
+| TASK-401 | ios-host | iOS host project setup |
+| TASK-402 | ios-host | Session creation flow |
+| TASK-403 | ios-host | Lobby management |
+| TASK-404 | ios-host | Game monitoring (pro-vy) |
+| TASK-501 | tvos | tvOS project setup |
+| TASK-502 | tvos | TV join + lobby display |
+| TASK-503 | tvos | Clue display |
+| TASK-504 | tvos | Reveal + scoreboard |
+| TASK-601 | ceo | E2E integration test |
+| TASK-602 | ceo | Reconnect stress test |
+| TASK-603 | ceo | Brake fairness stress test |
+
+### Kör TASK-xxx — Routing Rule
+
+När "Kör TASK-xxx" ges, routa till agent enligt nummerserien:
+
+| Serie | Agent | Stöd |
+|-------|-------|------|
+| 1xx | architect | — |
+| 2xx | backend | — |
+| 3xx | web | — |
+| 4xx | ios-host | — |
+| 5xx | tvos | — |
+| 6xx | ceo | backend, web |
 
 ### Contract-First Rule
 
