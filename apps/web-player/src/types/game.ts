@@ -54,6 +54,23 @@ export interface Timer {
   durationMs: number;
 }
 
+export interface FollowupPlayerAnswer {
+  playerId: string;
+  playerName: string;
+  answerText: string;
+}
+
+export interface FollowupQuestionState {
+  questionText: string;
+  options: string[] | null;
+  currentQuestionIndex: number;
+  totalQuestions: number;
+  correctAnswer?: string | null;   // HOST-only — absent for PLAYER
+  answersByPlayer?: FollowupPlayerAnswer[]; // HOST-only — absent for PLAYER
+  timer: Timer | null;
+  answeredByMe?: boolean;          // PLAYER helper — computed per connection
+}
+
 export interface GameState {
   version: number;
   phase: GamePhase;
@@ -66,6 +83,7 @@ export interface GameState {
   clueText: string | null;
   brakeOwnerPlayerId: string | null;
   lockedAnswers: LockedAnswer[];
+  followupQuestion: FollowupQuestionState | null;
   scoreboard: ScoreboardEntry[];
   timer?: Timer | null;
 }
@@ -168,6 +186,34 @@ export interface ScoreboardUpdatePayload {
   isGameOver?: boolean;
 }
 
+export interface FollowupQuestionPresentPayload {
+  questionText: string;
+  options: string[] | null;
+  currentQuestionIndex: number;
+  totalQuestions: number;
+  timerDurationMs: number;
+  correctAnswer?: string;          // HOST-only
+}
+
+export interface FollowupAnswersLockedPayload {
+  currentQuestionIndex: number;
+  lockedPlayerCount: number;
+  answersByPlayer?: FollowupPlayerAnswer[]; // HOST-only
+}
+
+export interface FollowupResultsPayload {
+  currentQuestionIndex: number;
+  correctAnswer: string;
+  results: Array<{
+    playerId: string;
+    playerName: string;
+    answerText: string;
+    isCorrect: boolean;
+    pointsAwarded: number;
+  }>;
+  nextQuestionIndex: number | null;
+}
+
 export interface ErrorPayload {
   errorCode: 'INVALID_SESSION' | 'UNAUTHORIZED' | 'RATE_LIMITED' | 'INVALID_PHASE' | 'VALIDATION_ERROR' | 'INTERNAL_ERROR';
   message: string;
@@ -189,4 +235,7 @@ export type GameEvent =
   | EventEnvelope<DestinationRevealPayload>
   | EventEnvelope<DestinationResultsPayload>
   | EventEnvelope<ScoreboardUpdatePayload>
+  | EventEnvelope<FollowupQuestionPresentPayload>
+  | EventEnvelope<FollowupAnswersLockedPayload>
+  | EventEnvelope<FollowupResultsPayload>
   | EventEnvelope<ErrorPayload>;

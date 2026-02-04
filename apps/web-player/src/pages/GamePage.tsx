@@ -1,11 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useWebSocket } from '../hooks/useWebSocket';
 import { loadSession } from '../services/storage';
 import { ClueDisplay } from '../components/ClueDisplay';
 import { BrakeButton } from '../components/BrakeButton';
 import { AnswerForm } from '../components/AnswerForm';
-import type { CluePresentPayload, BrakeRejectedPayload } from '../types/game';
+import type { CluePresentPayload, BrakeRejectedPayload, FollowupResultsPayload } from '../types/game';
 
 export const GamePage: React.FC = () => {
   const navigate = useNavigate();
@@ -15,6 +15,13 @@ export const GamePage: React.FC = () => {
   const [submitting, setSubmitting] = useState(false);
   const [answerSubmitted, setAnswerSubmitted] = useState(false);
   const [rejectionMessage, setRejectionMessage] = useState<string | null>(null);
+
+  // Follow-up question state
+  const [fqSubmitted, setFqSubmitted] = useState(false);
+  const [fqOpenText, setFqOpenText] = useState('');
+  const [fqResult, setFqResult] = useState<{ isCorrect: boolean; pointsAwarded: number; correctAnswer: string } | null>(null);
+  const [timeLeft, setTimeLeft] = useState<number | null>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const { isConnected, lastEvent, gameState, error, sendMessage } = useWebSocket(
     session?.wsUrl || null,
@@ -80,6 +87,43 @@ export const GamePage: React.FC = () => {
     }
   }, [lastEvent]);
 
+  // Follow-up: reset per-question UI when the question index changes
+  useEffect(() => {
+    setFqSubmitted(gameState?.followupQuestion?.answeredByMe ?? false);
+    setFqResult(null);
+    setFqOpenText('');
+  }, [gameState?.followupQuestion?.currentQuestionIndex, gameState?.followupQuestion?.answeredByMe]);
+
+  // Follow-up: countdown timer driven by server startAtServerMs + durationMs
+  useEffect(() => {
+    const timer = gameState?.followupQuestion?.timer;
+    if (!timer) {
+      if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
+      setTimeLeft(null);
+      return;
+    }
+    const tick = () => {
+      const remaining = Math.max(0, Math.ceil((timer.startAtServerMs + timer.durationMs - Date.now()) / 1000));
+      setTimeLeft(remaining);
+    };
+    tick();
+    timerRef.current = setInterval(tick, 500);
+    return () => { if (timerRef.current) clearInterval(timerRef.current); };
+  }, [gameState?.followupQuestion?.timer?.timerId, gameState?.followupQuestion?.timer?.startAtServerMs]);
+
+  // Follow-up: capture own result from FOLLOWUP_RESULTS event
+  useEffect(() => {
+    if (lastEvent?.type === 'FOLLOWUP_RESULTS') {
+      const payload = lastEvent.payload as FollowupResultsPayload;
+      const own = payload.results.find(r => r.playerId === session?.playerId);
+      setFqResult({
+        isCorrect: own?.isCorrect ?? false,
+        pointsAwarded: own?.pointsAwarded ?? 0,
+        correctAnswer: payload.correctAnswer,
+      });
+    }
+  }, [lastEvent, session?.playerId]);
+
   // Current clue info
   const currentClue = React.useMemo(() => {
     if (lastEvent?.type === 'CLUE_PRESENT') {
@@ -113,6 +157,12 @@ export const GamePage: React.FC = () => {
     if (!session || submitting) return;
     setSubmitting(true);
     sendMessage('BRAKE_ANSWER_SUBMIT', { playerId: session.playerId, answerText });
+  };
+
+  const handleFollowupSubmit = (answer: string) => {
+    if (!session || fqSubmitted) return;
+    setFqSubmitted(true);
+    sendMessage('FOLLOWUP_ANSWER_SUBMIT', { playerId: session.playerId, answerText: answer });
   };
 
   if (!session) {
@@ -173,11 +223,106 @@ export const GamePage: React.FC = () => {
         )}
 
         {/* Locked count */}
-        {lockedCount > 0 && (
+        {lockedCount > 0 && gameState?.phase !== 'FOLLOWUP_QUESTION' && (
           <div className="locked-count">
             {lockedCount} answer{lockedCount !== 1 ? 's' : ''} locked this round
           </div>
         )}
+
+        {/* ── Follow-up question ── */}
+        {gameState?.phase === 'FOLLOWUP_QUESTION' && gameState.followupQuestion && (() => {
+          const fq = gameState.followupQuestion;
+          const timerPct = fq.timer
+            ? Math.max(0, (timeLeft ?? 0) / (fq.timer.durationMs / 1000)) * 100
+            : 0;
+          const timerExpired = timeLeft !== null && timeLeft <= 0;
+
+          return (
+            <div className="followup-question">
+              <div className="followup-header">
+                <span className="followup-progress">
+                  Fråga {fq.currentQuestionIndex + 1} / {fq.totalQuestions}
+                </span>
+                {timeLeft !== null && (
+                  <span className={`followup-timer ${timeLeft <= 3 ? 'followup-timer-urgent' : ''}`}>
+                    {timeLeft}s
+                  </span>
+                )}
+              </div>
+
+              {/* Timer bar */}
+              {fq.timer && (
+                <div className="followup-timer-bar-bg">
+                  <div className="followup-timer-bar" style={{ width: `${timerPct}%` }} />
+                </div>
+              )}
+
+              <div className="followup-question-text">{fq.questionText}</div>
+
+              {/* Result overlay — shown after FOLLOWUP_RESULTS */}
+              {fqResult && (
+                <div className={`followup-result ${fqResult.isCorrect ? 'result-correct' : 'result-incorrect'}`}>
+                  <div className="followup-result-verdict">
+                    {fqResult.isCorrect ? 'Rätt!' : 'Fel'}
+                    {fqResult.pointsAwarded > 0 && ` — +${fqResult.pointsAwarded}p`}
+                  </div>
+                  <div className="followup-result-correct">
+                    Rätt svar: <strong>{fqResult.correctAnswer}</strong>
+                  </div>
+                </div>
+              )}
+
+              {/* Multiple-choice options */}
+              {fq.options && !fqResult && (
+                <div className="followup-options">
+                  {fq.options.map((option) => (
+                    <button
+                      key={option}
+                      className="followup-option-btn"
+                      disabled={fqSubmitted || timerExpired}
+                      onClick={() => handleFollowupSubmit(option)}
+                    >
+                      {option}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* Open-text input */}
+              {!fq.options && !fqResult && (
+                <div className="followup-open-text">
+                  <input
+                    type="text"
+                    className="followup-open-input"
+                    value={fqOpenText}
+                    onChange={(e) => setFqOpenText(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') handleFollowupSubmit(fqOpenText); }}
+                    disabled={fqSubmitted || timerExpired}
+                    placeholder="Skriv ditt svar..."
+                    autoFocus
+                  />
+                  <button
+                    className="followup-submit-btn"
+                    disabled={fqSubmitted || timerExpired || fqOpenText.trim().length === 0}
+                    onClick={() => handleFollowupSubmit(fqOpenText)}
+                  >
+                    Skicka
+                  </button>
+                </div>
+              )}
+
+              {/* Submitted badge */}
+              {fqSubmitted && !fqResult && (
+                <div className="answer-locked">Svar inskickat</div>
+              )}
+
+              {/* Timer expired + not submitted */}
+              {timerExpired && !fqSubmitted && !fqResult && (
+                <div className="followup-timeout">Timen gick ut</div>
+              )}
+            </div>
+          );
+        })()}
       </div>
     </div>
   );
