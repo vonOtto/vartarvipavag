@@ -17,6 +17,7 @@ class AppState: ObservableObject {
     // MARK: – connection status
     @Published var isConnected : Bool   = false
     @Published var error       : String?
+    @Published var sessionReady: Bool   = false   // true after first STATE_SNAPSHOT
 
     // MARK: – session credentials (populated after REST join)
     var token     : String?
@@ -145,7 +146,8 @@ class AppState: ObservableObject {
     // MARK: – helpers ─────────────────────────────────────────────────────────
 
     private func applyState(_ state: GameState) {
-        phase       = state.phase
+        sessionReady = true
+        phase        = state.phase
         players     = state.players
         clueText    = state.clueText
         levelPoints = state.levelPoints

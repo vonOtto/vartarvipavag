@@ -19,9 +19,15 @@ struct PaSparetTVApp: App {
 struct RootView: View {
     @EnvironmentObject var appState: AppState
 
+    private static let lobbyPhases: Set<String> = ["LOBBY", "PREPARING_ROUND", "ROUND_INTRO"]
+
     var body: some View {
         if appState.sessionId == nil {
             JoinView()
+        } else if !appState.sessionReady {
+            ConnectingView()
+        } else if Self.lobbyPhases.contains(appState.phase) {
+            LobbyView()
         } else {
             LiveView()
         }
@@ -78,7 +84,108 @@ struct JoinView: View {
     }
 }
 
-// MARK: – live game screen (placeholder — views expanded in TASK 502–504) ────
+// MARK: – connecting screen ─────────────────────────────────────────────────
+
+struct ConnectingView: View {
+    @EnvironmentObject var appState: AppState
+
+    var body: some View {
+        VStack(spacing: 32) {
+            Text(appState.isConnected ? "Connecting…" : "Reconnecting…")
+                .font(.system(size: 64, weight: .light))
+                .foregroundColor(.secondary)
+            if let err = appState.error {
+                Text(err).foregroundColor(.red).font(.title)
+            }
+        }
+    }
+}
+
+// MARK: – lobby screen ───────────────────────────────────────────────────────
+
+/// Origin used inside the QR code.  Must be reachable from the player's phone.
+/// On LAN set to http://<LAN-IP>:3000  (same value as backend PUBLIC_BASE_URL).
+private let PUBLIC_BASE_URL = ProcessInfo.processInfo.environment["PUBLIC_BASE_URL"]
+                              ?? "http://localhost:3000"
+
+struct LobbyView: View {
+    @EnvironmentObject var appState: AppState
+
+    var body: some View {
+        ZStack(alignment: .top) {
+            HStack(spacing: 80) {
+                qrColumn
+                playerColumn
+            }
+            .padding(60)
+
+            if !appState.isConnected { reconnectBanner }
+        }
+    }
+
+    // ── QR + join code ──
+    @ViewBuilder
+    private var qrColumn: some View {
+        VStack(spacing: 20) {
+            QRCodeView(url: joinURL)
+            if let code = appState.joinCode {
+                Text(code.uppercased().map { String($0) }.joined(separator: "  "))
+                    .font(.system(size: 48, weight: .bold))
+            }
+            Text("Scan to join")
+                .font(.system(size: 24))
+                .foregroundColor(.secondary)
+        }
+    }
+
+    // ── player list ──
+    @ViewBuilder
+    private var playerColumn: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Players")
+                .font(.system(size: 36, weight: .bold))
+            ForEach(appState.players) { player in
+                PlayerRow(player: player)
+            }
+            if appState.players.isEmpty {
+                Text("No players yet…")
+                    .foregroundColor(.secondary)
+                    .font(.system(size: 24))
+            }
+        }
+    }
+
+    private var joinURL: String {
+        "\(PUBLIC_BASE_URL)/join/\(appState.joinCode ?? "")"
+    }
+
+    private var reconnectBanner: some View {
+        Text("○ Reconnecting…")
+            .font(.system(size: 22))
+            .foregroundColor(.red)
+            .padding(.horizontal, 20)
+            .padding(.vertical, 8)
+            .background(Color.black.opacity(0.6))
+            .cornerRadius(8)
+            .padding(.top, 16)
+    }
+}
+
+struct PlayerRow: View {
+    let player: Player
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Circle()
+                .fill(player.isConnected ? Color.green : Color.gray)
+                .frame(width: 14, height: 14)
+            Text(player.name)
+                .font(.system(size: 28))
+        }
+    }
+}
+
+// MARK: – live game screen (placeholder — expanded in TASK 503–504) ──────────
 
 struct LiveView: View {
     @EnvironmentObject var appState: AppState

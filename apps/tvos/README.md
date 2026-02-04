@@ -32,13 +32,19 @@ The app reads `BASE_URL` at startup to locate the backend.
 | Variable | Default | Notes |
 |----------|---------|-------|
 | `BASE_URL` | `http://localhost:3000` | REST + WebSocket origin |
+| `PUBLIC_BASE_URL` | `http://localhost:3000` | Origin embedded in the QR code (must be reachable from player phones) |
 
-### Setting BASE_URL in Xcode
+### Setting env vars in Xcode
 
 1. **Edit Scheme** → **Run** → **Environment Variables**
-2. Add `BASE_URL` = `http://localhost:3000` (or your remote URL)
+2. Add `BASE_URL` = `http://localhost:3000`
+3. Add `PUBLIC_BASE_URL` = `http://localhost:3000`
 
-No value is needed when the backend is running on the default port on localhost.
+> For LAN play set both to `http://<LAN-IP>:3000` so phones on the network
+> can reach the backend and the web player via the QR code.
+
+No values are needed when the backend is running on localhost and you are
+testing on the same machine.
 
 ## WebSocket flow
 
