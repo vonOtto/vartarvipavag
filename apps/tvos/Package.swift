@@ -7,7 +7,10 @@ let package = Package(
     targets: [
         .executableTarget(
             name: "PaSparetTV",
-            path: "Sources/PaSparetTV"
+            path: "Sources/PaSparetTV",
+            resources: [
+                .process("Resources")
+            ]
         )
     ]
 )

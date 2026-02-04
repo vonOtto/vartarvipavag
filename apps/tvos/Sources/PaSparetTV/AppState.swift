@@ -20,6 +20,7 @@ class AppState: ObservableObject {
     @Published var results           : [PlayerResult] = []
     @Published var followupQuestion  : FollowupQuestionInfo?
     @Published var followupResults   : (correctAnswer: String, rows: [FollowupResultRow])?
+    @Published var showConfetti      : Bool = false
 
     // MARK: – connection status
     @Published var isConnected : Bool   = false
@@ -30,6 +31,9 @@ class AppState: ObservableObject {
     var token     : String?
     var wsUrl     : String?
     var sessionId : String?
+
+    // MARK: – audio
+    let audio = AudioManager()
 
     // MARK: – reconnect bookkeeping
     private var wsTask          : URLSessionWebSocketTask?
@@ -204,6 +208,64 @@ class AppState: ObservableObject {
             }
             followupResults = (correctAnswer: correct, rows: rows)
 
+        // ── audio events (contracts/audio_timeline.md) ────────────────────
+        case "MUSIC_SET":
+            guard let payload = json["payload"] as? [String: Any],
+                  let trackId = payload["trackId"] as? String else { break }
+            audio.playMusic(
+                trackId:  trackId,
+                fadeInMs: payload["fadeInMs"] as? Int    ?? 300,
+                loop:     (payload["mode"]    as? String ?? "loop") == "loop",
+                gainDb:   (payload["gainDb"]  as? Double).map(Float.init) ?? 0)
+
+        case "MUSIC_STOP":
+            let fadeOutMs = (json["payload"] as? [String: Any])?["fadeOutMs"] as? Int ?? 600
+            audio.stopMusic(fadeOutMs: fadeOutMs)
+
+        case "MUSIC_GAIN_SET":
+            guard let payload = json["payload"] as? [String: Any],
+                  let db      = payload["gainDb"] as? Double else { break }
+            audio.setMusicGain(gainDb: Float(db))
+
+        case "SFX_PLAY":
+            guard let payload = json["payload"] as? [String: Any],
+                  let sfxId   = payload["sfxId"] as? String else { break }
+            audio.playSFX(sfxId: sfxId,
+                          volume: (payload["volume"] as? Double).map(Float.init) ?? 1.0)
+
+        case "AUDIO_PLAY":
+            guard let payload = json["payload"]  as? [String: Any],
+                  let clipId  = payload["clipId"]     as? String,
+                  let urlStr  = payload["url"]        as? String,
+                  let url     = URL(string: urlStr),
+                  let durMs   = payload["durationMs"] as? Int else { break }
+            audio.playVoice(clipId: clipId, url: url, durationMs: durMs)
+
+        case "AUDIO_STOP":
+            audio.stopVoice()
+
+        case "UI_EFFECT_TRIGGER":
+            guard let payload  = json["payload"] as? [String: Any],
+                  let effectId = payload["effectId"] as? String else { break }
+            if effectId == "confetti" { showConfetti = true }
+
+        case "TTS_PREFETCH":
+            guard let payload = json["payload"] as? [String: Any],
+                  let clips   = payload["clips"] as? [[String: Any]] else { break }
+            audio.prefetch(clips: clips.compactMap { c -> (id: String, url: URL)? in
+                guard let id  = c["clipId"] as? String,
+                      let str = c["url"]    as? String,
+                      let url = URL(string: str) else { return nil }
+                return (id: id, url: url)
+            })
+
+        case "FINAL_RESULTS_PRESENT":
+            phase = "FINAL_RESULTS"
+            if !showConfetti {
+                audio.playSFX(sfxId: "sfx_winner_fanfare")
+                showConfetti = true
+            }
+
         default:
             break
         }
@@ -231,6 +293,7 @@ class AppState: ObservableObject {
     // MARK: – helpers ─────────────────────────────────────────────────────────
 
     private func applyState(_ state: GameState) {
+        let enteringFinale  = (state.phase == "FINAL_RESULTS" && phase != "FINAL_RESULTS")
         sessionReady        = true
         phase               = state.phase
         players             = state.players
@@ -244,6 +307,13 @@ class AppState: ObservableObject {
         if let jc           = state.joinCode { joinCode = jc }
         followupQuestion    = state.followupQuestion
         if state.phase != "FOLLOWUP_QUESTION" { followupResults = nil }
+
+        // Fallback: fanfare + confetti on FINAL_RESULTS entry.
+        // Covers reconnect mid-finale when the SFX event sequence is missed.
+        if enteringFinale && !showConfetti {
+            audio.playSFX(sfxId: "sfx_winner_fanfare")
+            showConfetti = true
+        }
     }
 
     /// Exponential-backoff reconnect (1 s … 10 s, max 10 attempts).

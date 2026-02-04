@@ -24,22 +24,28 @@ struct RootView: View {
     private static let scoreboardPhases: Set<String> = ["SCOREBOARD", "ROUND_END", "FINAL_RESULTS"]
 
     var body: some View {
-        if appState.sessionId == nil {
-            JoinView()
-        } else if !appState.sessionReady {
-            ConnectingView()
-        } else if Self.lobbyPhases.contains(appState.phase) {
-            LobbyView()
-        } else if Self.cluePhases.contains(appState.phase) {
-            TVClueView()
-        } else if appState.phase == "REVEAL_DESTINATION" {
-            TVRevealView()
-        } else if appState.phase == "FOLLOWUP_QUESTION" {
-            TVFollowupView()
-        } else if Self.scoreboardPhases.contains(appState.phase) {
-            TVScoreboardView()
-        } else {
-            LiveView()
+        ZStack {
+            if appState.sessionId == nil {
+                JoinView()
+            } else if !appState.sessionReady {
+                ConnectingView()
+            } else if Self.lobbyPhases.contains(appState.phase) {
+                LobbyView()
+            } else if Self.cluePhases.contains(appState.phase) {
+                TVClueView()
+            } else if appState.phase == "REVEAL_DESTINATION" {
+                TVRevealView()
+            } else if appState.phase == "FOLLOWUP_QUESTION" {
+                TVFollowupView()
+            } else if Self.scoreboardPhases.contains(appState.phase) {
+                TVScoreboardView()
+            } else {
+                LiveView()
+            }
+
+            if appState.showConfetti {
+                ConfettiView { appState.showConfetti = false }
+            }
         }
     }
 }
