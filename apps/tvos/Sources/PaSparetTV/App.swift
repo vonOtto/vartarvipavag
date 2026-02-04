@@ -50,6 +50,7 @@ struct JoinView: View {
     @EnvironmentObject var appState: AppState
     @State private var code = ""
     @State private var busy = false
+    @FocusState private var codeFocused: Bool
 
     var body: some View {
         VStack(spacing: 48) {
@@ -57,18 +58,40 @@ struct JoinView: View {
                 .font(.system(size: 96, weight: .bold))
 
             TextField("Join code", text: $code)
+                .focused($codeFocused)
+                .textInputAutocapitalization(.characters)
+                .autocorrectionDisabled()
                 .font(.system(size: 72))
                 .frame(width: 500)
-                .textFieldStyle(.roundedBorder)
+                .textFieldStyle(.plain) // ✅ tvOS-safe
+                .padding(.vertical, 18)
+                .padding(.horizontal, 24)
+                .background(
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .fill(.thinMaterial)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .stroke(codeFocused ? .white : .white.opacity(0.25),
+                                lineWidth: codeFocused ? 4 : 2)
+                )
+                .scaleEffect(codeFocused ? 1.06 : 1.0)
+                .shadow(color: .black.opacity(codeFocused ? 0.35 : 0.15),
+                        radius: codeFocused ? 18 : 10,
+                        x: 0, y: codeFocused ? 12 : 6)
+                .animation(.snappy(duration: 0.18), value: codeFocused)
+                .onAppear { codeFocused = true }
 
             Button("Join as TV") {
                 Task { await joinGame() }
             }
             .font(.largeTitle)
-            .disabled(busy || code.trimmingCharacters(in: .whitespaces).isEmpty)
+            .disabled(busy || code.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
 
             if let err = appState.error {
-                Text(err).foregroundColor(.red).font(.title)
+                Text(err)
+                    .foregroundColor(.red)
+                    .font(.title)
             }
         }
     }
