@@ -157,6 +157,82 @@ button:disabled {
   color: #fde68a;
 }
 
+/* Brake button */
+.brake-button {
+  width: 100%;
+  padding: 1.5rem;
+  font-size: 1.8rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  background: #fbbf24;
+  color: #1a1a2e;
+  border-radius: 12px;
+  text-transform: uppercase;
+  transition: background 0.2s, transform 0.1s;
+}
+
+.brake-button:hover:not(:disabled) {
+  background: #f59e0b;
+}
+
+.brake-button:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+/* Brake owner confirmation */
+.brake-owner-message {
+  text-align: center;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #fbbf24;
+  padding: 0.25rem 0;
+}
+
+/* Brake rejection toast */
+.brake-rejected-message {
+  text-align: center;
+  font-size: 1rem;
+  padding: 0.75rem 1rem;
+  background: rgba(248, 113, 113, 0.2);
+  border: 1px solid #f87171;
+  border-radius: 8px;
+  color: #fca5a5;
+  animation: fadeInOut 2.5s ease forwards;
+}
+
+@keyframes fadeInOut {
+  0%   { opacity: 0; }
+  15%  { opacity: 1; }
+  75%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* Answer form */
+.answer-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* Answer locked confirmation */
+.answer-locked {
+  text-align: center;
+  font-size: 1.1rem;
+  font-weight: 600;
+  padding: 1rem;
+  background: rgba(74, 222, 128, 0.2);
+  border: 1px solid #4ade80;
+  border-radius: 8px;
+  color: #86efac;
+}
+
+/* Locked count badge */
+.locked-count {
+  text-align: center;
+  font-size: 0.9rem;
+  opacity: 0.6;
+}
+
 /* Player list */
 .player-list ul {
   list-style: none;
@@ -300,5 +376,10 @@ button:disabled {
 
   .destination-name {
     font-size: 2rem;
+  }
+
+  .brake-button {
+    font-size: 1.5rem;
+    padding: 1.2rem;
   }
 }
