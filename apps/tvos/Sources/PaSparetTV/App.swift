@@ -19,8 +19,9 @@ struct PaSparetTVApp: App {
 struct RootView: View {
     @EnvironmentObject var appState: AppState
 
-    private static let lobbyPhases: Set<String> = ["LOBBY", "PREPARING_ROUND", "ROUND_INTRO"]
-    private static let cluePhases : Set<String> = ["CLUE_LEVEL", "PAUSED_FOR_BRAKE"]
+    private static let lobbyPhases     : Set<String> = ["LOBBY", "PREPARING_ROUND", "ROUND_INTRO"]
+    private static let cluePhases      : Set<String> = ["CLUE_LEVEL", "PAUSED_FOR_BRAKE"]
+    private static let scoreboardPhases: Set<String> = ["SCOREBOARD", "ROUND_END", "FINAL_RESULTS"]
 
     var body: some View {
         if appState.sessionId == nil {
@@ -31,6 +32,10 @@ struct RootView: View {
             LobbyView()
         } else if Self.cluePhases.contains(appState.phase) {
             TVClueView()
+        } else if appState.phase == "REVEAL_DESTINATION" {
+            TVRevealView()
+        } else if Self.scoreboardPhases.contains(appState.phase) {
+            TVScoreboardView()
         } else {
             LiveView()
         }

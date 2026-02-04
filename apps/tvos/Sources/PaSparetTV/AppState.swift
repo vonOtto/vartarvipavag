@@ -15,6 +15,9 @@ class AppState: ObservableObject {
     @Published var joinCode          : String?
     @Published var lockedAnswersCount: Int     = 0
     @Published var brakeOwnerName    : String?
+    @Published var destinationName   : String?
+    @Published var destinationCountry: String?
+    @Published var results           : [PlayerResult] = []
 
     // MARK: – connection status
     @Published var isConnected : Bool   = false
@@ -132,6 +135,42 @@ class AppState: ObservableObject {
             brakeOwnerName      = nil
             phase               = "CLUE_LEVEL"
 
+        case "DESTINATION_REVEAL":
+            guard let payload = json["payload"] as? [String: Any] else { break }
+            destinationName    = payload["destinationName"] as? String
+            destinationCountry = payload["country"]         as? String
+            phase              = "REVEAL_DESTINATION"
+
+        case "DESTINATION_RESULTS":
+            guard let payload = json["payload"]  as? [String: Any],
+                  let raw     = payload["results"] as? [[String: Any]]
+            else { break }
+            results = raw.compactMap { d in
+                guard let pid  = d["playerId"]            as? String,
+                      let name = d["playerName"]          as? String,
+                      let ans  = d["answerText"]          as? String,
+                      let ok   = d["isCorrect"]           as? Bool,
+                      let pts  = d["pointsAwarded"]       as? Int,
+                      let lvl  = d["lockedAtLevelPoints"] as? Int
+                else { return nil }
+                return PlayerResult(playerId: pid, playerName: name,
+                                    answerText: ans, isCorrect: ok,
+                                    pointsAwarded: pts, lockedAtLevelPoints: lvl)
+            }
+            phase = "SCOREBOARD"
+
+        case "SCOREBOARD_UPDATE":
+            guard let payload = json["payload"] as? [String: Any],
+                  let raw     = payload["scoreboard"] as? [[String: Any]]
+            else { break }
+            scoreboard = raw.compactMap { d in
+                guard let pid  = d["playerId"] as? String,
+                      let name = d["name"]     as? String,
+                      let score = d["score"]   as? Int
+                else { return nil }
+                return ScoreboardEntry(playerId: pid, name: name, totalScore: score)
+            }
+
         default:
             break
         }
@@ -167,6 +206,8 @@ class AppState: ObservableObject {
         scoreboard          = state.scoreboard
         lockedAnswersCount  = state.lockedAnswersCount
         brakeOwnerName      = state.brakeOwnerName
+        destinationName     = state.destinationName
+        destinationCountry  = state.destinationCountry
         if let jc           = state.joinCode { joinCode = jc }
     }
 

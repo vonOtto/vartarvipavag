@@ -37,6 +37,39 @@ struct ScoreboardEntry: Decodable, Identifiable {
     let totalScore : Int
 
     var id: String { playerId }
+
+    /// Backend sends "score"; map it to totalScore.
+    init(playerId: String, name: String, totalScore: Int) {
+        self.playerId    = playerId
+        self.name        = name
+        self.totalScore  = totalScore
+    }
+
+    init(from decoder: Decoder) throws {
+        let c            = try decoder.container(keyedBy: CodingKeys.self)
+        self.playerId    = try c.decode(String.self, forKey: .playerId)
+        self.name        = try c.decode(String.self, forKey: .name)
+        self.totalScore  = try c.decode(Int.self,    forKey: .score)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case playerId, name
+        case score   // backend key → totalScore
+    }
+}
+
+// MARK: – PlayerResult
+
+/// One row of the DESTINATION_RESULTS payload.
+struct PlayerResult: Decodable, Identifiable {
+    let playerId            : String
+    let playerName          : String
+    let answerText          : String
+    let isCorrect           : Bool
+    let pointsAwarded       : Int
+    let lockedAtLevelPoints : Int
+
+    var id: String { playerId }
 }
 
 // MARK: – GameState
@@ -53,6 +86,8 @@ struct GameState: Decodable {
     let joinCode           : String?
     let lockedAnswersCount : Int                     // TV projection: top-level count
     let brakeOwnerName     : String?                 // populated when phase == PAUSED_FOR_BRAKE
+    let destinationName    : String?                 // nil until revealed (TV projection)
+    let destinationCountry : String?
 
     init(from decoder: Decoder) throws {
         let c                  = try  decoder.container(keyedBy: CodingKeys.self)
@@ -71,12 +106,26 @@ struct GameState: Decodable {
             self.lockedAnswersCount = 0
         }
         self.brakeOwnerName    = try? c.decode(String.self, forKey: .brakeOwnerName)
+        // destination is a nested object; both fields are null pre-reveal for TV
+        if let dest = try? c.decode(Destination.self, forKey: .destination) {
+            self.destinationName   = dest.name
+            self.destinationCountry = dest.country
+        } else {
+            self.destinationName   = nil
+            self.destinationCountry = nil
+        }
     }
 
     private enum CodingKeys: String, CodingKey {
-        case phase, players, clueText, scoreboard, joinCode
+        case phase, players, clueText, scoreboard, joinCode, destination
         case levelPoints = "clueLevelPoints"   // match backend key
         case lockedAnswersCount, lockedAnswers, brakeOwnerName
+    }
+
+    /// Thin wrapper for the nested destination object in STATE_SNAPSHOT.
+    private struct Destination: Decodable {
+        let name   : String?
+        let country: String?
     }
 }
 
