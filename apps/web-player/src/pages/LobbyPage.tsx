@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useWebSocket } from '../hooks/useWebSocket';
-import { loadSession } from '../services/storage';
+import { loadSession, clearSession } from '../services/storage';
 import { PlayerList } from '../components/PlayerList';
 import type { LobbyUpdatedPayload } from '../types/game';
 
@@ -11,7 +11,9 @@ export const LobbyPage: React.FC = () => {
 
   const { isConnected, lastEvent, gameState, error } = useWebSocket(
     session?.wsUrl || null,
-    session?.playerAuthToken || null
+    session?.playerAuthToken || null,
+    session?.playerId || null,
+    session?.sessionId || null
   );
 
   // Redirect to join if no session
@@ -72,6 +74,8 @@ export const LobbyPage: React.FC = () => {
         <div className="waiting-message">
           Waiting for host to start game...
         </div>
+
+        <button className="leave-button" onClick={() => { clearSession(); navigate('/'); }}>Leave game</button>
       </div>
     </div>
   );

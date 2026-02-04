@@ -12,9 +12,14 @@ interface UseWebSocketResult {
 
 const MAX_RECONNECT_ATTEMPTS = 10;
 const INITIAL_RECONNECT_DELAY = 1000;
-const MAX_RECONNECT_DELAY = 30000;
+const MAX_RECONNECT_DELAY = 10000;
 
-export function useWebSocket(url: string | null, token: string | null): UseWebSocketResult {
+export function useWebSocket(
+  url: string | null,
+  token: string | null,
+  playerId?: string | null,
+  sessionId?: string | null
+): UseWebSocketResult {
   const [isConnected, setIsConnected] = useState(false);
   const [lastEvent, setLastEvent] = useState<GameEvent | null>(null);
   const [gameState, setGameState] = useState<GameState | null>(null);
@@ -24,6 +29,12 @@ export function useWebSocket(url: string | null, token: string | null): UseWebSo
   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const reconnectAttemptsRef = useRef(0);
   const reconnectDelayRef = useRef(INITIAL_RECONNECT_DELAY);
+
+  // Refs so onmessage/onclose closures can read current values without being deps
+  const playerIdRef = useRef(playerId);
+  const sessionIdRef = useRef(sessionId);
+  playerIdRef.current = playerId;
+  sessionIdRef.current = sessionId;
 
   const connect = useCallback(() => {
     if (!url || !token) {
@@ -63,6 +74,21 @@ export function useWebSocket(url: string | null, token: string | null): UseWebSo
             const payload = message.payload as { state: GameState };
             setGameState(payload.state);
           }
+
+          // Send RESUME_SESSION after WELCOME so server can restore state
+          if (message.type === 'WELCOME' && playerIdRef.current && sessionIdRef.current) {
+            const resumeMsg = {
+              type: 'RESUME_SESSION',
+              sessionId: sessionIdRef.current,
+              serverTimeMs: Date.now(),
+              payload: {
+                playerId: playerIdRef.current,
+                lastReceivedEventId: null,
+              },
+            };
+            console.log('WebSocket: Sending RESUME_SESSION', resumeMsg);
+            ws.send(JSON.stringify(resumeMsg));
+          }
         } catch (err) {
           console.error('WebSocket: Failed to parse message', err, event.data);
         }
@@ -76,6 +102,17 @@ export function useWebSocket(url: string | null, token: string | null): UseWebSo
       ws.onclose = (event) => {
         console.log('WebSocket: Closed', event.code, event.reason);
         setIsConnected(false);
+
+        // 4xxx = auth / session error — do not retry
+        if (event.code >= 4000 && event.code < 5000) {
+          const messages: Record<number, string> = {
+            4001: 'Invalid token. Please rejoin the game.',
+            4002: 'Session token expired. Please rejoin the game.',
+            4003: 'Session not found. Please rejoin the game.',
+          };
+          setError(messages[event.code] || event.reason || 'Authentication error.');
+          return;
+        }
 
         // Attempt to reconnect with exponential backoff
         if (reconnectAttemptsRef.current < MAX_RECONNECT_ATTEMPTS) {
@@ -103,7 +140,7 @@ export function useWebSocket(url: string | null, token: string | null): UseWebSo
     if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
       const message = {
         type,
-        sessionId: gameState?.sessionId || '',
+        sessionId: gameState?.sessionId || sessionIdRef.current || '',
         serverTimeMs: Date.now(), // Will be overridden by server
         payload,
       };

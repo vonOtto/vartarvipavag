@@ -20,7 +20,9 @@ export const RevealPage: React.FC = () => {
 
   const { isConnected, lastEvent, gameState, error } = useWebSocket(
     session?.wsUrl || null,
-    session?.playerAuthToken || null
+    session?.playerAuthToken || null,
+    session?.playerId || null,
+    session?.sessionId || null
   );
 
   // Redirect to join if no session
