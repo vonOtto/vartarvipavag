@@ -34,6 +34,8 @@ struct RootView: View {
             TVClueView()
         } else if appState.phase == "REVEAL_DESTINATION" {
             TVRevealView()
+        } else if appState.phase == "FOLLOWUP_QUESTION" {
+            TVFollowupView()
         } else if Self.scoreboardPhases.contains(appState.phase) {
             TVScoreboardView()
         } else {

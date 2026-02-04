@@ -84,6 +84,70 @@ Edit Scheme → Run → Environment Variables:
 
 ---
 
+## Test 5 — Followup question appears on TV
+
+> Requires at least one player to have locked an answer and the backend to
+> advance into the followup sequence after DESTINATION_REVEAL.
+
+1. Play through clue levels until the destination is revealed (all players
+   lock answers or the round timer expires).
+
+2. The backend starts the followup sequence automatically.
+
+3. **Expected (TV Simulator):**
+   - Screen transitions to the **followup** view.
+   - Progress header shows *Fråga 1 / N* (N = total followup questions).
+   - The question text is displayed in large bold text.
+   - If the question is multiple-choice, options appear as read-only badges
+     in a horizontal row (players answer on their phones, not the TV).
+   - A shrinking blue timer bar animates across the width; a countdown
+     label ticks down in seconds.
+
+---
+
+## Test 6 — Timer turns red near deadline
+
+1. Wait until roughly 3 seconds remain on the followup timer.
+
+2. **Expected:**
+   - The timer bar colour switches from blue to **red**.
+   - The countdown label colour switches from yellow to **red**.
+
+---
+
+## Test 7 — Followup results display
+
+1. Allow the timer to expire (or have all players submit answers).
+
+2. **Expected (TV Simulator):**
+   - The timer bar and options/input area are replaced by the **results
+     overlay**.
+   - A green banner shows *Rätt svar* with the correct answer text.
+   - Below it, each player appears as a row: ✓ (green) or ✗ (red),
+     player name, and `+X` points in yellow.
+   - Free-text answers entered by players are **never** shown on TV.
+
+3. If there is a next followup question the TV should automatically
+   transition back to the question view within a few seconds (server-driven).
+
+---
+
+## Test 8 — Reconnect during followup
+
+1. While a followup question is displayed, kill the backend.
+
+2. **Expected:** Red *○ Reconnecting…* banner appears at the top.
+
+3. Restart the backend.
+
+4. **Expected:**
+   - Banner disappears.
+   - `STATE_SNAPSHOT` restores the current followup state: the same question
+     (or results, if the timer already expired) is shown again with the
+     correct remaining time.
+
+---
+
 ## Backoff schedule (reference)
 
 | Attempt | Delay |

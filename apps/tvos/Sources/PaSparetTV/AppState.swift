@@ -18,6 +18,8 @@ class AppState: ObservableObject {
     @Published var destinationName   : String?
     @Published var destinationCountry: String?
     @Published var results           : [PlayerResult] = []
+    @Published var followupQuestion  : FollowupQuestionInfo?
+    @Published var followupResults   : (correctAnswer: String, rows: [FollowupResultRow])?
 
     // MARK: – connection status
     @Published var isConnected : Bool   = false
@@ -171,6 +173,37 @@ class AppState: ObservableObject {
                 return ScoreboardEntry(playerId: pid, name: name, totalScore: score)
             }
 
+        case "FOLLOWUP_QUESTION_PRESENT":
+            guard let payload = json["payload"] as? [String: Any],
+                  let qText   = payload["questionText"] as? String
+            else { break }
+            let options              = payload["options"]              as? [String]
+            let currentIdx           = payload["currentQuestionIndex"] as? Int ?? 0
+            let total                = payload["totalQuestions"]       as? Int ?? 1
+            let duration             = payload["timerDurationMs"]      as? Int
+            // Server does not send startAtServerMs in the event; use current time as approx start
+            followupQuestion = FollowupQuestionInfo(
+                questionText: qText, options: options,
+                currentQuestionIndex: currentIdx, totalQuestions: total,
+                timerStartMs: Int(Date().timeIntervalSince1970 * 1000), timerDurationMs: duration)
+            followupResults  = nil
+            phase            = "FOLLOWUP_QUESTION"
+
+        case "FOLLOWUP_RESULTS":
+            guard let payload = json["payload"] as? [String: Any],
+                  let correct = payload["correctAnswer"] as? String,
+                  let raw     = payload["results"]       as? [[String: Any]]
+            else { break }
+            let rows = raw.compactMap { d -> FollowupResultRow? in
+                guard let pid  = d["playerId"]      as? String,
+                      let name = d["playerName"]    as? String,
+                      let ok   = d["isCorrect"]     as? Bool,
+                      let pts  = d["pointsAwarded"] as? Int
+                else { return nil }
+                return FollowupResultRow(playerId: pid, playerName: name, isCorrect: ok, pointsAwarded: pts)
+            }
+            followupResults = (correctAnswer: correct, rows: rows)
+
         default:
             break
         }
@@ -209,6 +242,8 @@ class AppState: ObservableObject {
         destinationName     = state.destinationName
         destinationCountry  = state.destinationCountry
         if let jc           = state.joinCode { joinCode = jc }
+        followupQuestion    = state.followupQuestion
+        if state.phase != "FOLLOWUP_QUESTION" { followupResults = nil }
     }
 
     /// Exponential-backoff reconnect (1 s … 10 s, max 10 attempts).

@@ -72,6 +72,68 @@ struct PlayerResult: Decodable, Identifiable {
     var id: String { playerId }
 }
 
+// MARK: – FollowupQuestionInfo
+
+/// What the TV projection sees inside STATE_SNAPSHOT.followupQuestion.
+/// correctAnswer and answersByPlayer are stripped by the server for TV.
+struct FollowupQuestionInfo: Decodable {
+    let questionText         : String
+    let options              : [String]?          // nil = open-text
+    let currentQuestionIndex : Int
+    let totalQuestions       : Int
+    let timerStartMs         : Int?               // from nested timer.startAtServerMs
+    let timerDurationMs      : Int?               // from nested timer.durationMs
+
+    /// Explicit memberwise init — used when constructing from raw JSON dict in dispatch.
+    init(questionText: String, options: [String]?, currentQuestionIndex: Int,
+         totalQuestions: Int, timerStartMs: Int?, timerDurationMs: Int?) {
+        self.questionText         = questionText
+        self.options              = options
+        self.currentQuestionIndex = currentQuestionIndex
+        self.totalQuestions       = totalQuestions
+        self.timerStartMs         = timerStartMs
+        self.timerDurationMs      = timerDurationMs
+    }
+
+    init(from decoder: Decoder) throws {
+        let c                    = try decoder.container(keyedBy: CodingKeys.self)
+        self.questionText        = try  c.decode(String.self,   forKey: .questionText)
+        self.options             = try? c.decode([String].self, forKey: .options)
+        self.currentQuestionIndex = try c.decode(Int.self,      forKey: .currentQuestionIndex)
+        self.totalQuestions      = try  c.decode(Int.self,      forKey: .totalQuestions)
+        // timer is a nested object { timerId, startAtServerMs, durationMs } or null
+        if let timerDict = try? c.decode(TimerWrapper.self, forKey: .timer) {
+            self.timerStartMs   = timerDict.startAtServerMs
+            self.timerDurationMs = timerDict.durationMs
+        } else {
+            self.timerStartMs   = nil
+            self.timerDurationMs = nil
+        }
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case questionText, options, currentQuestionIndex, totalQuestions, timer
+    }
+
+    private struct TimerWrapper: Decodable {
+        let startAtServerMs : Int
+        let durationMs      : Int
+    }
+}
+
+// MARK: – FollowupResultRow
+
+/// One row inside FOLLOWUP_RESULTS.results.  TV sees name + correct/incorrect + points;
+/// answersByPlayer free-text is never forwarded to TV.
+struct FollowupResultRow: Identifiable {
+    let playerId      : String
+    let playerName    : String
+    let isCorrect     : Bool
+    let pointsAwarded : Int
+
+    var id: String { playerId }
+}
+
 // MARK: – GameState
 
 /// Full game-state payload carried inside every STATE_SNAPSHOT.
@@ -88,6 +150,7 @@ struct GameState: Decodable {
     let brakeOwnerName     : String?                 // populated when phase == PAUSED_FOR_BRAKE
     let destinationName    : String?                 // nil until revealed (TV projection)
     let destinationCountry : String?
+    let followupQuestion   : FollowupQuestionInfo?   // non-nil when phase == FOLLOWUP_QUESTION
 
     init(from decoder: Decoder) throws {
         let c                  = try  decoder.container(keyedBy: CodingKeys.self)
@@ -114,10 +177,11 @@ struct GameState: Decodable {
             self.destinationName   = nil
             self.destinationCountry = nil
         }
+        self.followupQuestion = try? c.decode(FollowupQuestionInfo.self, forKey: .followupQuestion)
     }
 
     private enum CodingKeys: String, CodingKey {
-        case phase, players, clueText, scoreboard, joinCode, destination
+        case phase, players, clueText, scoreboard, joinCode, destination, followupQuestion
         case levelPoints = "clueLevelPoints"   // match backend key
         case lockedAnswersCount, lockedAnswers, brakeOwnerName
     }
