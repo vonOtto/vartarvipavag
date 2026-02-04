@@ -203,12 +203,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## Future Versions (Planned)
+## [1.3.0] - 2026-02-04
 
-### [1.3.0] - Sprint 2+ (TTS & Voice)
-- Add `AUDIO_PLAY` event for voice narration
-- ElevenLabs TTS integration
-- Voice ducking implementation
+### Added - Sprint 1.3 (TTS Voice)
+
+**New Events (3)**:
+- `AUDIO_PLAY` — Server → TV: play a pre-generated TTS voice clip.
+  Automatically triggers music-bed ducking (−10 dB, 150 ms attack,
+  900 ms release).  Payload: `clipId`, `url`, `durationMs`,
+  `startAtServerMs`, `text`, `showText`.
+- `AUDIO_STOP` — Server → TV: stop the active voice clip early
+  (interruption path).  Duck release begins immediately (900 ms).
+- `TTS_PREFETCH` — Server → TV: batch-prefetch upcoming TTS clips so
+  that `AUDIO_PLAY` starts with zero download latency.  No audio
+  plays; no ducking occurs.
+
+**State Updates** (`audioState` expanded):
+- `activeVoiceClip` (nullable object) — currently playing voice clip
+  with `startAtServerMs` + `durationMs`.  Essential for reconnect:
+  tvOS derives remaining playback or skips if the clip has expired.
+- `ttsManifest` (array) — HOST projection only.  Full list of
+  pre-generated clips for the current round.  Omitted for TV and
+  PLAYER.
+
+**Projection Updates** (`projections.md` → v1.3.0):
+- Added "Audio State Projection" table: HOST sees full `audioState`
+  including `ttsManifest`; TV sees all except `ttsManifest`;
+  PLAYER projection omits `audioState` entirely.
+
+**Events NOT added** (rationale in `docs/audio-flow.md`):
+- `AUDIO_SET_MIX` — redundant with existing `MUSIC_SET` +
+  `MUSIC_GAIN_SET`.
+- `AUDIO_DUCK` — ducking is automatic on `AUDIO_PLAY`; an explicit
+  event would introduce ordering races.
+
+**Breaking Changes**: None.
+- All three new events are additive.
+- New `audioState` fields are optional; clients that do not handle
+  them continue to work unchanged.
+
+---
+
+## Future Versions (Planned)
 
 ### [2.0.0] - Sprint 3+ (Breaking Changes)
 - Multi-round game support

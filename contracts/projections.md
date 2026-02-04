@@ -252,6 +252,30 @@ question.
 
 ---
 
+## Audio State Projection (STATE_SNAPSHOT)
+
+`audioState` is playback-control data consumed exclusively by tvOS.
+`ttsManifest` is a debug / monitoring field that lists every
+pre-generated TTS clip for the current round — it must never reach
+TV or PLAYER.
+
+| Field | HOST | TV | PLAYER |
+|-------|------|----|--------|
+| `currentTrackId` | visible | visible | **omitted** |
+| `isPlaying` | visible | visible | **omitted** |
+| `gainDb` | visible | visible | **omitted** |
+| `activeVoiceClip` | visible | visible | **omitted** |
+| `ttsManifest` | visible | **omitted** | **omitted** |
+
+Rationale:
+- **PLAYER omitted entirely** — players have no audio output; the
+  field adds payload size with zero benefit.
+- **TV omits `ttsManifest`** — TV only needs *what is playing now*
+  (for reconnect resume).  The full manifest is a pre-gen artefact
+  owned by the backend, surfaced only to HOST for monitoring.
+
+---
+
 ## After DESTINATION_REVEAL
 
 Once `destination.revealed = true`, all projections receive full destination data:
@@ -424,6 +448,7 @@ A: Use `lockedAnswersCount` or `lockedAnswers.length` before filtering array.
 - **v1.0.0**: Initial projection rules for Sprint 1
 - **v1.1.0**: Added audioState field, clarified FINAL_RESULTS phase (Sprint 1.1)
 - **v1.2.0**: Added Projection Safety Checklist (Rule 1: TV/PLAYER never get answerText in STATE_SNAPSHOT; Rule 2: lobby players filtered to role=player). Corrected post-reveal TV lockedAnswers rule. Added 3 mandatory pre-merge test points.
+- **v1.3.0**: Added Audio State Projection table. `audioState` omitted for PLAYER; `ttsManifest` omitted for TV and PLAYER.
 
 ---
 

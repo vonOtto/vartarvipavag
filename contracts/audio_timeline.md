@@ -4,8 +4,8 @@
 
 This document defines the complete audio system for På Spåret Party Edition, including music layers, sound effects, ducking behavior, and the FINAL_RESULTS timeline.
 
-**Version**: 1.1.0 (Sprint 1.1)
-**Status**: Complete for Sprint 1.1 implementation
+**Version**: 1.2.0 (Sprint 1.3)
+**Status**: TTS voice layer and followup music activated; base infrastructure from Sprint 1.1
 
 ---
 
@@ -118,17 +118,20 @@ The game includes natural Swedish TV-host phrases (banter) that play at key mome
 
 ### Implementation Phases
 
-**Sprint 1.1 (Current)**: Text display only
+**Sprint 1.1**: Text display only
 - Server sends VOICE_LINE event with text content
 - TV displays text overlay on screen (2-4 seconds)
-- No audio playback yet
+- No audio playback
 
-**Sprint 2+ (Future)**: TTS Audio
-- Pre-generate TTS audio using ElevenLabs API before round starts
+**Sprint 1.3 (Current)**: TTS Audio active
+- Pre-generate TTS audio via ElevenLabs API before round starts
 - Cache clips with unique ID (e.g., "banter_intro_001_round5")
-- Server sends VOICE_LINE event referencing cached clip
-- TV plays audio + optional text display
+- Server sends `AUDIO_PLAY` event referencing cached clip
+- TV plays audio + optional text overlay (`showText`)
 - Voice layer triggers music ducking (see Ducking Policy above)
+- `TTS_PREFETCH` event pre-downloads upcoming clips for zero-latency start
+- Fallback: if a clip is missing, `AUDIO_PLAY` is omitted for that
+  moment → text-only overlay (Sprint 1.1 behaviour)
 
 ### VOICE_LINE Event
 
@@ -545,11 +548,9 @@ Use royalty-free or test tone placeholders until final assets are produced:
 
 ---
 
-## Out of Scope (Sprint 1.1)
+## Out of Scope (Sprint 1.3)
 
 Deferred to future sprints:
-- ElevenLabs TTS integration
-- Voice narration of clues
 - Dynamic music mixing (stems)
 - Spatial audio / Dolby Atmos
 - Player-side audio feedback
@@ -582,6 +583,7 @@ Deferred to future sprints:
 
 - **v1.0.0**: Initial audio specification (Sprint 1 - deferred)
 - **v1.1.0**: Complete audio implementation including FINAL_RESULTS timeline (Sprint 1.1)
+- **v1.2.0**: TTS voice layer activated — AUDIO_PLAY, AUDIO_STOP, TTS_PREFETCH; followup music; ducking integration (Sprint 1.3)
 
 ---
 
