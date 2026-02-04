@@ -18,6 +18,19 @@ Bygg en spelplattform:
 5) Allt som kan desync:a (timers, brake fairness) måste styras av servern.
 6) API-nycklar i `.env` och får aldrig committas.
 
+## Git Sync Rules (Mandatory)
+
+Alla agenter och alla TASK-körningar måste följa dessa reglar utan undantag:
+
+1. **Innan varje TASK:** Kör `git pull --rebase` och verifiera att working tree är clean (`git status`). Börja inte arbete om det finns uncommittade ändringar.
+2. **Efter varje TASK:** Avsluta med `/git-commit` och kör `git push` så att main är uppdaterad.
+3. **Aldri committa:**
+   - `node_modules/`
+   - `dist/`
+   - `.swiftpm/`
+
+   Dessa mappar ska finnas i `.gitignore` på respektive nivå. Om de saknas — skapa `.gitignore` innan första commit.
+
 ## Repo-struktur
 - contracts/ -> schema och regler (Architect äger)
 - apps/tvos/ -> Apple TV klient (tvos-agent)
