@@ -23,5 +23,8 @@ build/
 *.xcodeproj/xcuserdata/
 *.xcodeproj/project.xcworkspace/
 
+# Raw audio source files (converted + bundled into apps separately)
+audio/
+
 # Claude Code local overrides (per-developer, never committed)
 .claude/settings.local.json
