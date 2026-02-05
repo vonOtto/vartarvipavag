@@ -9,24 +9,23 @@ struct RoundIntroView: View {
     /// SwiftUI's animation interpolates between the two scale values.
     @State private var expanded = false
 
-    /// Duration of one full pulse cycle (scale up + scale down).
-    private static let pulsePeriod: Double = 2.0
-
     var body: some View {
         Text("Vart är vi på väg?")
-            .font(.system(size: 96, weight: .bold))
-            .foregroundColor(.white)
+            .font(.gameShowHeading)
+            .foregroundColor(.accentBlueBright)
             .multilineTextAlignment(.center)
+            .shadow(color: .accentBlue.opacity(0.4), radius: Layout.shadowRadius / 2)
             .scaleEffect(expanded ? 1.05 : 1.0)
+            .opacity(expanded ? 1.0 : 0.95)
             .animation(
-                .easeInOut(duration: Self.pulsePeriod / 2),
+                .easeInOut(duration: AnimationDuration.roundIntroPulse / 2),
                 value: expanded
             )
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .onAppear { expanded = true }
             .onChange(of: expanded) { _ in
                 // Re-schedule the toggle after each half-period so the pulse loops.
-                DispatchQueue.main.asyncAfter(deadline: .now() + Self.pulsePeriod / 2) {
+                DispatchQueue.main.asyncAfter(deadline: .now() + AnimationDuration.roundIntroPulse / 2) {
                     expanded.toggle()
                 }
             }

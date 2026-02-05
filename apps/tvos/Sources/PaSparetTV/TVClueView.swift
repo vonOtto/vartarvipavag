@@ -13,7 +13,7 @@ struct TVClueView: View {
             VStack(spacing: 0) {
                 // ── level badge + progress bar ──
                 levelHeader
-                    .padding(.top, 48)
+                    .padding(.top, Layout.verticalPadding)
 
                 Spacer()
 
@@ -24,9 +24,9 @@ struct TVClueView: View {
 
                 // ── locked count + brake banner ──
                 bottomBar
-                    .padding(.bottom, 60)
+                    .padding(.bottom, Layout.verticalPadding)
             }
-            .padding(.horizontal, 80)
+            .padding(.horizontal, Layout.horizontalPadding)
 
             // overlay reconnect banner when socket is down
             if !appState.isConnected { reconnectBanner }
@@ -44,14 +44,19 @@ struct TVClueView: View {
 
     /// Large circle showing current level points.
     private var levelBadge: some View {
-        ZStack {
+        let hasClue = appState.clueText != nil && !(appState.clueText?.isEmpty ?? true)
+        return ZStack {
             Circle()
-                .fill(Color.yellow)
+                .fill(Color.goldYellow)
                 .frame(width: 140, height: 140)
+                .shadow(color: .black.opacity(Layout.shadowOpacity), radius: Layout.shadowRadius / 2)
             Text(appState.levelPoints.map { "\($0)" } ?? "–")
                 .font(.system(size: 72, weight: .bold))
                 .foregroundColor(.black)
         }
+        .opacity(hasClue ? 1 : 0)
+        .scaleEffect(hasClue ? 1.0 : 0.8)
+        .animation(.fadeIn(duration: AnimationDuration.levelBadgeFadeIn), value: appState.clueText)
     }
 
     /// Five-segment bar; current level is white, past levels are dim, future are dark.
@@ -67,19 +72,36 @@ struct TVClueView: View {
     // MARK: – clue body ────────────────────────────────────────────────────
 
     private var clueBody: some View {
-        Group {
-            if let clue = appState.clueText {
+        let hasClue = appState.clueText != nil && !(appState.clueText?.isEmpty ?? true)
+        return Group {
+            if let clue = appState.clueText, !clue.isEmpty {
                 Text(clue)
-                    .font(.system(size: 58, weight: .medium))
+                    .font(.clueText)
                     .foregroundColor(.white)
                     .multilineTextAlignment(.center)
+                    .lineSpacing(4)
                     .lineLimit(4)
+                    .shadow(color: .black.opacity(Layout.textShadowOpacity), radius: Layout.textShadowRadius)
+                    .opacity(hasClue ? 1 : 0)
+                    .offset(y: hasClue ? 0 : 10)
+                    .animation(
+                        .fadeIn(duration: AnimationDuration.clueTextFadeIn).delay(0.2),
+                        value: appState.clueText
+                    )
             } else {
                 Text("Väntar på ledtråd…")
-                    .font(.system(size: 48, weight: .light))
+                    .font(.bodyLarge)
                     .foregroundColor(.secondary)
             }
         }
+        .padding(.horizontal, Layout.horizontalPadding)
+        .padding(.vertical, Layout.cardPadding)
+        .background(
+            RoundedRectangle(cornerRadius: Layout.cornerRadiusLarge)
+                .fill(Color.bgCard)
+                .opacity(hasClue ? 1 : 0)
+                .animation(.fadeIn(duration: AnimationDuration.clueBackgroundFadeIn), value: appState.clueText)
+        )
     }
 
     // MARK: – bottom bar ───────────────────────────────────────────────────
@@ -97,12 +119,15 @@ struct TVClueView: View {
     /// Red banner shown while a player's brake is active.
     private func brakeBanner(playerName: String) -> some View {
         Text("● \(playerName) bromsade!")
-            .font(.system(size: 36, weight: .bold))
+            .font(.bodyRegular)
             .foregroundColor(.white)
             .padding(.horizontal, 32)
             .padding(.vertical, 14)
-            .background(Color.red.opacity(0.85))
-            .cornerRadius(12)
+            .background(Color.errorRedBright.opacity(0.85))
+            .cornerRadius(Layout.cornerRadiusMedium)
+            .shadow(color: .errorRed.opacity(0.6), radius: Layout.shadowRadius / 2)
+            .transition(.move(edge: .bottom).combined(with: .opacity))
+            .animation(.easeOut(duration: AnimationDuration.brakeBannerSlide), value: appState.brakeOwnerName)
     }
 
     /// "X / Y players locked" counter.
@@ -110,21 +135,21 @@ struct TVClueView: View {
         let total  = appState.players.count
         let locked = appState.lockedAnswersCount
         return Text("\(locked) / \(total) spelare låsta")
-            .font(.system(size: 28))
-            .foregroundColor(.secondary)
+            .font(.bodySmall)
+            .foregroundColor(.white.opacity(0.7))
     }
 
     // MARK: – reconnect banner ─────────────────────────────────────────────
 
     private var reconnectBanner: some View {
         Text("○ Återansluter…")
-            .font(.system(size: 22))
-            .foregroundColor(.red)
+            .font(.label)
+            .foregroundColor(.errorRed)
             .padding(.horizontal, 20)
             .padding(.vertical, 8)
             .background(Color.black.opacity(0.6))
-            .cornerRadius(8)
-            .padding(.top, 16)
+            .cornerRadius(Layout.cornerRadiusSmall)
+            .padding(.top, Layout.tightSpacing)
     }
 }
 

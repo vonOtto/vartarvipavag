@@ -40,8 +40,9 @@ struct TVFollowupView: View {
         if let fq = appState.followupQuestion {
             HStack {
                 Text("Fråga \(fq.currentQuestionIndex + 1) / \(fq.totalQuestions)")
-                    .font(.system(size: 36, weight: .bold))
-                    .foregroundColor(.white)
+                    .font(.bodyRegular)
+                    .foregroundColor(.accentBlueBright)
+                    .shadow(color: .black.opacity(Layout.textShadowOpacity), radius: Layout.textShadowRadius)
                 Spacer()
                 CountdownLabel(fq: fq)
             }
@@ -62,12 +63,17 @@ struct TVFollowupView: View {
     @ViewBuilder
     private var questionText: some View {
         if let fq = appState.followupQuestion {
+            let hasText = !fq.questionText.isEmpty
             Text(fq.questionText)
-                .font(.system(size: 58, weight: .bold))
+                .font(.clueText)
                 .foregroundColor(.white)
                 .multilineTextAlignment(.center)
+                .lineSpacing(4)
                 .lineLimit(3)
-                .padding(.horizontal, 80)
+                .shadow(color: .black.opacity(Layout.textShadowOpacity), radius: Layout.textShadowRadius)
+                .padding(.horizontal, Layout.horizontalPadding)
+                .opacity(hasText ? 1 : 0)
+                .animation(.fadeIn(duration: AnimationDuration.questionFadeIn), value: fq.questionText)
         }
     }
 
@@ -75,13 +81,13 @@ struct TVFollowupView: View {
 
     private var reconnectBanner: some View {
         Text("○ Återansluter…")
-            .font(.system(size: 22))
-            .foregroundColor(.red)
+            .font(.label)
+            .foregroundColor(.errorRed)
             .padding(.horizontal, 20)
             .padding(.vertical, 8)
             .background(Color.black.opacity(0.6))
-            .cornerRadius(8)
-            .padding(.top, 16)
+            .cornerRadius(Layout.cornerRadiusSmall)
+            .padding(.top, Layout.tightSpacing)
     }
 }
 
@@ -100,8 +106,12 @@ private struct CountdownLabel: View {
         TimelineView(.periodic(from: Date(), by: 1.0)) { timeline in
             let remaining = max(0, Int(deadline.timeIntervalSince(timeline.date)))
             Text("\(remaining) s")
-                .font(.system(size: 48, weight: .bold))
-                .foregroundColor(remaining <= 3 ? .red : .yellow)
+                .font(.bodyLarge)
+                .foregroundColor(remaining <= 3 ? .errorRedBright : .goldYellow)
+                .shadow(
+                    color: (remaining <= 3 ? Color.errorRed : Color.goldYellow).opacity(0.4),
+                    radius: Layout.shadowRadius / 3
+                )
         }
     }
 }
@@ -135,8 +145,12 @@ private struct AnimatedTimerBar: View {
                         .frame(height: 12)
                     // fill
                     Capsule()
-                        .fill(urgent ? Color.red : Color(red: 0.39, green: 0.42, blue: 1.0))
+                        .fill(urgent ? Color.errorRedBright : Color.accentBlueBright)
                         .frame(width: geo.size.width * fraction, height: 12)
+                        .shadow(
+                            color: (urgent ? Color.errorRed : Color.accentBlue).opacity(0.4),
+                            radius: Layout.shadowRadius / 4
+                        )
                 }
             }
             .frame(height: 12)
@@ -154,12 +168,12 @@ private struct OptionsDisplay: View {
         HStack(spacing: 24) {
             ForEach(options, id: \.self) { opt in
                 Text(opt)
-                    .font(.system(size: 36, weight: .semibold))
+                    .font(.bodyRegular)
                     .foregroundColor(.white)
                     .padding(.horizontal, 32)
                     .padding(.vertical, 16)
-                    .background(Color.white.opacity(0.1))
-                    .cornerRadius(16)
+                    .background(Color.bgCard)
+                    .cornerRadius(Layout.cornerRadiusMedium)
             }
         }
     }
@@ -183,24 +197,26 @@ private struct ResultsOverlay: View {
     var body: some View {
         ZStack {
             // backdrop — design-decisions.md: rgba(18,18,30,0.85)
-            Color(red: 18.0/255, green: 18.0/255, blue: 30.0/255)
-                .opacity(0.85)
+            Color.overlayBackdrop
                 .ignoresSafeArea()
+                .transition(.opacity)
+                .animation(.fadeIn(duration: AnimationDuration.resultsOverlayFadeIn), value: true)
 
             VStack(spacing: 40) {
                 // correct-answer heading — 1.8 rem ~ 64 pt on tvOS
                 VStack(spacing: 6) {
                     Text("Rätt svar")
-                        .font(.system(size: 36, weight: .medium))
-                        .foregroundColor(Color(red: 74.0/255, green: 222.0/255, blue: 128.0/255).opacity(0.7))
+                        .font(.bodyRegular)
+                        .foregroundColor(.successGreen.opacity(0.7))
                     Text(correctAnswer)
-                        .font(.system(size: 64, weight: .bold))
-                        .foregroundColor(Color(red: 74.0/255, green: 222.0/255, blue: 128.0/255))
+                        .font(.gameShowSubheading)
+                        .foregroundColor(.successGreenBright)
+                        .shadow(color: .successGreen.opacity(0.3), radius: Layout.shadowRadius / 3)
                 }
                 .padding(.vertical, 16)
                 .padding(.horizontal, 48)
-                .background(Color(red: 74.0/255, green: 222.0/255, blue: 128.0/255).opacity(0.12))
-                .cornerRadius(20)
+                .background(Color.successGreen.opacity(0.12))
+                .cornerRadius(Layout.cornerRadiusLarge)
 
                 // per-player rows
                 VStack(alignment: .leading, spacing: 14) {
@@ -222,15 +238,11 @@ private struct ResultsOverlay: View {
 private struct FQResultRow: View {
     let row: FollowupResultRow
 
-    // design-decisions.md palette  (#4ade80 / #f87171)
-    private static let correctGreen  = Color(red: 74.0/255,  green: 222.0/255, blue: 128.0/255)
-    private static let incorrectRed  = Color(red: 248.0/255, green: 113.0/255, blue: 113.0/255)
-
     var body: some View {
         HStack(spacing: 20) {
             // name — flex 1 equivalent
             Text(row.playerName)
-                .font(.system(size: 32, weight: .semibold))
+                .font(.bodyRegular)
                 .foregroundColor(.white)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
@@ -238,16 +250,16 @@ private struct FQResultRow: View {
             Text(row.isCorrect
                  ? (row.pointsAwarded > 0 ? "Rätt +\(row.pointsAwarded)p" : "Rätt")
                  : "Fel")
-                .font(.system(size: 26, weight: .bold))
-                .foregroundColor(row.isCorrect ? Self.correctGreen : Self.incorrectRed)
+                .font(.label)
+                .foregroundColor(row.isCorrect ? .successGreenBright : .errorRedBright)
                 .padding(.horizontal, 20)
                 .padding(.vertical, 8)
                 .background(row.isCorrect
-                    ? Self.correctGreen.opacity(0.2)
-                    : Self.incorrectRed.opacity(0.15))
+                    ? Color.successGreen.opacity(0.2)
+                    : Color.errorRed.opacity(0.15))
                 .overlay(
                     RoundedRectangle(cornerRadius: 6)
-                        .stroke(row.isCorrect ? Self.correctGreen : Self.incorrectRed,
+                        .stroke(row.isCorrect ? Color.successGreen : Color.errorRed,
                                 lineWidth: 1.5)
                 )
                 .cornerRadius(6)
@@ -256,9 +268,9 @@ private struct FQResultRow: View {
         .padding(.horizontal, 24)
         .background(
             row.isCorrect
-                ? Self.correctGreen.opacity(0.08)
-                : Self.incorrectRed.opacity(0.06)
+                ? Color.successGreen.opacity(0.08)
+                : Color.errorRed.opacity(0.06)
         )
-        .cornerRadius(10)
+        .cornerRadius(Layout.cornerRadiusMedium)
     }
 }

@@ -46,22 +46,25 @@ struct TVScoreboardView: View {
     private var resultsColumn: some View {
         VStack(alignment: .leading, spacing: 20) {
             Text("Resultat")
-                .font(.system(size: 36, weight: .bold))
-                .foregroundColor(.white)
+                .font(.gameShowSubheading)
+                .foregroundColor(.accentBlueBright)
+                .shadow(color: .black.opacity(Layout.textShadowOpacity), radius: Layout.textShadowRadius)
 
             if appState.results.isEmpty {
                 Text("Inga resultat än…")
-                    .font(.system(size: 24))
-                    .foregroundColor(.secondary)
+                    .font(.bodySmall)
+                    .foregroundColor(.white.opacity(0.5))
             } else {
                 ForEach(appState.results) { r in
                     ResultRow(result: r)
+                        .transition(.opacity.combined(with: .move(edge: .leading)))
                 }
             }
 
             Spacer()
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+        .animation(.slideIn(), value: appState.results.count)
     }
 
     // MARK: – standings (right) ────────────────────────────────────────────
@@ -70,22 +73,25 @@ struct TVScoreboardView: View {
     private var standingsColumn: some View {
         VStack(alignment: .leading, spacing: 20) {
             Text("Poängtabell")
-                .font(.system(size: 36, weight: .bold))
-                .foregroundColor(.white)
+                .font(.gameShowSubheading)
+                .foregroundColor(.accentBlueBright)
+                .shadow(color: .black.opacity(Layout.textShadowOpacity), radius: Layout.textShadowRadius)
 
             if appState.scoreboard.isEmpty {
                 Text("Inga poäng än…")
-                    .font(.system(size: 24))
-                    .foregroundColor(.secondary)
+                    .font(.bodySmall)
+                    .foregroundColor(.white.opacity(0.5))
             } else {
                 ForEach(appState.scoreboard.enumerated().map({ $0 }), id: \.offset) { idx, entry in
                     StandingRow(rank: idx + 1, entry: entry)
+                        .transition(.opacity.combined(with: .move(edge: .trailing)))
                 }
             }
 
             Spacer()
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+        .animation(.slideIn(duration: AnimationDuration.scoreboardRowSlide), value: appState.scoreboard.map { $0.id })
     }
 
     // MARK: – followup-incoming banner ──────────────────────────────────────
@@ -95,25 +101,25 @@ struct TVScoreboardView: View {
     @ViewBuilder
     private func followupIncomingBanner(destination: String) -> some View {
         Text("Frågor om \(destination) väntar…")
-            .font(.system(size: 38, weight: .light))
+            .font(.scoreboardName)
             .foregroundColor(.white)
             .italic()
             .opacity(0.7)
             .multilineTextAlignment(.center)
-            .padding(.bottom, 40)
+            .padding(.bottom, Layout.cardPadding)
     }
 
     // MARK: – reconnect banner ─────────────────────────────────────────────
 
     private var reconnectBanner: some View {
         Text("○ Återansluter…")
-            .font(.system(size: 22))
-            .foregroundColor(.red)
+            .font(.label)
+            .foregroundColor(.errorRed)
             .padding(.horizontal, 20)
             .padding(.vertical, 8)
             .background(Color.black.opacity(0.6))
-            .cornerRadius(8)
-            .padding(.top, 16)
+            .cornerRadius(Layout.cornerRadiusSmall)
+            .padding(.top, Layout.tightSpacing)
     }
 }
 
@@ -128,29 +134,34 @@ private struct ResultRow: View {
             // ✓ / ✗ icon
             Text(result.isCorrect ? "✓" : "✗")
                 .font(.system(size: 32, weight: .bold))
-                .foregroundColor(result.isCorrect ? .green : .red)
+                .foregroundColor(result.isCorrect ? .successGreenBright : .errorRedBright)
                 .frame(width: 36)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(result.playerName)
-                    .font(.system(size: 28, weight: .bold))
+                    .font(.bodySmall)
                     .foregroundColor(.white)
                 Text(result.answerText)
-                    .font(.system(size: 22))
-                    .foregroundColor(.secondary)
+                    .font(.label)
+                    .foregroundColor(.white.opacity(0.7))
             }
 
             Spacer()
 
             // points badge
             Text("+\(result.pointsAwarded)")
-                .font(.system(size: 28, weight: .bold))
-                .foregroundColor(.yellow)
+                .font(.bodySmall)
+                .foregroundColor(.goldYellow)
+                .shadow(color: .goldYellow.opacity(0.3), radius: Layout.shadowRadius / 4)
         }
         .padding(.vertical, 8)
         .padding(.horizontal, 16)
-        .background(Color.white.opacity(result.isCorrect ? 0.08 : 0.03))
-        .cornerRadius(8)
+        .background(
+            result.isCorrect
+                ? Color.successGreen.opacity(0.08)
+                : Color.errorRed.opacity(0.03)
+        )
+        .cornerRadius(Layout.cornerRadiusSmall)
     }
 }
 
@@ -168,30 +179,47 @@ private struct StandingRow: View {
                 Circle()
                     .fill(rankColor)
                     .frame(width: 44, height: 44)
+                    .shadow(
+                        color: rank == 1 ? Color.goldYellow.opacity(0.5) : .clear,
+                        radius: Layout.shadowRadius / 3
+                    )
                 Text("\(rank)")
-                    .font(.system(size: 22, weight: .bold))
+                    .font(.label)
                     .foregroundColor(.black)
             }
 
             Text(entry.name)
-                .font(.system(size: 28, weight: .medium))
+                .font(.scoreboardName)
                 .foregroundColor(.white)
 
             Spacer()
 
             Text("\(entry.totalScore)")
-                .font(.system(size: 28, weight: .bold))
+                .font(.scoreboardPoints)
                 .foregroundColor(.white)
         }
-        .padding(.vertical, 6)
+        .padding(.vertical, 10)
+        .padding(.horizontal, rank == 1 ? 12 : 0)
+        .background(
+            rank == 1
+                ? Color.goldYellow.opacity(0.15)
+                : Color.clear
+        )
+        .overlay(
+            Rectangle()
+                .fill(rank == 1 ? Color.goldYellow : Color.clear)
+                .frame(width: 6),
+            alignment: .leading
+        )
+        .cornerRadius(Layout.cornerRadiusSmall)
     }
 
     /// Gold / silver / bronze for top 3; neutral for the rest.
     private var rankColor: Color {
         switch rank {
-        case 1: return Color(red: 0.95, green: 0.8,  blue: 0.1)   // gold
-        case 2: return Color(red: 0.7,  green: 0.75, blue: 0.8)   // silver
-        case 3: return Color(red: 0.8,  green: 0.5,  blue: 0.2)   // bronze
+        case 1: return .goldYellow
+        case 2: return .silverGray
+        case 3: return .bronzeOrange
         default: return .gray.opacity(0.5)
         }
     }

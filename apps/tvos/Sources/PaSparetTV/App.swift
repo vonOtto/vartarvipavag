@@ -68,14 +68,14 @@ private struct VoiceOverlay: View {
         VStack {
             Spacer()
             Text(text)
-                .font(.system(size: 48, weight: .semibold))
+                .font(.bodyLarge)
                 .foregroundColor(.white)
                 .multilineTextAlignment(.center)
-                .shadow(color: .black.opacity(0.6), radius: 4, x: 0, y: 2)
+                .shadow(color: .black.opacity(Layout.textShadowOpacity), radius: Layout.textShadowRadius)
                 .padding(.horizontal, 48)
                 .padding(.vertical, 24)
                 .background(
-                    RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    RoundedRectangle(cornerRadius: Layout.cornerRadiusLarge, style: .continuous)
                         .fill(Color.black.opacity(0.55))
                 )
             Spacer()
@@ -96,24 +96,26 @@ struct LaunchView: View {
     var body: some View {
         VStack(spacing: 32) {
             Text("På Spåret")
-                .font(.system(size: 96, weight: .bold))
+                .font(.gameShowHeading)
+                .foregroundColor(.accentBlueBright)
+                .shadow(color: .accentBlue.opacity(0.4), radius: Layout.shadowRadius / 2)
 
             if busy {
                 Text("Startar…")
-                    .font(.system(size: 48, weight: .light))
-                    .foregroundColor(.secondary)
+                    .font(.bodyLarge)
+                    .foregroundColor(.white.opacity(0.7))
             }
 
             if let err = appState.error {
                 Text(err)
-                    .foregroundColor(.red)
-                    .font(.system(size: 36))
+                    .foregroundColor(.errorRedBright)
+                    .font(.bodyRegular)
 
                 Button("Försök igen") {
                     Task { await createAndConnect() }
                 }
-                .font(.system(size: 36))
-                .padding(.top, 16)
+                .font(.bodyRegular)
+                .padding(.top, Layout.tightSpacing)
             }
         }
         .onAppear {
@@ -146,10 +148,12 @@ struct ConnectingView: View {
     var body: some View {
         VStack(spacing: 32) {
             Text(appState.hasEverConnected ? "Återansluter…" : "Ansluter…")
-                .font(.system(size: 64, weight: .light))
-                .foregroundColor(.secondary)
+                .font(.gameShowSubheading)
+                .foregroundColor(.white.opacity(0.7))
             if let err = appState.error {
-                Text(err).foregroundColor(.red).font(.title)
+                Text(err)
+                    .foregroundColor(.errorRedBright)
+                    .font(.bodyRegular)
             }
         }
     }
@@ -194,11 +198,11 @@ struct LobbyView: View {
             QRCodeView(url: joinURL)
             if let code = appState.joinCode {
                 Text(code.uppercased().map { String($0) }.joined(separator: "  "))
-                    .font(.system(size: 48, weight: .bold))
+                    .font(.bodyLarge)
             }
             Text("Skanna för att ansluta")
-                .font(.system(size: 24))
-                .foregroundColor(.secondary)
+                .font(.bodySmall)
+                .foregroundColor(.white.opacity(0.7))
         }
     }
 
@@ -207,24 +211,27 @@ struct LobbyView: View {
     private var playerColumn: some View {
         VStack(alignment: .leading, spacing: 16) {
             Text("Spelare")
-                .font(.system(size: 36, weight: .bold))
+                .font(.bodyRegular)
+                .foregroundColor(.accentBlueBright)
 
             if let host = appState.hostName {
                 Text("Värd: \(host)")
-                    .font(.system(size: 28, weight: .semibold))
-                    .foregroundColor(Color(red: 1.0, green: 0.84, blue: 0.0))   // gold
+                    .font(.bodySmall)
+                    .foregroundColor(.goldYellow)
                 Spacer().frame(height: 8)
             }
 
             ForEach(appState.players) { player in
                 PlayerRow(player: player)
+                    .transition(.opacity.combined(with: .move(edge: .leading)))
             }
             if appState.players.isEmpty {
                 Text("No players yet…")
-                    .foregroundColor(.secondary)
-                    .font(.system(size: 24))
+                    .foregroundColor(.white.opacity(0.5))
+                    .font(.bodySmall)
             }
         }
+        .animation(.easeOut(duration: 0.4), value: appState.players.count)
     }
 
     private var joinURL: String {
@@ -233,13 +240,13 @@ struct LobbyView: View {
 
     private var reconnectBanner: some View {
         Text("○ Återansluter…")
-            .font(.system(size: 22))
-            .foregroundColor(.red)
+            .font(.label)
+            .foregroundColor(.errorRed)
             .padding(.horizontal, 20)
             .padding(.vertical, 8)
             .background(Color.black.opacity(0.6))
-            .cornerRadius(8)
-            .padding(.top, 16)
+            .cornerRadius(Layout.cornerRadiusSmall)
+            .padding(.top, Layout.tightSpacing)
     }
 }
 
@@ -253,12 +260,12 @@ struct NewGameButton: View {
         Button("Ny spel") {
             appState.resetSession()
         }
-        .font(.system(size: 20, weight: .medium))
-        .foregroundColor(.secondary)
+        .font(.label)
+        .foregroundColor(.white.opacity(0.7))
         .padding(.horizontal, 20)
         .padding(.vertical, 10)
         .background(Color.white.opacity(0.08))
-        .cornerRadius(20)
+        .cornerRadius(Layout.cornerRadiusLarge)
     }
 }
 
@@ -268,10 +275,11 @@ struct PlayerRow: View {
     var body: some View {
         HStack(spacing: 12) {
             Circle()
-                .fill(player.isConnected ? Color.green : Color.gray)
+                .fill(player.isConnected ? Color.successGreenBright : Color.gray)
                 .frame(width: 14, height: 14)
             Text(player.name)
-                .font(.system(size: 28))
+                .font(.bodySmall)
+                .foregroundColor(.white)
         }
     }
 }
@@ -287,31 +295,39 @@ struct LiveView: View {
                 Text("Phase:")
                 Text(appState.phase).fontWeight(.bold)
             }
-            .font(.system(size: 96, weight: .bold))
+            .font(.gameShowHeading)
+            .foregroundColor(.accentBlueBright)
 
             statusBadge
 
             if let clue = appState.clueText {
-                Text(clue).font(.largeTitle)
+                Text(clue)
+                    .font(.clueText)
+                    .foregroundColor(.white)
             }
             if let pts = appState.levelPoints {
-                Text("\(pts) pts").font(.title).foregroundColor(.yellow)
+                Text("\(pts) pts")
+                    .font(.bodyLarge)
+                    .foregroundColor(.goldYellow)
             }
             if !appState.players.isEmpty {
                 Text("Players: \(appState.players.map { $0.name }.joined(separator: ", "))")
-                    .font(.title2)
+                    .font(.bodyRegular)
+                    .foregroundColor(.white)
             }
             if let err = appState.error {
-                Text(err).foregroundColor(.red).font(.title)
+                Text(err)
+                    .foregroundColor(.errorRedBright)
+                    .font(.bodyRegular)
             }
         }
-        .padding(60)
+        .padding(Layout.verticalPadding)
     }
 
     @ViewBuilder
     private var statusBadge: some View {
         Text(appState.isConnected ? "● Connected" : "○ Reconnecting…")
-            .foregroundColor(appState.isConnected ? .green : .red)
-            .font(.title)
+            .foregroundColor(appState.isConnected ? .successGreenBright : .errorRed)
+            .font(.bodyRegular)
     }
 }
