@@ -218,7 +218,10 @@ export function onAnswerLocked(session: Session): EventEnvelope[] {
     activeVoiceClip: null,
   };
 
-  return [buildMusicSetEvent(sessionId, 'music_travel_loop', 'loop', now)];
+  return [
+    buildSfxPlayEvent(sessionId, 'sfx_lock', now, 0.9),
+    buildMusicSetEvent(sessionId, 'music_travel_loop', 'loop', now),
+  ];
 }
 
 /**
