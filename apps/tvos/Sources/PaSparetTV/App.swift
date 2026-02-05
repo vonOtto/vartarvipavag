@@ -206,6 +206,14 @@ struct LobbyView: View {
         VStack(alignment: .leading, spacing: 16) {
             Text("Players")
                 .font(.system(size: 36, weight: .bold))
+
+            if let host = appState.hostName {
+                Text("Värd: \(host)")
+                    .font(.system(size: 28, weight: .semibold))
+                    .foregroundColor(Color(red: 1.0, green: 0.84, blue: 0.0))   // gold
+                Spacer().frame(height: 8)
+            }
+
             ForEach(appState.players) { player in
                 PlayerRow(player: player)
             }

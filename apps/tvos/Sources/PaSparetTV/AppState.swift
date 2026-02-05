@@ -22,6 +22,7 @@ class AppState: ObservableObject {
     @Published var followupResults   : (correctAnswer: String, rows: [FollowupResultRow])?
     @Published var showConfetti      : Bool = false
     @Published var voiceOverlayText  : String? = nil
+    @Published var hostName          : String? = nil
 
     // MARK: – connection status
     /// True once the server has sent WELCOME on the current socket.
@@ -122,7 +123,12 @@ class AppState: ObservableObject {
                   let stateData = try? JSONSerialization.data(withJSONObject: stateRaw),
                   let state     = try? JSONDecoder().decode(GameState.self, from: stateData)
             else { break }
-            applyState(state)
+            // Derive hostName from the raw players array (role field is not in the Player model)
+            let rawPlayers = stateRaw["players"] as? [[String: Any]] ?? []
+            let snapshotHostName = rawPlayers
+                .first(where: { ($0["role"] as? String) == "host" })
+                .flatMap { $0["name"] as? String }
+            applyState(state, hostName: snapshotHostName)
 
         // ── incremental updates ─────────────────────────────────────────
         case "CLUE_PRESENT":
@@ -145,6 +151,12 @@ class AppState: ObservableObject {
                       let name = d["name"]        as? String else { return nil }
                 return Player(playerId: id, name: name,
                               isConnected: d["isConnected"] as? Bool ?? true)
+            }
+            // host is either { "name": "…" } or null / absent
+            if let hostDict = payload["host"] as? [String: Any] {
+                hostName = hostDict["name"] as? String
+            } else {
+                hostName = nil
             }
 
         case "BRAKE_ACCEPTED":
@@ -340,13 +352,14 @@ class AppState: ObservableObject {
 
     // MARK: – helpers ─────────────────────────────────────────────────────────
 
-    private func applyState(_ state: GameState) {
+    private func applyState(_ state: GameState, hostName: String? = nil) {
         let enteringFinale    = (state.phase == "FINAL_RESULTS"       && phase != "FINAL_RESULTS")
         let enteringFollowup  = (state.phase == "FOLLOWUP_QUESTION"  && phase != "FOLLOWUP_QUESTION")
         let enteringClueLevel = (state.phase == "CLUE_LEVEL"         && phase != "CLUE_LEVEL")
         sessionReady        = true
         phase               = state.phase
         players             = state.players
+        self.hostName       = hostName
         clueText            = state.clueText
         levelPoints         = state.levelPoints
         scoreboard          = state.scoreboard
@@ -427,6 +440,7 @@ class AppState: ObservableObject {
         followupResults   = nil
         showConfetti      = false
         voiceOverlayText  = nil
+        hostName          = nil
 
         // 5. Stop any audio that is still playing
         audio.stopMusic(fadeOutMs: 0)
