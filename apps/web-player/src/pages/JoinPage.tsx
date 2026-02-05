@@ -1,7 +1,13 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { lookupSession, joinSession } from '../services/api';
+import { lookupSession, joinSession, HostTakenError } from '../services/api';
+import type { SessionInfo } from '../services/api';
 import { saveSession } from '../services/storage';
+
+type JoinStep =
+  | 'form'          // code + name input
+  | 'role-choice'   // pick player / host (only when hasHost === false)
+  | 'joining';      // network call in flight
 
 export const JoinPage: React.FC = () => {
   const { joinCode: paramCode } = useParams<{ joinCode: string }>();
@@ -12,9 +18,13 @@ export const JoinPage: React.FC = () => {
   const [code, setCode] = useState(codeFromUrl);
   const [name, setName] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [step, setStep] = useState<JoinStep>('form');
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  // Cached lookup result — kept so the role-choice screen can read sessionId without re-fetching
+  const [sessionInfo, setSessionInfo] = useState<SessionInfo | null>(null);
+
+  // ── Step 1: lookup ──────────────────────────────────────────────────────
+  const handleLookup = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
@@ -31,36 +41,105 @@ export const JoinPage: React.FC = () => {
       return;
     }
 
-    setLoading(true);
+    setStep('joining');
 
     try {
-      const sessionInfo = await lookupSession(trimmedCode);
-      const joinResponse = await joinSession(sessionInfo.sessionId, trimmedName);
+      const info = await lookupSession(trimmedCode);
+      setSessionInfo(info);
+
+      if (info.hasHost) {
+        // Host already exists — skip choice, join straight as player
+        await doJoin(info.sessionId, trimmedName, 'player');
+      } else {
+        // Let the user pick a role
+        setStep('role-choice');
+      }
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : 'Misslyckades att hoppa in';
+      setError(message);
+      setStep('form');
+    }
+  };
+
+  // ── Step 2 (or direct): actually POST to /join ─────────────────────────
+  const doJoin = async (sessionId: string, playerName: string, role: 'player' | 'host') => {
+    setStep('joining');
+    setError(null);
+
+    try {
+      const joinResponse = await joinSession(sessionId, playerName, role);
 
       saveSession({
         playerId: joinResponse.playerId,
         playerAuthToken: joinResponse.playerAuthToken,
         wsUrl: joinResponse.wsUrl,
-        sessionId: sessionInfo.sessionId,
-        joinCode: trimmedCode,
-        playerName: trimmedName,
+        sessionId,
+        joinCode: code.trim().toUpperCase(),
+        playerName,
       });
 
       navigate('/lobby');
     } catch (err: unknown) {
-      const message =
-        err instanceof Error ? err.message : 'Misslyckades att hoppa in';
-      setError(message);
-      setLoading(false);
+      if (err instanceof HostTakenError) {
+        // Race condition: someone else claimed host between lookup and join.
+        // Show the error but stay on the role-choice screen so the user can
+        // fall back to player.
+        setError(err.message);
+        setStep('role-choice');
+      } else {
+        const message =
+          err instanceof Error ? err.message : 'Misslyckades att hoppa in';
+        setError(message);
+        setStep('form');
+      }
     }
   };
+
+  const handleRoleClick = (role: 'player' | 'host') => {
+    if (!sessionInfo) return;
+    doJoin(sessionInfo.sessionId, name.trim(), role);
+  };
+
+  // ── Render: role choice screen ──────────────────────────────────────────
+  if (step === 'role-choice' && sessionInfo) {
+    return (
+      <div className="page join-page">
+        <div className="container join-container">
+          <h1 className="join-title">Vem är du?</h1>
+
+          {error && <div className="error-message">{error}</div>}
+
+          <div className="role-choice-grid">
+            <button
+              className="role-card role-card--player"
+              onClick={() => handleRoleClick('player')}
+            >
+              <span className="role-card__label">Gå med som spelare</span>
+            </button>
+
+            <button
+              className="role-card role-card--host"
+              onClick={() => handleRoleClick('host')}
+            >
+              <span className="role-card__label">Gå med som värd</span>
+              <span className="role-card__note">Styrden spelets gång</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Render: code + name form (initial state + "joining" spinner) ────────
+  const isLoading = step === 'joining';
 
   return (
     <div className="page join-page">
       <div className="container join-container">
         <h1 className="join-title">På Spåret</h1>
 
-        <form onSubmit={handleSubmit} className="join-form">
+        <form onSubmit={handleLookup} className="join-form">
           {/* Code input – only shown when no code was in the URL */}
           {!codeFromUrl && (
             <div className="form-group">
@@ -74,7 +153,7 @@ export const JoinPage: React.FC = () => {
                 placeholder="Skriv join-koden"
                 autoComplete="off"
                 autoFocus
-                disabled={loading}
+                disabled={isLoading}
               />
               <span className="join-code-hint">Koden är 6 tecken</span>
             </div>
@@ -97,7 +176,7 @@ export const JoinPage: React.FC = () => {
               onChange={(e) => setName(e.target.value)}
               placeholder="Ditt namn"
               maxLength={30}
-              disabled={loading}
+              disabled={isLoading}
               autoFocus={!!codeFromUrl}
             />
           </div>
@@ -105,8 +184,8 @@ export const JoinPage: React.FC = () => {
           {/* Error banner – sits between inputs and button */}
           {error && <div className="error-message">{error}</div>}
 
-          <button type="submit" disabled={loading || !name.trim() || !code.trim()}>
-            {loading ? 'Hoppar in…' : 'Hoppa in!'}
+          <button type="submit" disabled={isLoading || !name.trim() || !code.trim()}>
+            {isLoading ? 'Hoppar in…' : 'Hoppa in!'}
           </button>
         </form>
       </div>

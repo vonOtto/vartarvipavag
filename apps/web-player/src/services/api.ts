@@ -7,12 +7,21 @@ export interface SessionInfo {
   joinCode: string;
   phase: string;
   playerCount: number;
+  hasHost: boolean;
 }
 
 export interface JoinResponse {
   playerId: string;
   playerAuthToken: string;
   wsUrl: string;
+}
+
+/** 409 when someone else already claimed the host role. */
+export class HostTakenError extends Error {
+  constructor() {
+    super('En värd har redan hoppat in. Du kan hoppa in som spelare.');
+    this.name = 'HostTakenError';
+  }
 }
 
 export async function lookupSession(joinCode: string): Promise<SessionInfo> {
@@ -28,14 +37,18 @@ export async function lookupSession(joinCode: string): Promise<SessionInfo> {
   return response.json();
 }
 
-export async function joinSession(sessionId: string, name: string): Promise<JoinResponse> {
+export async function joinSession(sessionId: string, name: string, role: 'player' | 'host' = 'player'): Promise<JoinResponse> {
   const response = await fetch(`${API_BASE_URL}/v1/sessions/${sessionId}/join`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ name }),
+    body: JSON.stringify({ name, role }),
   });
+
+  if (response.status === 409) {
+    throw new HostTakenError();
+  }
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ message: response.statusText }));

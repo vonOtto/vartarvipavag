@@ -4,18 +4,10 @@ import { JoinPage } from './pages/JoinPage';
 import { LobbyPage } from './pages/LobbyPage';
 import { GamePage } from './pages/GamePage';
 import { RevealPage } from './pages/RevealPage';
+import { LandingPage } from './pages/LandingPage';
 import { hasSession, loadSession, clearSession } from './services/storage';
 import { useWebSocket } from './hooks/useWebSocket';
 import './App.css';
-
-const HomePage = () => (
-  <div className="page home-page">
-    <div className="container">
-      <h1>Pa Sparet - Party</h1>
-      <p>To join a game, scan the QR code or enter the join link.</p>
-    </div>
-  </div>
-);
 
 // Connects to the server on page load when a session exists,
 // waits for STATE_SNAPSHOT, then routes to the correct page based on phase.
@@ -60,7 +52,7 @@ function ResumeRoute() {
   };
 
   if (left) {
-    return <HomePage />;
+    return <LandingPage />;
   }
 
   return (
@@ -126,7 +118,7 @@ function App() {
         />
         <Route
           path="/"
-          element={hasSession() ? <ResumeRoute /> : <HomePage />}
+          element={hasSession() ? <ResumeRoute /> : <LandingPage />}
         />
       </Routes>
     </Router>
