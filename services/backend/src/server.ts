@@ -168,19 +168,20 @@ export function createWebSocketServer(server: HTTPServer) {
       playerId: actualPlayerId,
     });
 
-    // Broadcast LOBBY_UPDATED to all OTHER connected clients (not the connecting one)
-    // The connecting client gets STATE_SNAPSHOT which already has the lobby state
+    // Broadcast LOBBY_UPDATED to ALL connected clients (including the one
+    // that just joined).  STATE_SNAPSHOT is sent first so the new client has
+    // a baseline, but it can be stale if other players joined in the meantime;
+    // the subsequent LOBBY_UPDATED keeps the player list authoritative.
     if (session.state.phase === 'LOBBY') {
       const lobbyEvent = buildLobbyUpdatedEvent(
         sessionId,
         session.joinCode,
         session.state
       );
-      sessionStore.broadcastEventToSession(sessionId, lobbyEvent, actualPlayerId);
+      sessionStore.broadcastEventToSession(sessionId, lobbyEvent);
       logger.info('Broadcasted LOBBY_UPDATED after connection', {
         sessionId,
         playerId: actualPlayerId,
-        excludedPlayer: actualPlayerId,
       });
     }
 

@@ -28,8 +28,13 @@ export function buildLobbyUpdatedEvent(
       isConnected: player.isConnected,
     }));
 
+  // Locate the host entry so tvOS and web can display who created the session
+  const hostPlayer = state.players.find((player) => player.role === 'host');
+  const host = hostPlayer ? { name: hostPlayer.name } : null;
+
   return buildEvent('LOBBY_UPDATED', sessionId, {
     players,
+    host,
     joinCode,
   });
 }
