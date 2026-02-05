@@ -115,6 +115,21 @@ När någon skriver "kör TASK-XXX" måste agenten:
 4. Avsluta alltid med testinstruktioner (eller skapa en test-checklista i `docs/`).
 5. Be om `/git-commit` och avsluta med en commit som täcker enbart tasken.
 
+### Output Guardrails (Hard)
+
+För alla TASK-körningar (alla agenter) gäller:
+
+1. **Max 120 rader output per svar** (inklusive kodblock).
+2. Klistra **aldri** in hela filer eller stora scheman.
+3. **Max 30 rader totalt** citat/diff per svar.
+4. Om mer behövs: sammanfatta och peka på `fil + sektion`, och skriv `CONTINUE` med nästa steg.
+5. Skriv **aldri** ut binär eller base64 (`wav`/`png`/`mp3`, stora JSON-dumps, lockfiles).
+6. Assets ska skapas som filer i repo via verktyg/skript — **aldri** som inline-text.
+7. Vid ändringar: visa **enbart**
+   - lista på ändrade filer
+   - 1–3 bullets per fil
+   - ev. små diff-hunks (inom 30-radersgränsen)
+
 ### Contract-First Rule
 
 Innan en agent börjar på en TASK som berör event- eller state-shape:
@@ -123,6 +138,12 @@ Innan en agent börjar på en TASK som berör event- eller state-shape:
 2. Om shape saknar stöd → diskutera med architect *innan* kod skrivs.
 3. Backend implementerar exakt enligt schema; klienter konsumerar enligt projections.
 4. Ingen agent ändrar `contracts/` unilateralt — architect approvar alltid.
+
+**Läsning av contracts/ — kompakta extract:**
+- När `contracts/` läses: extrahera **enbart** relevanta event/state-shapes.
+- Returnera som kort lista/tabell (`event → fält → typer`).
+- Citera **max 20 rader** totalt från contracts per svar.
+- Klistra **aldri** in hela `events.schema.json` eller `state.schema.json`.
 
 ### Conflict Rule
 

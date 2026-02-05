@@ -20,3 +20,6 @@ build/
 
 # SwiftPM
 **/.swiftpm/
+
+# Claude Code local overrides (per-developer, never committed)
+.claude/settings.local.json
