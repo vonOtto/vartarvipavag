@@ -27,8 +27,17 @@ class AudioManager {
     // MARK: – duck + voice
     private var duckFactor    : Float = 1.0            // multiplied onto baseMusicGain
     private var duckTask      : Task<Void, Never>?
-    private var voicePlayer   : AVAudioPlayer?
+    private var voicePlayer   : AVAudioPlayer?         // used when volume <= 1.0
     private var voiceTask     : Task<Void, Never>?
+
+    // MARK: – AVAudioEngine path (voice volume > 1.0)
+    // AVAudioPlayer.volume is clamped to [0, 1] by the runtime.  When the
+    // server requests volume > 1.0 (e.g. 1.4 for clue-read TTS) we route
+    // through an AVAudioEngine with a mixer-node whose outputVolume IS allowed
+    // above 1.0.  Music and SFX are unaffected.
+    private var engine        : AVAudioEngine?
+    private var enginePlayer  : AVAudioPlayerNode?
+    private var engineMixer   : AVAudioMixerNode?
 
     // MARK: – prefetch cache
     private var prefetchCache : [String: Data] = [:]   // clipId → raw bytes
@@ -100,6 +109,9 @@ class AudioManager {
 
     /// Play a TTS clip; uses prefetch cache if available, else fetches.
     /// Automatically ducks the music bed for the clip duration.
+    ///
+    /// When *volume* > 1.0 the clip is routed through an AVAudioEngine so that
+    /// gain above unity is honoured (AVAudioPlayer clamps to 1.0).
     func playVoice(clipId: String, url: URL, durationMs: Int, volume: Float = 1.0) {
         stopVoice()
         voiceTask?.cancel()
@@ -112,11 +124,17 @@ class AudioManager {
                     data = try await URLSession.shared.data(from: url).0
                 }
                 guard !Task.isCancelled else { return }
-                let hint = url.pathExtension == "wav" ? "public.wave" : nil
-                let p    = try AVAudioPlayer(data: data, fileTypeHint: hint)
-                p.volume = volume
-                p.play()
-                self.voicePlayer = p
+
+                if volume > 1.0 {
+                    try self.playVoiceViaEngine(data: data, url: url, volume: volume)
+                } else {
+                    let hint = url.pathExtension == "wav" ? "public.wave" : nil
+                    let p    = try AVAudioPlayer(data: data, fileTypeHint: hint)
+                    p.volume = volume
+                    p.play()
+                    self.voicePlayer = p
+                }
+
                 self.startDuck()
                 // Hold until clip ends, then release
                 try await Task.sleep(nanoseconds: Self.ns(Double(durationMs) / 1000))
@@ -132,9 +150,58 @@ class AudioManager {
     func stopVoice() {
         voicePlayer?.stop()
         voicePlayer = nil
+        stopVoiceEngine()
         voiceTask?.cancel()
         voiceTask   = nil
         releaseDuck()
+    }
+
+    // ── engine-based voice (volume > 1.0) ───────────────────────────────────
+
+    /// Lazily create and wire the AVAudioEngine graph:
+    ///   playerNode → mixerNode (gain) → defaultOutput
+    private func ensureEngine() {
+        guard engine == nil else { return }
+        let e = AVAudioEngine()
+        let player = AVAudioPlayerNode()
+        let mixer  = AVAudioMixerNode()
+        e.attach(player)
+        e.attach(mixer)
+        e.connect(player, to: mixer, format: nil)
+        e.connect(mixer, to: e.mainMixerNode, format: nil)
+        try? e.start()
+        engine       = e
+        enginePlayer = player
+        engineMixer  = mixer
+    }
+
+    /// Schedule a buffer on the engine player and set the mixer gain.
+    private func playVoiceViaEngine(data: Data, url: URL, volume: Float) throws {
+        ensureEngine()
+        guard let player = enginePlayer, let mixer = engineMixer else {
+            throw NSError(domain: "AudioManager", code: 1, userInfo: [NSLocalizedDescriptionKey: "engine init failed"])
+        }
+        // Derive AVAudioFormat from the raw data via AVAudioFile in memory.
+        let tmpURL = URL(fileURLWithPath: NSTemporaryDirectory())
+                        .appendingPathComponent("voice_\(ProcessInfo.processInfo.globallyUniqueString).\(url.pathExtension)")
+        try data.write(to: tmpURL)
+        let file = try AVAudioFile(forReading: tmpURL)
+        let buf  = AVAudioPCMBuffer(pcmFormat: file.processingFormat,
+                                    frameCapacity: AVAudioFrameCount(file.length))!
+        try file.read(into: buf)
+        // Clean up temp file
+        try? FileManager.default.removeItem(at: tmpURL)
+
+        mixer.outputVolume = volume   // > 1.0 is valid here
+        player.play()
+        player.scheduleBuffer(buf)
+    }
+
+    /// Tear down the engine player (called on stopVoice).
+    private func stopVoiceEngine() {
+        enginePlayer?.stop()
+        // Keep the engine graph alive so it can be reused; only reset gain.
+        engineMixer?.outputVolume = 1.0
     }
 
     // ── prefetch ────────────────────────────────────────────────────────────

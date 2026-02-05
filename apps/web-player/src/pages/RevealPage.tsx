@@ -140,7 +140,7 @@ export const RevealPage: React.FC = () => {
         {/* Followup-incoming nudge — shown during the SCOREBOARD pause before
             the first followup question arrives.  Condition is narrow on purpose:
             only fires when destination is revealed and phase is exactly SCOREBOARD. */}
-        {gameState?.phase === 'SCOREBOARD' && destination && (
+        {gameState?.phase === 'SCOREBOARD' && destination && gameState?.followupQuestion != null && (
           <div className="followup-incoming">
             Frågor om {destination.name} väntar...
           </div>

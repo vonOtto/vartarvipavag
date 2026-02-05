@@ -19,7 +19,9 @@ struct TVScoreboardView: View {
                 // innan första followup.  Villkor: phase är SCOREBOARD (inte
                 // ROUND_END / FINAL_RESULTS) och destinationName är populerad.
                 // Design-decisions.md: centered italic, opacity 0.7, no border.
-                if appState.phase == "SCOREBOARD", let dest = appState.destinationName {
+                if appState.phase == "SCOREBOARD",
+                   let dest = appState.destinationName,
+                   appState.followupQuestion != nil {
                     followupIncomingBanner(destination: dest)
                 }
             }
