@@ -60,11 +60,11 @@ struct CreateSessionView: View {
             Text("På Spåret")
                 .font(.system(size: 48, weight: .bold))
 
-            Text("Host")
+            Text("Värd")
                 .font(.system(size: 24))
                 .foregroundColor(.secondary)
 
-            Button("Create Game") {
+            Button("Skapa spel") {
                 Task { await createSession() }
             }
             .font(.system(size: 28, weight: .medium))
@@ -114,7 +114,7 @@ struct ConnectingView: View {
     var body: some View {
         VStack(spacing: 24) {
             Spacer()
-            Text(state.isConnected ? "Connecting…" : "Reconnecting…")
+            Text(state.isConnected ? "Ansluter…" : "Återansluter…")
                 .font(.system(size: 36, weight: .light))
                 .foregroundColor(.secondary)
             if let err = state.error {
@@ -143,7 +143,7 @@ struct LobbyHostView: View {
                         .font(.system(size: 36, weight: .bold))
                         .foregroundColor(.primary)
                 }
-                Text("Scan to join")
+                Text("Skanna för att ansluta")
                     .font(.system(size: 14))
                     .foregroundColor(.secondary)
             }
@@ -152,7 +152,7 @@ struct LobbyHostView: View {
             Divider().padding(.vertical, 16)
 
             // ── player list ──
-            Text("Players (\(state.players.count))")
+            Text("Spelare (\(state.players.count))")
                 .font(.system(size: 18, weight: .semibold))
                 .foregroundColor(.secondary)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -172,7 +172,7 @@ struct LobbyHostView: View {
             Spacer()
 
             // ── start button ──
-            Button("Start Game") {
+            Button("Starta spelet") {
                 state.sendStartGame()
             }
             .font(.system(size: 22, weight: .semibold))
@@ -190,7 +190,7 @@ struct LobbyHostView: View {
     }
 
     private var reconnectBanner: some View {
-        Text("○ Reconnecting…")
+        Text("○ Återansluter…")
             .font(.caption)
             .foregroundColor(.red)
             .padding(.horizontal, 12)
@@ -252,7 +252,7 @@ struct GameHostView: View {
             Spacer()
 
             // ── next-clue button ──
-            Button("Next Clue") {
+            Button("Nästa ledtråd") {
                 state.sendNextClue()
             }
             .font(.system(size: 20, weight: .semibold))
@@ -271,7 +271,7 @@ struct GameHostView: View {
     // ── sub-views ──────────────────────────────────────────────────────────
 
     private var levelBadge: some View {
-        Text(state.levelPoints.map { "\($0) pts" } ?? "–")
+        Text(state.levelPoints.map { "\($0) p" } ?? "–")
             .font(.system(size: 18, weight: .bold))
             .padding(.horizontal, 14)
             .padding(.vertical, 6)
@@ -281,14 +281,14 @@ struct GameHostView: View {
     }
 
     private var statusBadge: some View {
-        Text(state.isConnected ? "● Connected" : "○ Reconnecting…")
+        Text(state.isConnected ? "● Ansluten" : "○ Återansluter…")
             .font(.caption)
             .foregroundColor(state.isConnected ? .green : .red)
     }
 
     private func secretCard(_ name: String) -> some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text("DESTINATION (secret)")
+            Text("DESTINATION (hemligt)")
                 .font(.caption)
                 .foregroundColor(.secondary)
                 .textCase(.uppercase)
@@ -309,7 +309,7 @@ struct GameHostView: View {
 
     private func clueCard(_ clue: String) -> some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text("Current clue")
+            Text("Aktuell ledtråd")
                 .font(.caption)
                 .foregroundColor(.secondary)
                 .textCase(.uppercase)
@@ -323,7 +323,7 @@ struct GameHostView: View {
     }
 
     private func brakeNotice(_ name: String) -> some View {
-        Text("● \(name) pulled the brake")
+        Text("● \(name) bromsade")
             .font(.system(size: 16, weight: .semibold))
             .foregroundColor(.white)
             .padding(.horizontal, 16)
@@ -335,7 +335,7 @@ struct GameHostView: View {
     @ViewBuilder
     private var lockedAnswersSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Locked answers (\(state.lockedAnswers.count))")
+            Text("Låsta svar (\(state.lockedAnswers.count))")
                 .font(.caption)
                 .foregroundColor(.secondary)
                 .textCase(.uppercase)
@@ -362,7 +362,7 @@ struct GameHostView: View {
     }
 
     private var reconnectBanner: some View {
-        Text("○ Reconnecting…")
+        Text("○ Återansluter…")
             .font(.caption)
             .foregroundColor(.red)
             .padding(.horizontal, 12)
@@ -385,7 +385,7 @@ struct ScoreboardHostView: View {
             // ── destination header (now revealed) ──
             if let name = state.destinationName {
                 HStack {
-                    Text("Answer: \(name)")
+                    Text("Svar: \(name)")
                         .font(.system(size: 20, weight: .bold))
                     if let c = state.destinationCountry {
                         Text("(\(c))")
@@ -432,11 +432,11 @@ struct ScoreboardHostView: View {
     @ViewBuilder
     private var resultsColumn: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Results")
+            Text("Resultat")
                 .font(.system(size: 18, weight: .semibold))
 
             if state.results.isEmpty {
-                Text("No results yet…").foregroundColor(.secondary)
+                Text("Inga resultat än…").foregroundColor(.secondary)
             } else {
                 ForEach(state.results) { r in
                     HStack(spacing: 10) {
@@ -468,11 +468,11 @@ struct ScoreboardHostView: View {
     @ViewBuilder
     private var standingsColumn: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Scoreboard")
+            Text("Poängtabell")
                 .font(.system(size: 18, weight: .semibold))
 
             if state.scoreboard.isEmpty {
-                Text("No scores yet…").foregroundColor(.secondary)
+                Text("Inga poäng än…").foregroundColor(.secondary)
             } else {
                 ForEach(state.scoreboard.enumerated().map({ $0 }), id: \.offset) { idx, entry in
                     HStack(spacing: 10) {
@@ -507,7 +507,7 @@ struct ScoreboardHostView: View {
     }
 
     private var reconnectBanner: some View {
-        Text("○ Reconnecting…")
+        Text("○ Återansluter…")
             .font(.caption)
             .foregroundColor(.red)
             .padding(.horizontal, 12)
@@ -588,7 +588,7 @@ struct FollowupHostView: View {
     // ── sub-views ──────────────────────────────────────────────────────────
 
     private var statusBadge: some View {
-        Text(state.isConnected ? "● Connected" : "○ Reconnecting…")
+        Text(state.isConnected ? "● Ansluten" : "○ Återansluter…")
             .font(.caption)
             .foregroundColor(state.isConnected ? .green : .red)
     }
@@ -596,7 +596,7 @@ struct FollowupHostView: View {
     /// Green card: the correct answer — visible to HOST immediately.
     private func correctAnswerCard(_ answer: String) -> some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text("RÄTT SVAR (secret)")
+            Text("RÄTT SVAR (hemligt)")
                 .font(.caption)
                 .foregroundColor(.secondary)
                 .textCase(.uppercase)
@@ -613,7 +613,7 @@ struct FollowupHostView: View {
     /// Gray card: the question text.
     private func questionCard(_ text: String) -> some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text("Question")
+            Text("Fråga")
                 .font(.caption)
                 .foregroundColor(.secondary)
                 .textCase(.uppercase)
@@ -629,7 +629,7 @@ struct FollowupHostView: View {
     /// Horizontal row of option badges (read-only display).
     private func optionsBadges(_ options: [String]) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("Options")
+            Text("Alternativ")
                 .font(.caption)
                 .foregroundColor(.secondary)
                 .textCase(.uppercase)
@@ -693,7 +693,7 @@ struct FollowupHostView: View {
     /// Per-player answers as they trickle in (HOST-only, pre-results).
     private func answersSection(_ answers: [HostFollowupAnswerByPlayer]) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Answers (\(answers.count))")
+            Text("Svar (\(answers.count))")
                 .font(.caption)
                 .foregroundColor(.secondary)
                 .textCase(.uppercase)
@@ -730,7 +730,7 @@ struct FollowupHostView: View {
             .background(Color.green.opacity(0.08))
             .cornerRadius(8)
 
-            Text("Results")
+            Text("Resultat")
                 .font(.caption)
                 .foregroundColor(.secondary)
                 .textCase(.uppercase)
@@ -756,7 +756,7 @@ struct FollowupHostView: View {
     }
 
     private var reconnectBanner: some View {
-        Text("○ Reconnecting…")
+        Text("○ Återansluter…")
             .font(.caption)
             .foregroundColor(.red)
             .padding(.horizontal, 12)
