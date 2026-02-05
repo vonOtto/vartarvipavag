@@ -100,7 +100,7 @@ class AudioManager {
 
     /// Play a TTS clip; uses prefetch cache if available, else fetches.
     /// Automatically ducks the music bed for the clip duration.
-    func playVoice(clipId: String, url: URL, durationMs: Int) {
+    func playVoice(clipId: String, url: URL, durationMs: Int, volume: Float = 1.0) {
         stopVoice()
         voiceTask?.cancel()
         voiceTask = Task {
@@ -114,6 +114,7 @@ class AudioManager {
                 guard !Task.isCancelled else { return }
                 let hint = url.pathExtension == "wav" ? "public.wave" : nil
                 let p    = try AVAudioPlayer(data: data, fileTypeHint: hint)
+                p.volume = volume
                 p.play()
                 self.voicePlayer = p
                 self.startDuck()

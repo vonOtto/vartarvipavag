@@ -267,7 +267,8 @@ class AppState: ObservableObject {
                   let urlStr  = payload["url"]        as? String,
                   let url     = URL(string: urlStr),
                   let durMs   = payload["durationMs"] as? Int else { break }
-            audio.playVoice(clipId: clipId, url: url, durationMs: durMs)
+            let vol = (payload["volume"] as? Double).map { Float($0) } ?? 1.0
+            audio.playVoice(clipId: clipId, url: url, durationMs: durMs, volume: vol)
             if (payload["showText"] as? Bool) == true, let text = payload["text"] as? String {
                 voiceOverlayText = text
                 Task { [self] in
