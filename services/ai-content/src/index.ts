@@ -17,22 +17,32 @@ app.post('/tts/batch', async (req, res) => {
         return;
     }
 
-    const results = await Promise.allSettled(
-        voiceLines.map(async (line) => {
-            const text = line.text?.trim();
-            if (!text) throw new Error('empty text');
+    // Process in small batches to avoid ElevenLabs rate-limit (429).
+    const BATCH_SIZE = 3;
+    const results: PromiseSettledResult<{
+        clipId: string; phraseId: string; url: string; durationMs: number; generatedAtMs: number;
+    }>[] = [];
 
-            const vid  = line.voiceId ?? process.env.ELEVENLABS_DEFAULT_VOICE_ID ?? 'mock';
-            const clip = await generateOrFetch(text, vid);
-            return {
-                clipId:        `banter_${line.phraseId}_${roundId}`,
-                phraseId:      line.phraseId,
-                url:           `${PUBLIC_URL}/cache/${clip.assetId}.${clip.ext}`,
-                durationMs:    clip.durationMs,
-                generatedAtMs: Date.now(),
-            };
-        })
-    );
+    for (let i = 0; i < voiceLines.length; i += BATCH_SIZE) {
+        const batch = voiceLines.slice(i, i + BATCH_SIZE);
+        const batchResults = await Promise.allSettled(
+            batch.map(async (line) => {
+                const text = line.text?.trim();
+                if (!text) throw new Error('empty text');
+
+                const vid  = line.voiceId ?? process.env.ELEVENLABS_DEFAULT_VOICE_ID ?? 'mock';
+                const clip = await generateOrFetch(text, vid);
+                return {
+                    clipId:        `${line.phraseId}_${roundId}`,
+                    phraseId:      line.phraseId,
+                    url:           `${PUBLIC_URL}/cache/${clip.assetId}.${clip.ext}`,
+                    durationMs:    clip.durationMs,
+                    generatedAtMs: Date.now(),
+                };
+            })
+        );
+        results.push(...batchResults);
+    }
 
     const clips = results
         .map((r, i) => {
