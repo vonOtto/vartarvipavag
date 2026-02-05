@@ -26,7 +26,7 @@ struct RootView: View {
     var body: some View {
         ZStack {
             if appState.sessionId == nil {
-                JoinView()
+                LaunchView()
             } else if !appState.sessionReady {
                 ConnectingView()
             } else if Self.lobbyPhases.contains(appState.phase) {
@@ -83,73 +83,55 @@ private struct VoiceOverlay: View {
     }
 }
 
-// MARK: – join screen ────────────────────────────────────────────────────────
+// MARK: – launch screen ──────────────────────────────────────────────────────
 
-struct JoinView: View {
+/// First screen after app launch.  Creates a session automatically via REST
+/// and connects as TV — no keyboard input required on the Apple TV.
+struct LaunchView: View {
     @EnvironmentObject var appState: AppState
-    @State private var code = ""
-    @State private var busy = false
-    @FocusState private var codeFocused: Bool
+    @State private var busy = true
 
     var body: some View {
-        VStack(spacing: 48) {
+        VStack(spacing: 32) {
             Text("På Spåret")
                 .font(.system(size: 96, weight: .bold))
 
-            TextField("Join code", text: $code)
-                .focused($codeFocused)
-                .font(.system(size: 72))
-                .frame(width: 500)
-                .textFieldStyle(.plain) // ✅ tvOS-safe
-                .padding(.vertical, 18)
-                .padding(.horizontal, 24)
-                .background(
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .fill(.thinMaterial)
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .stroke(codeFocused ? .white : .white.opacity(0.25),
-                                lineWidth: codeFocused ? 4 : 2)
-                )
-                .scaleEffect(codeFocused ? 1.06 : 1.0)
-                .shadow(color: .black.opacity(codeFocused ? 0.35 : 0.15),
-                        radius: codeFocused ? 18 : 10,
-                        x: 0, y: codeFocused ? 12 : 6)
-                .animation(.snappy(duration: 0.18), value: codeFocused)
-                .onAppear { codeFocused = true }
-
-            Button("Join as TV") {
-                Task { await joinGame() }
+            if busy {
+                Text("Starting…")
+                    .font(.system(size: 48, weight: .light))
+                    .foregroundColor(.secondary)
             }
-            .font(.largeTitle)
-            .disabled(busy || code.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
 
             if let err = appState.error {
                 Text(err)
                     .foregroundColor(.red)
-                    .font(.title)
+                    .font(.system(size: 36))
+
+                Button("Retry") {
+                    Task { await createAndConnect() }
+                }
+                .font(.system(size: 36))
+                .padding(.top, 16)
             }
+        }
+        .onAppear {
+            Task { await createAndConnect() }
         }
     }
 
-    private func joinGame() async {
+    private func createAndConnect() async {
         busy = true
-        defer { busy = false }
         appState.error = nil
-
-        let trimmed = code.trimmingCharacters(in: .whitespaces).lowercased()
         do {
-            let lookup = try await SessionAPI.lookupByCode(trimmed)
-            let tv     = try await SessionAPI.joinAsTV(sessionId: lookup.sessionId)
-
-            appState.sessionId = lookup.sessionId
-            appState.joinCode  = trimmed
-            appState.token     = tv.tvAuthToken
-            appState.wsUrl     = tv.wsUrl
+            let session = try await SessionAPI.createSession()
+            appState.sessionId = session.sessionId
+            appState.joinCode  = session.joinCode
+            appState.token     = session.tvJoinToken
+            appState.wsUrl     = session.wsUrl
             appState.connect()
         } catch {
             appState.error = error.localizedDescription
+            busy = false
         }
     }
 }

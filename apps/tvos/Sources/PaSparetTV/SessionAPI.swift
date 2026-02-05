@@ -59,4 +59,28 @@ enum SessionAPI {
         }
         return try JSONDecoder().decode(JoinTVResponse.self, from: data)
     }
+
+    // MARK: – create session
+    /// POST /v1/sessions  →  { sessionId, joinCode, tvJoinToken, wsUrl }
+
+    struct CreateSessionResponse: Decodable {
+        let sessionId   : String
+        let joinCode    : String
+        let tvJoinToken : String
+        let wsUrl       : String
+    }
+
+    static func createSession() async throws -> CreateSessionResponse {
+        let url = URL(string: "\(BASE_URL)/v1/sessions")!
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.httpBody   = "{}".data(using: .utf8)
+
+        let (data, resp) = try await URLSession.shared.data(for: req)
+        guard let http = resp as? HTTPURLResponse, http.statusCode == 201 else {
+            throw APIError.http((resp as? HTTPURLResponse)?.statusCode ?? 0)
+        }
+        return try JSONDecoder().decode(CreateSessionResponse.self, from: data)
+    }
 }
