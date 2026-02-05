@@ -207,6 +207,7 @@ export const GamePage: React.FC = () => {
   const [fqSubmitted, setFqSubmitted] = useState(false);
   const [fqOpenText, setFqOpenText] = useState('');
   const [fqResult, setFqResult] = useState<{ isCorrect: boolean; pointsAwarded: number; correctAnswer: string } | null>(null);
+  const [fqAllResults, setFqAllResults] = useState<FollowupResultsPayload | null>(null);
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -282,6 +283,7 @@ export const GamePage: React.FC = () => {
   useEffect(() => {
     setFqSubmitted(gameState?.followupQuestion?.answeredByMe ?? false);
     setFqResult(null);
+    setFqAllResults(null);
     setFqOpenText('');
   }, [gameState?.followupQuestion?.currentQuestionIndex, gameState?.followupQuestion?.answeredByMe]);
 
@@ -302,7 +304,7 @@ export const GamePage: React.FC = () => {
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
   }, [gameState?.followupQuestion?.timer?.timerId, gameState?.followupQuestion?.timer?.startAtServerMs]);
 
-  // Follow-up: capture own result from FOLLOWUP_RESULTS event
+  // Follow-up: capture own result AND full results from FOLLOWUP_RESULTS event
   useEffect(() => {
     if (lastEvent?.type === 'FOLLOWUP_RESULTS') {
       const payload = lastEvent.payload as FollowupResultsPayload;
@@ -312,6 +314,7 @@ export const GamePage: React.FC = () => {
         pointsAwarded: own?.pointsAwarded ?? 0,
         correctAnswer: payload.correctAnswer,
       });
+      setFqAllResults(payload);
     }
   }, [lastEvent, session?.playerId]);
 
@@ -391,6 +394,30 @@ export const GamePage: React.FC = () => {
             <span className="status-disconnected">Återansluter...</span>
           )}
         </div>
+
+        {/* ── Followup-result full-screen overlay ── */}
+        {fqAllResults && (
+          <div className="fq-result-overlay">
+            <div className="fq-result-overlay-inner">
+              <div className="fq-result-overlay-correct-label">Rätt svar</div>
+              <div className="fq-result-overlay-correct-answer">{fqAllResults.correctAnswer}</div>
+              <div className="fq-result-overlay-rows">
+                {fqAllResults.results.map((r) => (
+                  <div
+                    key={r.playerId}
+                    className={`fq-result-overlay-row ${r.isCorrect ? 'fq-row-correct' : 'fq-row-incorrect'} ${r.playerId === session?.playerId ? 'fq-row-mine' : ''}`}
+                  >
+                    <span className="fq-row-name">{r.playerName}</span>
+                    <span className="fq-row-answer">{r.answerText || '—'}</span>
+                    <span className="fq-row-verdict">
+                      {r.isCorrect ? 'Rätt' : 'Fel'}{r.pointsAwarded > 0 ? ` +${r.pointsAwarded}p` : ''}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
 
         {currentClue ? (
           <ClueDisplay points={currentClue.points} clueText={currentClue.text} />
