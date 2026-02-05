@@ -29,9 +29,10 @@ class HostState: ObservableObject {
     @Published var followupResults    : (correctAnswer: String, rows: [HostFollowupResultRow])?
 
     // MARK: – connection status
-    @Published var isConnected : Bool   = false
-    @Published var sessionReady: Bool   = false
-    @Published var error       : String?
+    @Published var isConnected     : Bool   = false
+    @Published var hasEverConnected: Bool   = false
+    @Published var sessionReady    : Bool   = false
+    @Published var error           : String?
 
     // MARK: – reconnect bookkeeping
     private var wsTask          : URLSessionWebSocketTask?
@@ -52,8 +53,9 @@ class HostState: ObservableObject {
         wsTask   = task
         task.resume()
 
-        isConnected = true
-        error       = nil
+        isConnected     = true
+        hasEverConnected = true
+        error           = nil
 
         Task.detached { [weak self] in
             await self?.receiveLoop(task)

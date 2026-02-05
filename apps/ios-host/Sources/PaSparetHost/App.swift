@@ -114,7 +114,7 @@ struct ConnectingView: View {
     var body: some View {
         VStack(spacing: 24) {
             Spacer()
-            Text(state.isConnected ? "Ansluter…" : "Återansluter…")
+            Text(state.hasEverConnected ? "Återansluter…" : "Ansluter…")
                 .font(.system(size: 36, weight: .light))
                 .foregroundColor(.secondary)
             if let err = state.error {
