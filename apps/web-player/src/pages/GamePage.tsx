@@ -15,19 +15,12 @@ const HostGameView: React.FC<{
   currentClue: { points: ClueLevelPoints; text: string } | null;
   isConnected: boolean;
   error: string | null;
-  sendMessage: (type: string, payload: any) => void;
-  sessionId: string;
-}> = ({ gameState, currentClue, isConnected, error, sendMessage, sessionId }) => {
-  const nextClueEnabled =
-    gameState.phase === 'CLUE_LEVEL' || gameState.phase === 'PAUSED_FOR_BRAKE';
+}> = ({ gameState, currentClue, isConnected, error }) => {
+  const hostPlayerId = gameState?.players?.find(p => p.role === 'HOST')?.playerId;
 
   const brakeOwnerName = gameState.brakeOwnerPlayerId
     ? gameState.players.find(p => p.playerId === gameState.brakeOwnerPlayerId)?.name ?? 'Okänd'
     : null;
-
-  const handleNextClue = () => {
-    sendMessage('HOST_NEXT_CLUE', { sessionId });
-  };
 
   return (
     <div className="page game-page">
@@ -49,17 +42,6 @@ const HostGameView: React.FC<{
         ) : (
           <div className="waiting-message">Waiting for next clue...</div>
         )}
-
-        {/* Nästa ledtråd button — prominent, green, centered */}
-        <div style={{ display: 'flex', justifyContent: 'center' }}>
-          <button
-            className="host-next-clue-btn"
-            disabled={!nextClueEnabled}
-            onClick={handleNextClue}
-          >
-            Nästa ledtråd
-          </button>
-        </div>
 
         {/* Brake status */}
         <div className="host-section">
@@ -101,7 +83,7 @@ const HostGameView: React.FC<{
             <div style={{ opacity: 0.6, fontSize: '0.95rem' }}>Ingen poängtablell</div>
           ) : (
             <ol>
-              {gameState.scoreboard.map(entry => (
+              {gameState.scoreboard.filter(e => e.playerId !== hostPlayerId).map(entry => (
                 <li key={entry.playerId}>
                   <span className="player-name">{entry.name}</span>
                   <span className="player-score">{entry.score}p</span>
@@ -294,8 +276,6 @@ export const GamePage: React.FC = () => {
         currentClue={currentClue}
         isConnected={isConnected}
         error={error}
-        sendMessage={sendMessage}
-        sessionId={session.sessionId}
       />
     );
   }
