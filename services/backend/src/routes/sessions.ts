@@ -136,6 +136,9 @@ router.post('/v1/sessions/:id/join', (req: Request, res: Response) => {
       if (playerInState) {
         playerInState.role = 'host';
       }
+      // Remove the synthetic host placeholder that createSession() inserted
+      // so the lobby only shows the real host entry.
+      sessionStore.removePlayer(sessionId, session.hostId);
     }
 
     // Sign the auth token.  When claiming host the token carries role 'host'
