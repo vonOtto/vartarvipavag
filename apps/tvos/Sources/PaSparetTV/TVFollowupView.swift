@@ -69,7 +69,7 @@ struct TVFollowupView: View {
     // MARK: – reconnect banner ────────────────────────────────────────────────
 
     private var reconnectBanner: some View {
-        Text("○ Reconnecting…")
+        Text("○ Återansluter…")
             .font(.system(size: 22))
             .foregroundColor(.red)
             .padding(.horizontal, 20)

@@ -75,7 +75,7 @@ struct TVClueView: View {
                     .multilineTextAlignment(.center)
                     .lineLimit(4)
             } else {
-                Text("Waiting for clue…")
+                Text("Väntar på ledtråd…")
                     .font(.system(size: 48, weight: .light))
                     .foregroundColor(.secondary)
             }
@@ -96,7 +96,7 @@ struct TVClueView: View {
 
     /// Red banner shown while a player's brake is active.
     private func brakeBanner(playerName: String) -> some View {
-        Text("● \(playerName) pulled the brake!")
+        Text("● \(playerName) bromsade!")
             .font(.system(size: 36, weight: .bold))
             .foregroundColor(.white)
             .padding(.horizontal, 32)
@@ -109,7 +109,7 @@ struct TVClueView: View {
     private var lockedCountRow: some View {
         let total  = appState.players.count
         let locked = appState.lockedAnswersCount
-        return Text("\(locked) / \(total) players locked")
+        return Text("\(locked) / \(total) spelare låsta")
             .font(.system(size: 28))
             .foregroundColor(.secondary)
     }
@@ -117,7 +117,7 @@ struct TVClueView: View {
     // MARK: – reconnect banner ─────────────────────────────────────────────
 
     private var reconnectBanner: some View {
-        Text("○ Reconnecting…")
+        Text("○ Återansluter…")
             .font(.system(size: 22))
             .foregroundColor(.red)
             .padding(.horizontal, 20)

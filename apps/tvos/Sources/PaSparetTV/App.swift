@@ -99,7 +99,7 @@ struct LaunchView: View {
                 .font(.system(size: 96, weight: .bold))
 
             if busy {
-                Text("Starting…")
+                Text("Startar…")
                     .font(.system(size: 48, weight: .light))
                     .foregroundColor(.secondary)
             }
@@ -109,7 +109,7 @@ struct LaunchView: View {
                     .foregroundColor(.red)
                     .font(.system(size: 36))
 
-                Button("Retry") {
+                Button("Försök igen") {
                     Task { await createAndConnect() }
                 }
                 .font(.system(size: 36))
@@ -145,7 +145,7 @@ struct ConnectingView: View {
 
     var body: some View {
         VStack(spacing: 32) {
-            Text(appState.hasEverConnected ? "Reconnecting…" : "Connecting…")
+            Text(appState.hasEverConnected ? "Återansluter…" : "Ansluter…")
                 .font(.system(size: 64, weight: .light))
                 .foregroundColor(.secondary)
             if let err = appState.error {
@@ -196,7 +196,7 @@ struct LobbyView: View {
                 Text(code.uppercased().map { String($0) }.joined(separator: "  "))
                     .font(.system(size: 48, weight: .bold))
             }
-            Text("Scan to join")
+            Text("Skanna för att ansluta")
                 .font(.system(size: 24))
                 .foregroundColor(.secondary)
         }
@@ -206,7 +206,7 @@ struct LobbyView: View {
     @ViewBuilder
     private var playerColumn: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Players")
+            Text("Spelare")
                 .font(.system(size: 36, weight: .bold))
 
             if let host = appState.hostName {
@@ -232,7 +232,7 @@ struct LobbyView: View {
     }
 
     private var reconnectBanner: some View {
-        Text("○ Reconnecting…")
+        Text("○ Återansluter…")
             .font(.system(size: 22))
             .foregroundColor(.red)
             .padding(.horizontal, 20)

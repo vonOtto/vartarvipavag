@@ -32,12 +32,12 @@ struct TVScoreboardView: View {
     @ViewBuilder
     private var resultsColumn: some View {
         VStack(alignment: .leading, spacing: 20) {
-            Text("Results")
+            Text("Resultat")
                 .font(.system(size: 36, weight: .bold))
                 .foregroundColor(.white)
 
             if appState.results.isEmpty {
-                Text("No results yet…")
+                Text("Inga resultat än…")
                     .font(.system(size: 24))
                     .foregroundColor(.secondary)
             } else {
@@ -56,12 +56,12 @@ struct TVScoreboardView: View {
     @ViewBuilder
     private var standingsColumn: some View {
         VStack(alignment: .leading, spacing: 20) {
-            Text("Scoreboard")
+            Text("Poängtabell")
                 .font(.system(size: 36, weight: .bold))
                 .foregroundColor(.white)
 
             if appState.scoreboard.isEmpty {
-                Text("No scores yet…")
+                Text("Inga poäng än…")
                     .font(.system(size: 24))
                     .foregroundColor(.secondary)
             } else {
@@ -78,7 +78,7 @@ struct TVScoreboardView: View {
     // MARK: – reconnect banner ─────────────────────────────────────────────
 
     private var reconnectBanner: some View {
-        Text("○ Reconnecting…")
+        Text("○ Återansluter…")
             .font(.system(size: 22))
             .foregroundColor(.red)
             .padding(.horizontal, 20)

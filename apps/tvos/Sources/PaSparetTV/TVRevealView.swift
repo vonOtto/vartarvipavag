@@ -29,7 +29,7 @@ struct TVRevealView: View {
     // MARK: – subviews ──────────────────────────────────────────────────────
 
     private var revealLabel: some View {
-        Text("The destination is…")
+        Text("Destinationen är…")
             .font(.system(size: 40, weight: .light))
             .foregroundColor(.secondary)
     }
@@ -50,7 +50,7 @@ struct TVRevealView: View {
     // MARK: – reconnect banner ─────────────────────────────────────────────
 
     private var reconnectBanner: some View {
-        Text("○ Reconnecting…")
+        Text("○ Återansluter…")
             .font(.system(size: 22))
             .foregroundColor(.red)
             .padding(.horizontal, 20)
