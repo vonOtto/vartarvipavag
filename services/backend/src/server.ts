@@ -31,6 +31,7 @@ import { buildLobbyUpdatedEvent } from './utils/lobby-events';
 import sessionRoutes from './routes/sessions';
 import { startGame, nextClue, pullBrake, submitAnswer, releaseBrake, startFollowupSequence, submitFollowupAnswer, lockFollowupAnswers, scoreFollowupQuestion } from './game/state-machine';
 import {
+  onRoundIntro,
   onGameStart,
   onClueAdvance,
   onBrakeAccepted,
@@ -444,7 +445,7 @@ async function handleHostStartGame(
   }
 
   try {
-    // Start game - this loads destination and first clue
+    // Start game - this loads destination and first clue into state
     const gameData = startGame(session);
 
     logger.info('Game started successfully', {
@@ -457,36 +458,80 @@ async function handleHostStartGame(
     // Pre-generate TTS clips so audio-director has manifest for this round
     await prefetchRoundTts(session);
 
-    // On-demand: generate the first clue voice line and add it to manifest
-    // BEFORE onGameStart so audio-director finds it and emits AUDIO_PLAY.
-    await generateClueVoice(session, gameData.clueLevelPoints, gameData.clueText);
+    // ── ROUND_INTRO phase ──────────────────────────────────────────────
+    // Transition to ROUND_INTRO before the first clue is revealed.
+    // Voice asks "Vart är vi på väg?" + travel music fades in.
+    session.state.phase = 'ROUND_INTRO';
 
-    // Audio: mutate audioState first so STATE_SNAPSHOT includes it
-    const audioEvents = onGameStart(session, gameData.clueLevelPoints, gameData.clueText);
+    // Audio: mutate audioState + collect intro events
+    const introEvents = onRoundIntro(session);
 
-    // Broadcast STATE_SNAPSHOT to all clients (with role-based projection)
+    // Broadcast STATE_SNAPSHOT with phase = ROUND_INTRO
     broadcastStateSnapshot(sessionId);
 
-    // Broadcast audio events (MUSIC_SET, TTS_PREFETCH) before CLUE_PRESENT per audio-flow.md
-    audioEvents.forEach((e) => sessionStore.broadcastEventToSession(sessionId, e));
+    // Broadcast intro audio events (MUSIC_SET + optional AUDIO_PLAY)
+    introEvents.forEach((e) => sessionStore.broadcastEventToSession(sessionId, e));
 
-    // Broadcast CLUE_PRESENT event
-    const clueEvent = buildCluePresentEvent(
+    // Derive delay from the AUDIO_PLAY event if one was emitted; fall back to 3000 ms
+    const introAudioPlay = introEvents.find((e) => e.type === 'AUDIO_PLAY');
+    const introDurationMs: number = introAudioPlay ? (introAudioPlay.payload as any).durationMs : 0;
+    const BREATHING_WINDOW_MS = 1500;
+    const introDelayMs = introDurationMs > 0 ? introDurationMs + BREATHING_WINDOW_MS : 3000;
+
+    logger.info('ROUND_INTRO scheduled', {
       sessionId,
-      gameData.clueText,
-      gameData.clueLevelPoints,
-      session.state.roundIndex || 0,
-      gameData.clueIndex
-    );
-    sessionStore.broadcastEventToSession(sessionId, clueEvent);
-
-    // Start auto-advance timer for the first clue
-    scheduleClueTimer(sessionId);
-
-    logger.info('Broadcasted CLUE_PRESENT event', {
-      sessionId,
-      clueLevelPoints: gameData.clueLevelPoints,
+      introDurationMs,
+      introDelayMs,
     });
+
+    // ── Delayed transition: ROUND_INTRO → CLUE_LEVEL ─────────────────
+    setTimeout(async () => {
+      // Re-fetch session — it must still exist and still be in ROUND_INTRO
+      const sess = sessionStore.getSession(sessionId);
+      if (!sess || sess.state.phase !== 'ROUND_INTRO') {
+        logger.debug('ROUND_INTRO timer fired but phase changed, ignoring', { sessionId });
+        return;
+      }
+
+      try {
+        // On-demand: generate the first clue voice line and add it to manifest
+        // BEFORE onGameStart so audio-director finds it and emits AUDIO_PLAY.
+        await generateClueVoice(sess, gameData.clueLevelPoints, gameData.clueText);
+
+        // Audio: mutate audioState first so STATE_SNAPSHOT includes it
+        const audioEvents = onGameStart(sess, gameData.clueLevelPoints, gameData.clueText);
+
+        // Broadcast STATE_SNAPSHOT to all clients (with role-based projection)
+        broadcastStateSnapshot(sessionId);
+
+        // Broadcast audio events (MUSIC_SET, TTS_PREFETCH) before CLUE_PRESENT per audio-flow.md
+        audioEvents.forEach((e) => sessionStore.broadcastEventToSession(sessionId, e));
+
+        // Broadcast CLUE_PRESENT event
+        const clueEvent = buildCluePresentEvent(
+          sessionId,
+          gameData.clueText,
+          gameData.clueLevelPoints,
+          sess.state.roundIndex || 0,
+          gameData.clueIndex
+        );
+        sessionStore.broadcastEventToSession(sessionId, clueEvent);
+
+        // Start auto-advance timer for the first clue
+        scheduleClueTimer(sessionId);
+
+        logger.info('Broadcasted CLUE_PRESENT event (after ROUND_INTRO)', {
+          sessionId,
+          clueLevelPoints: gameData.clueLevelPoints,
+        });
+      } catch (innerError: any) {
+        logger.error('HOST_START_GAME: Failed during ROUND_INTRO → CLUE_LEVEL transition', {
+          sessionId,
+          error: innerError.message,
+        });
+      }
+    }, introDelayMs);
+
   } catch (error: any) {
     logger.error('HOST_START_GAME: Failed to start game', {
       sessionId,

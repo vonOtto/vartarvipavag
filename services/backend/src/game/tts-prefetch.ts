@@ -14,6 +14,12 @@ const AI_CONTENT_URL = process.env.AI_CONTENT_URL ?? 'http://localhost:3001';
 // Keys = phraseId prefixes that audio-director.ts searches via startsWith().
 // Values = Swedish texts from banter.md — one is picked randomly per round.
 const BANTER_POOL: Record<string, string[]> = {
+  banter_round_intro: [
+    'Var tror ni vi ska? Beredda på resan?',
+    'En ny resa väntar. Vart är vi på väg?',
+    'Dags att ge er en ledtråd. Vart är vi på väg?',
+    'Härbhärbär… Vilken resa blir det här?',
+  ],
   banter_after_brake: [
     'Där bromsar vi! Låt se vad ni kommit fram till.',
     'Och där fick vi broms! Vad säger ni?',
@@ -48,10 +54,12 @@ function pick<T>(arr: T[]): T {
 }
 
 function buildBanterLines(): Array<{ phraseId: string; text: string }> {
-  return Object.entries(BANTER_POOL).map(([prefix, phrases]) => ({
-    phraseId: `${prefix}_001`,
-    text:     pick(phrases),
-  }));
+  const lines: Array<{ phraseId: string; text: string }> = [];
+  for (const [prefix, phrases] of Object.entries(BANTER_POOL)) {
+    lines.push({ phraseId: `${prefix}_001`, text: pick(phrases) });
+    lines.push({ phraseId: `${prefix}_002`, text: pick(phrases) });
+  }
+  return lines;
 }
 
 // ── ordinal map for clue-level → Swedish ordinal (variant A templates) ─────

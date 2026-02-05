@@ -35,7 +35,18 @@ function findClip(manifest: TtsManifestEntry[], phraseId: string): TtsManifestEn
   return manifest.find((c) => c.phraseId === phraseId) || null;
 }
 
-/** Emit AUDIO_PLAY + mutate activeVoiceClip if the clip exists in manifest. */
+/**
+ * Collects all manifest entries whose phraseId starts with the given prefix
+ * and returns one at random.  Used for banter categories that are pre-generated
+ * with _001 / _002 suffixes so that each playback picks a different variant.
+ */
+function pickRandomClip(manifest: TtsManifestEntry[], prefix: string): TtsManifestEntry | null {
+  const candidates = manifest.filter((c) => c.phraseId.startsWith(prefix));
+  if (candidates.length === 0) return null;
+  return candidates[Math.floor(Math.random() * candidates.length)];
+}
+
+/** Emit AUDIO_PLAY + mutate activeVoiceClip if the clip exists in manifest (exact phraseId match). */
 function emitVoiceClip(
   session: Session,
   manifest: TtsManifestEntry[],
@@ -44,6 +55,28 @@ function emitVoiceClip(
   events: EventEnvelope[]
 ): void {
   const clip = findClip(manifest, phraseId);
+  if (!clip) return;
+
+  const now = getServerTimeMs();
+  session.state.audioState!.activeVoiceClip = {
+    clipId: clip.clipId,
+    url: clip.url,
+    startAtServerMs: now,
+    durationMs: clip.durationMs,
+    text,
+  };
+  events.push(buildAudioPlayEvent(session.sessionId, clip.clipId, clip.url, clip.durationMs, now, text));
+}
+
+/** Emit AUDIO_PLAY + mutate activeVoiceClip using pickRandomClip (prefix / startsWith match). */
+function emitRandomBanterClip(
+  session: Session,
+  manifest: TtsManifestEntry[],
+  prefix: string,
+  text: string,
+  events: EventEnvelope[]
+): void {
+  const clip = pickRandomClip(manifest, prefix);
   if (!clip) return;
 
   const now = getServerTimeMs();
@@ -83,6 +116,36 @@ export function onGameStart(session: Session, clueLevel: number, clueText: strin
       durationMs: c.durationMs,
     }))));
     emitVoiceClip(session, manifest, `voice_clue_${clueLevel}`, clueText, events);
+  }
+
+  return events;
+}
+
+/**
+ * ROUND_INTRO phase — fires after LOBBY → ROUND_INTRO transition.
+ * Plays the round-intro banter clip (if available) and starts travel music
+ * with a gentle fade-in and attenuated gain so the voice sits on top.
+ * Caller extracts durationMs from the returned AUDIO_PLAY event to compute
+ * the breathing-window delay before transitioning to CLUE_LEVEL.
+ */
+export function onRoundIntro(session: Session): EventEnvelope[] {
+  const now = getServerTimeMs();
+  const sessionId = session.sessionId;
+  const events: EventEnvelope[] = [];
+
+  // Start travel music at reduced gain with a slow fade-in
+  session.state.audioState = {
+    ...session.state.audioState!,
+    currentTrackId: 'music_travel',
+    isPlaying: true,
+    gainDb: -6,
+  };
+  events.push(buildMusicSetEvent(sessionId, 'music_travel', 'loop', now, -6, 2000));
+
+  // Play banter intro clip (random pick among banter_round_intro_001 / _002)
+  const manifest = getManifest(session);
+  if (manifest) {
+    emitRandomBanterClip(session, manifest, 'banter_round_intro', '', events);
   }
 
   return events;
@@ -134,7 +197,7 @@ export function onBrakeAccepted(session: Session): EventEnvelope[] {
 
   const manifest = getManifest(session);
   if (manifest) {
-    emitVoiceClip(session, manifest, 'banter_after_brake', '', events);
+    emitRandomBanterClip(session, manifest, 'banter_after_brake', '', events);
   }
 
   return events;
@@ -175,7 +238,7 @@ export function onRevealStart(session: Session): EventEnvelope[] {
 
   const manifest = getManifest(session);
   if (manifest) {
-    emitVoiceClip(session, manifest, 'banter_before_reveal', '', events);
+    emitRandomBanterClip(session, manifest, 'banter_before_reveal', '', events);
   }
 
   return events;
@@ -198,7 +261,7 @@ export function onDestinationResults(session: Session, anyCorrect: boolean): Eve
   const manifest = getManifest(session);
   if (manifest) {
     const prefix = anyCorrect ? 'banter_reveal_correct' : 'banter_reveal_incorrect';
-    emitVoiceClip(session, manifest, prefix, '', events);
+    emitRandomBanterClip(session, manifest, prefix, '', events);
   }
 
   return events;
@@ -286,7 +349,7 @@ export function onFinalResults(session: Session): AudioDirectorResult {
 
   const manifest = getManifest(session);
   if (manifest) {
-    emitVoiceClip(session, manifest, 'banter_before_final', '', immediate);
+    emitRandomBanterClip(session, manifest, 'banter_before_final', '', immediate);
   }
 
   const scheduled: Array<{ event: EventEnvelope; delayMs: number }> = [
