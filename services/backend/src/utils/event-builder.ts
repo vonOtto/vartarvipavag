@@ -329,9 +329,10 @@ export function buildAudioPlayEvent(
   durationMs: number,
   startAtServerMs: number,
   text: string,
-  showText: boolean = false
+  showText: boolean = false,
+  volume: number = 1.0
 ): EventEnvelope {
-  return buildEvent('AUDIO_PLAY', sessionId, { clipId, url, durationMs, startAtServerMs, text, showText });
+  return buildEvent('AUDIO_PLAY', sessionId, { clipId, url, durationMs, startAtServerMs, text, showText, volume });
 }
 
 export function buildAudioStopEvent(

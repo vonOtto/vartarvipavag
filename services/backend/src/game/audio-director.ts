@@ -65,7 +65,7 @@ function emitVoiceClip(
     durationMs: clip.durationMs,
     text,
   };
-  events.push(buildAudioPlayEvent(session.sessionId, clip.clipId, clip.url, clip.durationMs, now, text));
+  events.push(buildAudioPlayEvent(session.sessionId, clip.clipId, clip.url, clip.durationMs, now, text, false, 1.4));
 }
 
 /** Emit AUDIO_PLAY + mutate activeVoiceClip using pickRandomClip (prefix / startsWith match). */
@@ -87,7 +87,7 @@ function emitRandomBanterClip(
     durationMs: clip.durationMs,
     text,
   };
-  events.push(buildAudioPlayEvent(session.sessionId, clip.clipId, clip.url, clip.durationMs, now, text));
+  events.push(buildAudioPlayEvent(session.sessionId, clip.clipId, clip.url, clip.durationMs, now, text, false, 1.4));
 }
 
 // ── public API ───────────────────────────────────────────────────────────────

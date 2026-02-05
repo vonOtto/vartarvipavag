@@ -215,6 +215,66 @@ export async function generateQuestionVoice(
   }
 }
 
+/**
+ * Generates a one-off TTS clip for the followup-intro bridge phrase
+ * "Nu ska vi se vad ni kan om {destinationName}".
+ * Follows the same POST /tts pattern as generateClueVoice / generateQuestionVoice.
+ * Returns the manifest entry (or null when ai-content is unreachable).
+ * Duration fallback: ~150 ms per word, minimum 3000 ms.
+ */
+export async function generateFollowupIntroVoice(
+  session: Session,
+  destinationName: string
+): Promise<TtsManifestEntry | null> {
+  const text = `Nu ska vi se vad ni kan om ${destinationName}`;
+  const wordCount = text.split(/\s+/).length;
+  const estimatedDurationMs = Math.max(wordCount * 150, 3000);
+
+  try {
+    const res = await fetch(`${AI_CONTENT_URL}/tts`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ text }),
+    });
+
+    if (!res.ok) {
+      logger.warn('generateFollowupIntroVoice: ai-content non-OK', {
+        sessionId: session.sessionId, status: res.status,
+      });
+      // Return a synthetic entry with the estimated duration so the caller
+      // can still schedule the pause even without a real clip.
+      return { clipId: 'voice_followup_intro', phraseId: 'voice_followup_intro', url: '', durationMs: estimatedDurationMs, generatedAtMs: Date.now() };
+    }
+
+    const data = await res.json() as { assetId: string; url: string; durationMs: number };
+
+    const entry: TtsManifestEntry = {
+      clipId:        'voice_followup_intro',
+      phraseId:      'voice_followup_intro',
+      url:           data.url,
+      durationMs:    data.durationMs,
+      generatedAtMs: Date.now(),
+    };
+
+    if (!(session as any)._ttsManifest) {
+      (session as any)._ttsManifest = [];
+    }
+    (session as any)._ttsManifest.push(entry);
+
+    logger.info('generateFollowupIntroVoice: clip added to manifest', {
+      sessionId: session.sessionId, durationMs: data.durationMs,
+    });
+
+    return entry;
+  } catch (err) {
+    logger.warn('generateFollowupIntroVoice: ai-content unreachable — using estimated duration', {
+      sessionId: session.sessionId, error: (err as Error).message,
+    });
+    // Return synthetic entry so caller can still wait the right amount of time
+    return { clipId: 'voice_followup_intro', phraseId: 'voice_followup_intro', url: '', durationMs: estimatedDurationMs, generatedAtMs: Date.now() };
+  }
+}
+
 export async function prefetchRoundTts(session: Session): Promise<void> {
   const roundId    = `round_${session.sessionId}_${session.state.roundIndex ?? 0}`;
   const voiceLines = buildBanterLines();

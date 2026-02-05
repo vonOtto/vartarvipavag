@@ -25,6 +25,7 @@ import {
   buildFollowupQuestionPresentEvent,
   buildFollowupAnswersLockedEvent,
   buildFollowupResultsEvent,
+  buildAudioPlayEvent,
 } from './utils/event-builder';
 import { projectState } from './utils/state-projection';
 import { buildLobbyUpdatedEvent } from './utils/lobby-events';
@@ -43,7 +44,7 @@ import {
   onFollowupQuestionPresent,
   onFollowupSequenceEnd,
 } from './game/audio-director';
-import { prefetchRoundTts, generateClueVoice, generateQuestionVoice } from './game/tts-prefetch';
+import { prefetchRoundTts, generateClueVoice, generateQuestionVoice, generateFollowupIntroVoice } from './game/tts-prefetch';
 
 export function createServer() {
   const app = express();
@@ -678,19 +679,53 @@ async function handleHostNextClue(
       // Try to start follow-up questions; fall back to scoreboard if none
       const followupStart = startFollowupSequence(session);
       if (followupStart) {
-        // On-demand: generate question voice BEFORE audio-director searches manifest
-        await generateQuestionVoice(session, followupStart.currentQuestionIndex, followupStart.question.questionText);
+        // ── FOLLOWUP_INTRO pause: scoreboard → intro TTS → first question ──
+        // 1) Broadcast SCOREBOARD_UPDATE so clients show current standings
+        const scoreboardEvent = buildScoreboardUpdateEvent(sessionId, session.state.scoreboard, false);
+        sessionStore.broadcastEventToSession(sessionId, scoreboardEvent);
 
-        // Audio: mutate audioState before snapshot so reconnect sees followup music
-        const fqAudioEvents = onFollowupStart(session, followupStart.currentQuestionIndex, followupStart.question.questionText);
+        // 2) Generate intro voice clip ("Nu ska vi se vad ni kan om …")
+        const introClip = await generateFollowupIntroVoice(session, result.destinationName!);
+        const introDurationMs = introClip?.durationMs ?? 3000;
 
-        broadcastStateSnapshot(sessionId);
-        broadcastFollowupQuestionPresent(sessionId, followupStart);
+        // 3) Emit AUDIO_PLAY for the intro clip (skip if no real URL — ai-content was down)
+        if (introClip && introClip.url) {
+          const introAudioEvent = buildAudioPlayEvent(
+            sessionId,
+            introClip.clipId,
+            introClip.url,
+            introClip.durationMs,
+            getServerTimeMs(),
+            `Nu ska vi se vad ni kan om ${result.destinationName!}`,
+            true,  // showText
+            1.4    // volume boost
+          );
+          sessionStore.broadcastEventToSession(sessionId, introAudioEvent);
+        }
 
-        // Broadcast audio events after snapshot
-        fqAudioEvents.forEach((e) => sessionStore.broadcastEventToSession(sessionId, e));
+        // 4) Wait for clip to finish + 1500 ms breathing window, then present first followup
+        const INTRO_BREATHING_MS = 1500;
+        setTimeout(async () => {
+          const sess = sessionStore.getSession(sessionId);
+          if (!sess || sess.state.phase !== 'FOLLOWUP_QUESTION') {
+            logger.debug('handleHostNextClue: FOLLOWUP_INTRO timer fired but phase changed, ignoring', { sessionId });
+            return;
+          }
 
-        scheduleFollowupTimer(sessionId, followupStart.timerDurationMs);
+          // On-demand: generate question voice BEFORE audio-director searches manifest
+          await generateQuestionVoice(sess, followupStart.currentQuestionIndex, followupStart.question.questionText);
+
+          // Audio: mutate audioState before snapshot so reconnect sees followup music
+          const fqAudioEvents = onFollowupStart(sess, followupStart.currentQuestionIndex, followupStart.question.questionText);
+
+          broadcastStateSnapshot(sessionId);
+          broadcastFollowupQuestionPresent(sessionId, followupStart);
+
+          // Broadcast audio events after snapshot
+          fqAudioEvents.forEach((e) => sessionStore.broadcastEventToSession(sessionId, e));
+
+          scheduleFollowupTimer(sessionId, followupStart.timerDurationMs);
+        }, introDurationMs + INTRO_BREATHING_MS);
       } else {
         const scoreboardEvent = buildScoreboardUpdateEvent(
           sessionId,
@@ -1265,19 +1300,53 @@ async function autoAdvanceClue(sessionId: string): Promise<void> {
       // Try to start follow-up questions; fall back to scoreboard if none
       const followupStart = startFollowupSequence(session);
       if (followupStart) {
-        // On-demand: generate question voice BEFORE audio-director searches manifest
-        await generateQuestionVoice(session, followupStart.currentQuestionIndex, followupStart.question.questionText);
+        // ── FOLLOWUP_INTRO pause: scoreboard → intro TTS → first question ──
+        // 1) Broadcast SCOREBOARD_UPDATE so clients show current standings
+        const scoreboardEvent = buildScoreboardUpdateEvent(sessionId, session.state.scoreboard, false);
+        sessionStore.broadcastEventToSession(sessionId, scoreboardEvent);
 
-        // Audio: mutate audioState before snapshot so reconnect sees followup music
-        const fqAudioEvents = onFollowupStart(session, followupStart.currentQuestionIndex, followupStart.question.questionText);
+        // 2) Generate intro voice clip ("Nu ska vi se vad ni kan om …")
+        const introClip = await generateFollowupIntroVoice(session, result.destinationName!);
+        const introDurationMs = introClip?.durationMs ?? 3000;
 
-        broadcastStateSnapshot(sessionId);
-        broadcastFollowupQuestionPresent(sessionId, followupStart);
+        // 3) Emit AUDIO_PLAY for the intro clip (skip if no real URL — ai-content was down)
+        if (introClip && introClip.url) {
+          const introAudioEvent = buildAudioPlayEvent(
+            sessionId,
+            introClip.clipId,
+            introClip.url,
+            introClip.durationMs,
+            getServerTimeMs(),
+            `Nu ska vi se vad ni kan om ${result.destinationName!}`,
+            true,  // showText
+            1.4    // volume boost
+          );
+          sessionStore.broadcastEventToSession(sessionId, introAudioEvent);
+        }
 
-        // Broadcast audio events after snapshot
-        fqAudioEvents.forEach((e) => sessionStore.broadcastEventToSession(sessionId, e));
+        // 4) Wait for clip to finish + 1500 ms breathing window, then present first followup
+        const INTRO_BREATHING_MS = 1500;
+        setTimeout(async () => {
+          const sess = sessionStore.getSession(sessionId);
+          if (!sess || sess.state.phase !== 'FOLLOWUP_QUESTION') {
+            logger.debug('autoAdvanceClue: FOLLOWUP_INTRO timer fired but phase changed, ignoring', { sessionId });
+            return;
+          }
 
-        scheduleFollowupTimer(sessionId, followupStart.timerDurationMs);
+          // On-demand: generate question voice BEFORE audio-director searches manifest
+          await generateQuestionVoice(sess, followupStart.currentQuestionIndex, followupStart.question.questionText);
+
+          // Audio: mutate audioState before snapshot so reconnect sees followup music
+          const fqAudioEvents = onFollowupStart(sess, followupStart.currentQuestionIndex, followupStart.question.questionText);
+
+          broadcastStateSnapshot(sessionId);
+          broadcastFollowupQuestionPresent(sessionId, followupStart);
+
+          // Broadcast audio events after snapshot
+          fqAudioEvents.forEach((e) => sessionStore.broadcastEventToSession(sessionId, e));
+
+          scheduleFollowupTimer(sessionId, followupStart.timerDurationMs);
+        }, introDurationMs + INTRO_BREATHING_MS);
       } else {
         const scoreboardEvent = buildScoreboardUpdateEvent(
           sessionId,
@@ -1363,28 +1432,39 @@ function scheduleFollowupTimer(sessionId: string, durationMs: number): void {
     broadcastStateSnapshot(sessionId);
 
     if (nextQuestionIndex !== null && sess.state.followupQuestion) {
-      // Next question — generate voice BEFORE audio-director searches manifest
-      const nextFq = sess.state.followupQuestion;
-      await generateQuestionVoice(sess, nextFq.currentQuestionIndex, nextFq.questionText);
+      // ── 4 s pause so FOLLOWUP_RESULTS stays visible before next question ──
+      const BETWEEN_FOLLOWUPS_MS = 4000;
+      setTimeout(async () => {
+        const s = sessionStore.getSession(sessionId);
+        if (!s || !s.state.followupQuestion || s.state.phase !== 'FOLLOWUP_QUESTION') {
+          logger.debug('scheduleFollowupTimer: between-followups pause expired but phase changed, ignoring', { sessionId });
+          return;
+        }
 
-      broadcastFollowupQuestionPresent(sessionId, {
-        question: {
-          questionText: nextFq.questionText,
-          options: nextFq.options,
-          correctAnswer: nextFq.correctAnswer!,
-        },
-        currentQuestionIndex: nextFq.currentQuestionIndex,
-        totalQuestions: nextFq.totalQuestions,
-        timerDurationMs: nextFq.timer!.durationMs,
-        startAtServerMs: nextFq.timer!.startAtServerMs,
-      });
+        const nextFq = s.state.followupQuestion;
 
-      // Audio: seamless question TTS (music keeps playing)
-      onFollowupQuestionPresent(sess, nextFq.currentQuestionIndex, nextFq.questionText).forEach((e) =>
-        sessionStore.broadcastEventToSession(sessionId, e)
-      );
+        // Next question — generate voice BEFORE audio-director searches manifest
+        await generateQuestionVoice(s, nextFq.currentQuestionIndex, nextFq.questionText);
 
-      scheduleFollowupTimer(sessionId, nextFq.timer!.durationMs);
+        broadcastFollowupQuestionPresent(sessionId, {
+          question: {
+            questionText: nextFq.questionText,
+            options: nextFq.options,
+            correctAnswer: nextFq.correctAnswer!,
+          },
+          currentQuestionIndex: nextFq.currentQuestionIndex,
+          totalQuestions: nextFq.totalQuestions,
+          timerDurationMs: nextFq.timer!.durationMs,
+          startAtServerMs: nextFq.timer!.startAtServerMs,
+        });
+
+        // Audio: seamless question TTS (music keeps playing)
+        onFollowupQuestionPresent(s, nextFq.currentQuestionIndex, nextFq.questionText).forEach((e) =>
+          sessionStore.broadcastEventToSession(sessionId, e)
+        );
+
+        scheduleFollowupTimer(sessionId, nextFq.timer!.durationMs);
+      }, BETWEEN_FOLLOWUPS_MS);
     } else {
       // Audio: stop followup music (mutate audioState before snapshot)
       const endAudioEvents = onFollowupSequenceEnd(sess);
