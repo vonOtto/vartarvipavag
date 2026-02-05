@@ -135,7 +135,11 @@ class AppState: ObservableObject {
         case "LOBBY_UPDATED":
             guard let payload = json["payload"]  as? [String: Any],
                   let arr     = payload["players"] as? [[String: Any]]
-            else { break }
+            else {
+                print("[DEBUG TV] LOBBY_UPDATED received but payload/players missing — raw: \(raw)")
+                break
+            }
+            print("[DEBUG TV] LOBBY_UPDATED — \(arr.count) player(s): \(arr.map { $0["name"] ?? "?" })")
             players = arr.compactMap { d in
                 guard let id   = d["playerId"]    as? String,
                       let name = d["name"]        as? String else { return nil }
