@@ -42,6 +42,7 @@ import {
   onFollowupQuestionPresent,
   onFollowupSequenceEnd,
 } from './game/audio-director';
+import { prefetchRoundTts } from './game/tts-prefetch';
 
 export function createServer() {
   const app = express();
@@ -365,12 +366,12 @@ function handleResumeSession(
 /**
  * Handles HOST_START_GAME event
  */
-function handleHostStartGame(
+async function handleHostStartGame(
   ws: WebSocket,
   sessionId: string,
   playerId: string,
   role: string
-): void {
+): Promise<void> {
   // Only host can start game
   if (role !== 'host') {
     logger.warn('HOST_START_GAME: Non-host attempted to start game', {
@@ -425,6 +426,9 @@ function handleHostStartGame(
       destinationName: gameData.destination.name,
       firstCluePoints: gameData.clueLevelPoints,
     });
+
+    // Pre-generate TTS clips so audio-director has manifest for this round
+    await prefetchRoundTts(session);
 
     // Audio: mutate audioState first so STATE_SNAPSHOT includes it
     const audioEvents = onGameStart(session, gameData.clueText);
