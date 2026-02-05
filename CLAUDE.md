@@ -364,6 +364,7 @@ När arbete skiftar från en agent till en annan skickas:
 | `/deploy-audit` | backend | DevOps | Pre-deployment checklist, infrastructure audit, rollback plan |
 | `/test-coverage` | backend | QA | Deep dive i test coverage, identifiera gaps, prioritera test additions |
 | `/game-balance-audit` | ceo | Game Designer | Analysera scoring balance, timer tuning, fairness, playtest scenarios |
+| `/tts-integration` | ai-content | AI Content | ElevenLabs TTS integration, caching, batch generation (TASK-A01) |
 
 ### Hur Commands Fungerar
 
