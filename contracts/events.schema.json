@@ -796,7 +796,8 @@
             "durationMs": { "type": "integer", "minimum": 100, "description": "Clip duration in ms" },
             "startAtServerMs": { "type": "integer", "description": "Server time sync point; TV compensates via WELCOME offset" },
             "text": { "type": "string", "description": "Swedish text of the clip — always included as subtitle fallback" },
-            "showText": { "type": "boolean", "default": false, "description": "If true, TV shows text overlay while clip plays" }
+            "showText": { "type": "boolean", "default": false, "description": "If true, TV shows text overlay while clip plays" },
+            "volume": { "type": "number", "minimum": 0.0, "maximum": 2.0, "default": 1.0, "description": "Playback volume multiplier. 1.0 = nominal TTS level; values > 1.0 amplify (e.g. 1.4 for boosted TTS). Range intentionally wider than SFX_PLAY to support voice-level tuning." }
           },
           "additionalProperties": false
         }

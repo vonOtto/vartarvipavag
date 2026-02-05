@@ -4,7 +4,7 @@
 
 This document defines the complete audio system for På Spåret Party Edition, including music layers, sound effects, ducking behavior, and the FINAL_RESULTS timeline.
 
-**Version**: 1.3.2 (Sprint 1.3)
+**Version**: 1.3.3 (Sprint 1.3)
 **Status**: TTS voice layer activated; clue-read (`voice_clue_read_*`), question-read (`voice_question_read_*`) and round-intro (`banter_round_intro`) TTS enabled; followup music active; base infrastructure from Sprint 1.1
 
 ---
@@ -359,20 +359,34 @@ All audio events are server-authoritative and sent with precise timing.
 
 ---
 
-### AUDIO_PLAY (Sprint 2+)
+### AUDIO_PLAY (Sprint 1.3+)
 
 **Direction**: Server → TV
-**Purpose**: Play voice/TTS narration
+**Purpose**: Play a pre-generated TTS voice clip. Automatically triggers music-bed ducking (-10 dB, 150 ms attack, 900 ms release). No explicit AUDIO_DUCK event exists -- ducking is a deterministic side-effect of this event.
 
 **Payload**:
 ```json
 {
-  "clipId": "clue_intro_voice",
-  "startAtServerMs": 1234567890
+  "clipId": "banter_after_brake_002_round_abc123",
+  "url": "https://cache/banter_after_brake_002_round_abc123.m4a",
+  "durationMs": 1900,
+  "startAtServerMs": 1234567890,
+  "text": "Och där fick vi broms! Vad säger ni?",
+  "showText": false,
+  "volume": 1.4
 }
 ```
 
-**Note**: Out of scope for Sprint 1.1, defined for future use.
+**Fields**:
+- `clipId`: Unique clip ID from TTS manifest (e.g. `banter_after_brake_002_round_abc123`)
+- `url`: Cache URL for the M4A clip
+- `durationMs`: Clip duration in milliseconds (minimum 100)
+- `startAtServerMs`: Server time sync point; TV compensates via WELCOME offset
+- `text`: Swedish text of the clip -- always included as subtitle fallback
+- `showText`: If true, TV shows text overlay while clip plays. Default `false`
+- `volume`: Playback volume multiplier. `1.0` = nominal TTS level; values above 1.0 amplify (e.g. `1.4` for boosted TTS). Range 0.0--2.0, default `1.0`. Optional -- omitting is equivalent to `1.0`
+
+**When**: Any game moment that plays TTS narration (clue-read, banter, question-read). See Banter Moment Mapping above.
 
 ---
 
@@ -592,6 +606,9 @@ Deferred to future sprints:
 - **v1.3.2**: ROUND_INTRO row added to Phase-Based Audio Behavior table (Voice column added to all rows).
   `banter_round_intro` category added to Banter Moment Mapping.  VOICE_LINE example payloads updated to use `banter_round_intro_*` phraseIds.
   See `banter.md` section 1 and CHANGELOG [1.3.2].
+- **v1.3.3**: `volume` field added to AUDIO_PLAY (optional float, default 1.0, range 0.0--2.0).
+  Non-breaking: existing emits without `volume` behave identically to before.
+  Motivation: TTS voice needs per-clip amplitude control (e.g. 1.4x boost for clue-read).
 
 ---
 
