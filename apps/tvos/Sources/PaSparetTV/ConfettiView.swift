@@ -11,7 +11,7 @@ struct ConfettiView: View {
 
     var body: some View {
         GeometryReader { geo in
-            ForEach(0..<Self.count) { i in
+            ForEach(0..<70, id: \.self) { i in
                 ConfettiPiece(index: i, width: geo.size.width, height: geo.size.height)
             }
         }

@@ -28,6 +28,10 @@
 		AA000012 /* sfx_winner_fanfare.wav in Resources */ = {isa = PBXBuildFile; fileRef = BB000012 /* sfx_winner_fanfare.wav */; };
 		AA000014 /* music_travel.wav in Resources */       = {isa = PBXBuildFile; fileRef = BB000014 /* music_travel.wav */; };
 		AA000015 /* sfx_sting_build.wav in Resources */    = {isa = PBXBuildFile; fileRef = BB000015 /* sfx_sting_build.wav */; };
+		AA000016 /* Animations.swift in Sources */         = {isa = PBXBuildFile; fileRef = BB000016 /* Animations.swift */; };
+		AA000017 /* Colors.swift in Sources */             = {isa = PBXBuildFile; fileRef = BB000017 /* Colors.swift */; };
+		AA000018 /* Fonts.swift in Sources */              = {isa = PBXBuildFile; fileRef = BB000018 /* Fonts.swift */; };
+		AA000019 /* Layout.swift in Sources */             = {isa = PBXBuildFile; fileRef = BB000019 /* Layout.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -52,6 +56,10 @@
 		BB000012 /* sfx_winner_fanfare.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = sfx_winner_fanfare.wav; sourceTree = "<group>"; };
 		BB000014 /* music_travel.wav */       = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = music_travel.wav;       sourceTree = "<group>"; };
 		BB000015 /* sfx_sting_build.wav */    = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = sfx_sting_build.wav;    sourceTree = "<group>"; };
+		BB000016 /* Animations.swift */       = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Design/Animations.swift; sourceTree = "<group>"; };
+		BB000017 /* Colors.swift */           = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Design/Colors.swift;     sourceTree = "<group>"; };
+		BB000018 /* Fonts.swift */            = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Design/Fonts.swift;      sourceTree = "<group>"; };
+		BB000019 /* Layout.swift */           = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Design/Layout.swift;     sourceTree = "<group>"; };
 		BB000099 /* Info.plist */             = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		BB0000F0 /* PaSparetTV.app */         = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PaSparetTV.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -80,6 +88,10 @@
 				BB00000A /* TVRevealView.swift */,
 				BB00000B /* TVScoreboardView.swift */,
 				BB000013 /* RoundIntroView.swift */,
+				BB000016 /* Animations.swift */,
+				BB000017 /* Colors.swift */,
+				BB000018 /* Fonts.swift */,
+				BB000019 /* Layout.swift */,
 				BB000099 /* Info.plist */,
 				BB0000AD /* Resources */,
 			);
@@ -161,6 +173,10 @@
 				AA00000A /* TVRevealView.swift in Sources */,
 				AA00000B /* TVScoreboardView.swift in Sources */,
 				AA000013 /* RoundIntroView.swift in Sources */,
+				AA000016 /* Animations.swift in Sources */,
+				AA000017 /* Colors.swift in Sources */,
+				AA000018 /* Fonts.swift in Sources */,
+				AA000019 /* Layout.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
