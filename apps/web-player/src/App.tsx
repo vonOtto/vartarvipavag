@@ -99,6 +99,7 @@ function App() {
     <Router>
       <Routes>
         <Route path="/join/:joinCode" element={<JoinPage />} />
+        <Route path="/join" element={<JoinPage />} />
         <Route
           path="/lobby"
           element={
