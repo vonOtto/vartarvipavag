@@ -43,10 +43,43 @@ struct RootView: View {
                 LiveView()
             }
 
+            if let overlayText = appState.voiceOverlayText {
+                VoiceOverlay(text: overlayText)
+            }
+
             if appState.showConfetti {
                 ConfettiView { appState.showConfetti = false }
             }
         }
+    }
+}
+
+// MARK: – voice overlay ──────────────────────────────────────────────────────
+
+/// Semi-transparent text banner that surfaces during TTS playback or
+/// text-only VOICE_LINE events.  Hit-testing is disabled so that it
+/// never steals focus from the underlying game view.
+private struct VoiceOverlay: View {
+    let text: String
+
+    var body: some View {
+        VStack {
+            Spacer()
+            Text(text)
+                .font(.system(size: 48, weight: .semibold))
+                .foregroundColor(.white)
+                .multilineTextAlignment(.center)
+                .shadow(color: .black.opacity(0.6), radius: 4, x: 0, y: 2)
+                .padding(.horizontal, 48)
+                .padding(.vertical, 24)
+                .background(
+                    RoundedRectangle(cornerRadius: 20, style: .continuous)
+                        .fill(Color.black.opacity(0.55))
+                )
+            Spacer()
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .allowsHitTesting(false)
     }
 }
 

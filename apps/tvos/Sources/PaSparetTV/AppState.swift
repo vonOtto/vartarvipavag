@@ -21,6 +21,7 @@ class AppState: ObservableObject {
     @Published var followupQuestion  : FollowupQuestionInfo?
     @Published var followupResults   : (correctAnswer: String, rows: [FollowupResultRow])?
     @Published var showConfetti      : Bool = false
+    @Published var voiceOverlayText  : String? = nil
 
     // MARK: – connection status
     @Published var isConnected : Bool   = false
@@ -240,9 +241,41 @@ class AppState: ObservableObject {
                   let url     = URL(string: urlStr),
                   let durMs   = payload["durationMs"] as? Int else { break }
             audio.playVoice(clipId: clipId, url: url, durationMs: durMs)
+            if (payload["showText"] as? Bool) == true, let text = payload["text"] as? String {
+                voiceOverlayText = text
+                Task { [self] in
+                    try? await Task.sleep(nanoseconds: UInt64(durMs) * 1_000_000)
+                    await MainActor.run { self.voiceOverlayText = nil }
+                }
+            }
 
         case "AUDIO_STOP":
             audio.stopVoice()
+            voiceOverlayText = nil
+
+        case "VOICE_LINE":
+            guard let payload = json["payload"] as? [String: Any],
+                  let text    = payload["text"]  as? String else { break }
+            if let clipId = payload["clipId"] as? String,
+               let urlStr  = payload["url"]    as? String,
+               let url     = URL(string: urlStr),
+               let durMs    = payload["durationMs"] as? Int {
+                // TTS clip available — play audio + show overlay (same as AUDIO_PLAY showText)
+                audio.playVoice(clipId: clipId, url: url, durationMs: durMs)
+                voiceOverlayText = text
+                Task { [self] in
+                    try? await Task.sleep(nanoseconds: UInt64(durMs) * 1_000_000)
+                    await MainActor.run { self.voiceOverlayText = nil }
+                }
+            } else {
+                // Text-only fallback: overlay only, no audio
+                let displayMs = payload["displayDurationMs"] as? Int ?? 3000
+                voiceOverlayText = text
+                Task { [self] in
+                    try? await Task.sleep(nanoseconds: UInt64(displayMs) * 1_000_000)
+                    await MainActor.run { self.voiceOverlayText = nil }
+                }
+            }
 
         case "UI_EFFECT_TRIGGER":
             guard let payload  = json["payload"] as? [String: Any],
@@ -293,7 +326,9 @@ class AppState: ObservableObject {
     // MARK: – helpers ─────────────────────────────────────────────────────────
 
     private func applyState(_ state: GameState) {
-        let enteringFinale  = (state.phase == "FINAL_RESULTS" && phase != "FINAL_RESULTS")
+        let enteringFinale    = (state.phase == "FINAL_RESULTS"       && phase != "FINAL_RESULTS")
+        let enteringFollowup  = (state.phase == "FOLLOWUP_QUESTION"  && phase != "FOLLOWUP_QUESTION")
+        let enteringClueLevel = (state.phase == "CLUE_LEVEL"         && phase != "CLUE_LEVEL")
         sessionReady        = true
         phase               = state.phase
         players             = state.players
@@ -313,6 +348,13 @@ class AppState: ObservableObject {
         if enteringFinale && !showConfetti {
             audio.playSFX(sfxId: "sfx_winner_fanfare")
             showConfetti = true
+        }
+
+        // Re-issue looping music on reconnect into music-bearing phases.
+        if enteringFollowup {
+            audio.playMusic(trackId: "music_followup_loop", fadeInMs: 300, loop: true, gainDb: 0)
+        } else if enteringClueLevel {
+            audio.playMusic(trackId: "music_travel_loop",   fadeInMs: 300, loop: true, gainDb: 0)
         }
     }
 
