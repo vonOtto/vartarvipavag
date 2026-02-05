@@ -349,6 +349,91 @@ När arbete skiftar från en agent till en annan skickas:
 
 ---
 
+## Command-Based Role Context (Hybrid Approach)
+
+**Problem:** Claude Code har ett begränsat antal hårdkodade agent-typer. Roller som `qa-tester`, `devops`, `game-designer` och `visual-content` finns inte som riktiga agent-typer.
+
+**Lösning:** Slash commands ger befintliga agents tydlig roll-kontext för specifika uppgifter.
+
+### Tillgängliga Role Commands
+
+| Command | Agent som körs | Roll-kontext | Användning |
+|---------|---------------|--------------|------------|
+| `/ci-cd-setup` | backend | DevOps | Setup CI/CD pipeline, GitHub Actions, deployment automation |
+| `/run-integration-tests` | backend | QA | Kör integration tests, analysera coverage, rapportera findings |
+| `/deploy-audit` | backend | DevOps | Pre-deployment checklist, infrastructure audit, rollback plan |
+| `/test-coverage` | backend | QA | Deep dive i test coverage, identifiera gaps, prioritera test additions |
+| `/game-balance-audit` | ceo | Game Designer | Analysera scoring balance, timer tuning, fairness, playtest scenarios |
+
+### Hur Commands Fungerar
+
+1. **User kör command:** `/ci-cd-setup`
+2. **Command läses från:** `.claude/commands/ci-cd-setup.md`
+3. **Command innehåller:**
+   - Tydlig roll-beskrivning ("Du arbetar nu i DevOps-rollen")
+   - Kontext (vad rollen ansvarar för, fokusområden)
+   - Specifik uppgift (steg-för-steg instruktioner)
+   - Output-förväntan (vilka filer/docs som ska skapas)
+   - Koordination (vilka andra agents att samarbeta med)
+4. **Agent exekverar med roll-kontext**
+5. **Output dokumenteras enligt command-spec**
+
+### När Ska Commands Användas?
+
+**Använd command för roll-kontext när:**
+- Uppgiften kräver en specialist-roll (QA, DevOps, Game Designer)
+- Du behöver tydlig kontext och fokus för en specifik uppgift
+- Uppgiften involverar flera steg och kräver dokumentation
+
+**Använd vanlig agent direkt när:**
+- Uppgiften är inom agentens kärnexpertis (backend → state machine impl)
+- Ingen special roll-kontext behövs
+- Uppgiften är en del av en TASK-serie (TASK-2xx → backend agent)
+
+### Exempel: TASK-802 (CI/CD Pipeline)
+
+**Tidigare approach:**
+```
+TASK-802 → backend agent (som spelar devops-roll)
+```
+Problem: Otydligt vad "devops-roll" innebär
+
+**Ny approach:**
+```
+/ci-cd-setup
+```
+Resultat: Backend agent får tydlig DevOps-kontext med:
+- Deployment focus (Railway, GitHub Actions)
+- Infrastructure mindset
+- Automation requirements
+- Documentation expectations
+
+### Fördelar med Command-Based Approach
+
+✅ **Tydligare kontext:** Agent vet exakt vad rollen innebär
+✅ **Bättre dokumentation:** Commands dokumenterar förväntningar
+✅ **Återanvändbarhet:** Commands kan köras flera gånger
+✅ **Koordination:** Commands specificerar hur agents samarbetar
+✅ **Ingen confusion:** Ingen förvirring mellan agent-typer vs roller
+
+### Command Development Guide
+
+För att skapa nya role commands:
+
+1. **Identifiera behov:** Vilken specialist-roll behövs?
+2. **Skapa command-fil:** `.claude/commands/role-context.md`
+3. **Definiera roll-kontext:**
+   - Vad rollen ansvarar för
+   - Fokusområden
+   - Samarbete med andra agents
+4. **Specificera uppgift:**
+   - Steg-för-steg instruktioner
+   - Input sources (vilka filer/docs att läsa)
+   - Output expectations (vilka filer/docs att skapa)
+5. **Dokumentera i CLAUDE.md:** Lägg till i command-tabellen ovan
+
+---
+
 ## Definition of Done (DoD)
 En feature är klar när:
 - contracts uppdaterade + validerade
