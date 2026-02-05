@@ -28,7 +28,7 @@ struct TVScoreboardView: View {
 
             if !appState.isConnected { reconnectBanner }
 
-            // "Ny spel" — bottom-right, visible after game ends (FINAL_RESULTS)
+            // "Nytt spel" — bottom-right, visible after game ends (FINAL_RESULTS)
             VStack {
                 Spacer()
                 HStack {
