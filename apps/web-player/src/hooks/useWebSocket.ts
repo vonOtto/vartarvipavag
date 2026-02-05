@@ -30,6 +30,12 @@ export function useWebSocket(
   const reconnectAttemptsRef = useRef(0);
   const reconnectDelayRef = useRef(INITIAL_RECONNECT_DELAY);
 
+  // Generation counter: incremented every time connect() is called or cleanup runs.
+  // Each onclose/onerror closure captures the generation at the time the WebSocket was
+  // created. If the generation has moved on by the time the event fires, the handler
+  // is stale (the WebSocket was intentionally closed) and must not schedule a reconnect.
+  const generationRef = useRef(0);
+
   // Refs so onmessage/onclose closures can read current values without being deps
   const playerIdRef = useRef(playerId);
   const sessionIdRef = useRef(sessionId);
@@ -42,7 +48,17 @@ export function useWebSocket(
       return;
     }
 
-    // Close existing connection if any
+    // Invalidate any in-flight onclose handler from a previous WebSocket
+    generationRef.current += 1;
+    const myGeneration = generationRef.current;
+
+    // Cancel any pending reconnect timeout from a previous generation
+    if (reconnectTimeoutRef.current) {
+      clearTimeout(reconnectTimeoutRef.current);
+      reconnectTimeoutRef.current = null;
+    }
+
+    // Close existing connection if any (its onclose will be ignored via generation check)
     if (wsRef.current) {
       wsRef.current.close();
       wsRef.current = null;
@@ -56,6 +72,9 @@ export function useWebSocket(
       wsRef.current = ws;
 
       ws.onopen = () => {
+        // Stale check: if a newer connect() already ran, ignore this open
+        if (myGeneration !== generationRef.current) return;
+
         console.log('WebSocket: Connected');
         setIsConnected(true);
         setError(null);
@@ -64,6 +83,9 @@ export function useWebSocket(
       };
 
       ws.onmessage = (event) => {
+        // Stale check
+        if (myGeneration !== generationRef.current) return;
+
         try {
           const message = JSON.parse(event.data) as GameEvent;
           console.log('WebSocket: Received event', message.type, message);
@@ -75,31 +97,32 @@ export function useWebSocket(
             setGameState(payload.state);
           }
 
-          // Send RESUME_SESSION after WELCOME so server can restore state
-          if (message.type === 'WELCOME' && playerIdRef.current && sessionIdRef.current) {
-            const resumeMsg = {
-              type: 'RESUME_SESSION',
-              sessionId: sessionIdRef.current,
-              serverTimeMs: Date.now(),
-              payload: {
-                playerId: playerIdRef.current,
-                lastReceivedEventId: null,
-              },
-            };
-            console.log('WebSocket: Sending RESUME_SESSION', resumeMsg);
-            ws.send(JSON.stringify(resumeMsg));
-          }
+          // NOTE: RESUME_SESSION is intentionally NOT sent here.
+          // The server sends a complete STATE_SNAPSHOT immediately after WELCOME
+          // on every connection (initial and reconnect alike). Sending RESUME_SESSION
+          // would only produce a duplicate snapshot. The WELCOME event itself is
+          // sufficient to confirm the connection is authenticated and active.
         } catch (err) {
           console.error('WebSocket: Failed to parse message', err, event.data);
         }
       };
 
       ws.onerror = (event) => {
+        // Stale check
+        if (myGeneration !== generationRef.current) return;
+
         console.error('WebSocket: Error', event);
         setError('Connection error occurred');
       };
 
       ws.onclose = (event) => {
+        // Stale check: if this WebSocket was closed intentionally (by cleanup or by a
+        // subsequent connect() call), do NOT schedule a reconnect.
+        if (myGeneration !== generationRef.current) {
+          console.log('WebSocket: Ignoring close from stale generation', myGeneration);
+          return;
+        }
+
         console.log('WebSocket: Closed', event.code, event.reason);
         setIsConnected(false);
 
@@ -160,10 +183,13 @@ export function useWebSocket(
   useEffect(() => {
     connect();
 
-    // Cleanup on unmount
+    // Cleanup on unmount: invalidate the current generation so any pending
+    // onclose handlers are ignored, cancel reconnect timers, and close the socket.
     return () => {
+      generationRef.current += 1;
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current);
+        reconnectTimeoutRef.current = null;
       }
       if (wsRef.current) {
         wsRef.current.close();

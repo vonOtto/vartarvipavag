@@ -84,14 +84,17 @@ function ResumeRoute() {
   );
 }
 
-function App() {
-  const ProtectedRoute = ({ children }: { children: ReactNode }) => {
-    if (!hasSession()) {
-      return <Navigate to="/" replace />;
-    }
-    return <>{children}</>;
-  };
+// Defined outside App so that React sees a stable component type across renders.
+// If this were defined inside App, every render would produce a new function reference,
+// causing React to unmount and remount the entire subtree under each ProtectedRoute.
+const ProtectedRoute = ({ children }: { children: ReactNode }) => {
+  if (!hasSession()) {
+    return <Navigate to="/" replace />;
+  }
+  return <>{children}</>;
+};
 
+function App() {
   return (
     <Router>
       <Routes>
