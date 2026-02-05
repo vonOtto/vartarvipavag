@@ -476,6 +476,9 @@ async function handleHostStartGame(
     );
     sessionStore.broadcastEventToSession(sessionId, clueEvent);
 
+    // Start auto-advance timer for the first clue
+    scheduleClueTimer(sessionId);
+
     logger.info('Broadcasted CLUE_PRESENT event', {
       sessionId,
       clueLevelPoints: gameData.clueLevelPoints,
@@ -548,6 +551,13 @@ function handleHostNextClue(
   }
 
   try {
+    // Clear any pending auto-advance timer — manual override takes priority
+    if ((session as any)._clueTimer) {
+      clearTimeout((session as any)._clueTimer);
+      (session as any)._clueTimer = null;
+      logger.info('HOST_NEXT_CLUE: Cleared pending clue auto-advance timer', { sessionId });
+    }
+
     // If host overrides during brake, release it first
     if (session.state.phase === 'PAUSED_FOR_BRAKE') {
       logger.info('HOST_NEXT_CLUE: Host overriding brake', {
@@ -753,6 +763,13 @@ function handleBrakePull(
         sessionStore.broadcastEventToSession(sessionId, e)
       );
 
+      // Clear clue auto-advance timer — game is paused for brake
+      if ((session as any)._clueTimer) {
+        clearTimeout((session as any)._clueTimer);
+        (session as any)._clueTimer = null;
+        logger.info('BRAKE_PULL: Cleared pending clue auto-advance timer', { sessionId });
+      }
+
       logger.info('Broadcasted BRAKE_ACCEPTED event', {
         sessionId,
         playerId,
@@ -854,6 +871,9 @@ function handleBrakeAnswerSubmit(
     onAnswerLocked(session).forEach((e) =>
       sessionStore.broadcastEventToSession(sessionId, e)
     );
+
+    // Auto-advance to next clue (or reveal) now that the answer is locked
+    autoAdvanceClue(sessionId);
 
   } catch (error: any) {
     logger.error('BRAKE_ANSWER_SUBMIT: Failed', { sessionId, playerId, error: error.message });
@@ -1037,6 +1057,215 @@ function broadcastFollowupAnswersLocked(sessionId: string, currentQuestionIndex:
   });
 
   logger.info('Broadcasted FOLLOWUP_ANSWERS_LOCKED', { sessionId, currentQuestionIndex, lockedCount });
+}
+
+// ============================================================================
+// CLUE AUTO-ADVANCE TIMER
+// ============================================================================
+
+/** Time (ms) players get to discuss after the TTS clue clip finishes. */
+const DISCUSSION_DELAY_MS = 12_000;
+
+/** Fallback total delay when no TTS clip is available for the current clue. */
+const CLUE_FALLBACK_DURATION_MS = 30_000;
+
+/**
+ * Schedules (or re-schedules) the clue auto-advance timer for the current
+ * clue level.  The total delay is:
+ *   voice_clue_<level>.durationMs  +  DISCUSSION_DELAY_MS
+ * or CLUE_FALLBACK_DURATION_MS when the TTS clip is missing.
+ */
+function scheduleClueTimer(sessionId: string): void {
+  const session = sessionStore.getSession(sessionId);
+  if (!session) return;
+
+  // Clear any existing timer so we never have two racing
+  if ((session as any)._clueTimer) {
+    clearTimeout((session as any)._clueTimer);
+    (session as any)._clueTimer = null;
+  }
+
+  // Look up TTS duration from the round manifest
+  const manifest: any[] | undefined = (session as any)._ttsManifest;
+  const currentLevel = session.state.clueLevelPoints; // 10 | 8 | 6 | 4 | 2 | null
+  const clip = manifest?.find((c: any) => c.phraseId === `voice_clue_${currentLevel}`);
+  const ttsDuration: number = clip?.durationMs ?? 0;
+  const totalDelay = ttsDuration > 0
+    ? ttsDuration + DISCUSSION_DELAY_MS
+    : CLUE_FALLBACK_DURATION_MS;
+
+  logger.info('Clue timer scheduled', { sessionId, currentLevel, ttsDuration, totalDelay });
+
+  const timeoutId = setTimeout(() => {
+    // Guard: session must still exist and be in CLUE_LEVEL
+    const sess = sessionStore.getSession(sessionId);
+    if (!sess || sess.state.phase !== 'CLUE_LEVEL') {
+      logger.debug('Clue timer fired but phase is not CLUE_LEVEL, ignoring', { sessionId });
+      return;
+    }
+    logger.info('Clue timer fired — auto-advancing', { sessionId, fromLevel: sess.state.clueLevelPoints });
+    autoAdvanceClue(sessionId);
+  }, totalDelay);
+
+  (session as any)._clueTimer = timeoutId;
+}
+
+/**
+ * Auto-advances the current clue level.  Contains the same next-clue /
+ * reveal transition logic as handleHostNextClue, minus the role check and
+ * the WebSocket error-send (errors are logged instead).
+ *
+ * Called by:
+ *   - scheduleClueTimer callback (timer expiry)
+ *   - handleBrakeAnswerSubmit (after answer is locked)
+ */
+function autoAdvanceClue(sessionId: string): void {
+  const session = sessionStore.getSession(sessionId);
+  if (!session) {
+    logger.warn('autoAdvanceClue: Session not found', { sessionId });
+    return;
+  }
+
+  // Allow in CLUE_LEVEL or PAUSED_FOR_BRAKE (mirrors handleHostNextClue)
+  if (session.state.phase !== 'CLUE_LEVEL' && session.state.phase !== 'PAUSED_FOR_BRAKE') {
+    logger.warn('autoAdvanceClue: Not in clue or brake phase', {
+      sessionId,
+      phase: session.state.phase,
+    });
+    return;
+  }
+
+  try {
+    // If somehow still in brake phase, release it first (safety mirror)
+    if (session.state.phase === 'PAUSED_FOR_BRAKE') {
+      logger.info('autoAdvanceClue: Releasing brake before advance', {
+        sessionId,
+        brakeOwner: session.state.brakeOwnerPlayerId,
+      });
+      releaseBrake(session);
+    }
+
+    // Advance to next clue or reveal
+    const result = nextClue(session);
+
+    if (result.isReveal) {
+      // ── Destination revealed ──────────────────────────────────────────
+      logger.info('autoAdvanceClue: Revealing destination', {
+        sessionId,
+        destinationName: result.destinationName,
+      });
+
+      // Audio: stop music + banter before reveal
+      onRevealStart(session).forEach((e) =>
+        sessionStore.broadcastEventToSession(sessionId, e)
+      );
+
+      // Broadcast STATE_SNAPSHOT to all clients
+      broadcastStateSnapshot(sessionId);
+
+      // Broadcast DESTINATION_REVEAL event
+      const revealEvent = buildDestinationRevealEvent(
+        sessionId,
+        result.destinationName!,
+        result.country!,
+        result.aliases || []
+      );
+      sessionStore.broadcastEventToSession(sessionId, revealEvent);
+
+      // Audio: reveal sting SFX
+      onDestinationReveal(session).forEach((e) =>
+        sessionStore.broadcastEventToSession(sessionId, e)
+      );
+
+      // Build and broadcast DESTINATION_RESULTS event
+      const results = session.state.lockedAnswers.map((answer) => {
+        const player = session.state.players.find(
+          (p) => p.playerId === answer.playerId
+        );
+        return {
+          playerId: answer.playerId,
+          playerName: player?.name || 'Unknown',
+          answerText: answer.answerText,
+          isCorrect: answer.isCorrect || false,
+          pointsAwarded: answer.pointsAwarded || 0,
+          lockedAtLevelPoints: answer.lockedAtLevelPoints,
+        };
+      });
+
+      const resultsEvent = buildDestinationResultsEvent(sessionId, results);
+      sessionStore.broadcastEventToSession(sessionId, resultsEvent);
+
+      // Audio: correct/incorrect banter
+      const anyCorrect = results.some((r) => r.isCorrect);
+      onDestinationResults(session, anyCorrect).forEach((e) =>
+        sessionStore.broadcastEventToSession(sessionId, e)
+      );
+
+      // Try to start follow-up questions; fall back to scoreboard if none
+      const followupStart = startFollowupSequence(session);
+      if (followupStart) {
+        // Audio: mutate audioState before snapshot so reconnect sees followup music
+        const fqAudioEvents = onFollowupStart(session, followupStart.question.questionText);
+
+        broadcastStateSnapshot(sessionId);
+        broadcastFollowupQuestionPresent(sessionId, followupStart);
+
+        // Broadcast audio events after snapshot
+        fqAudioEvents.forEach((e) => sessionStore.broadcastEventToSession(sessionId, e));
+
+        scheduleFollowupTimer(sessionId, followupStart.timerDurationMs);
+      } else {
+        const scoreboardEvent = buildScoreboardUpdateEvent(
+          sessionId,
+          session.state.scoreboard,
+          false
+        );
+        sessionStore.broadcastEventToSession(sessionId, scoreboardEvent);
+      }
+
+      logger.info('autoAdvanceClue: Broadcasted destination reveal and results', {
+        sessionId,
+        resultsCount: results.length,
+      });
+    } else {
+      // ── Next clue presented ───────────────────────────────────────────
+      logger.info('autoAdvanceClue: Advanced to next clue', {
+        sessionId,
+        clueLevelPoints: result.clueLevelPoints,
+      });
+
+      // Broadcast STATE_SNAPSHOT to all clients
+      broadcastStateSnapshot(sessionId);
+
+      // Broadcast CLUE_PRESENT event
+      const clueEvent = buildCluePresentEvent(
+        sessionId,
+        result.clueText!,
+        result.clueLevelPoints!,
+        session.state.roundIndex || 0,
+        result.clueIndex!
+      );
+      sessionStore.broadcastEventToSession(sessionId, clueEvent);
+
+      // Audio: resume music if needed + optional clue TTS
+      onClueAdvance(session, result.clueText!).forEach((e) =>
+        sessionStore.broadcastEventToSession(sessionId, e)
+      );
+
+      // Schedule timer for the new clue level
+      scheduleClueTimer(sessionId);
+
+      logger.info('autoAdvanceClue: Broadcasted CLUE_PRESENT event', {
+        sessionId,
+        clueLevelPoints: result.clueLevelPoints,
+      });
+    }
+  } catch (error: any) {
+    logger.error('autoAdvanceClue: Failed to advance clue', {
+      sessionId,
+      error: error.message,
+    });
+  }
 }
 
 /**
