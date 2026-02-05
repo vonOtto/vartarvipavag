@@ -58,6 +58,7 @@ Alla agenter och alla TASK-körningar måste följa dessa reglar utan undantag:
 | Spelmekanik-balans (poäng, timers, fairness) | game-designer | backend, producer |
 | Bug-rapportering + verifiering | qa-tester | backend, web, tvos |
 | Error tracking + monitoring | devops | backend |
+| Visuellt innehåll (bilder, video, motion graphics) | visual-content | tvos, web, web-designer |
 
 **Specialister äger besluten, implementatörer implementerar:**
 - Producer beslutar pacing → backend implementerar
@@ -88,6 +89,9 @@ Varje path har en utsedd ägaragent. Code-ändringar till en path kräver ägare
 | `docs/deploy-spec.md` | devops |
 | `docs/test-suite.md` | qa-tester |
 | `docs/game-balance-audit.md` | game-designer |
+| `docs/visual-assets/` | visual-content |
+| `assets/images/` | visual-content |
+| `assets/video/` | visual-content |
 
 ### TASK → Agent
 
@@ -139,6 +143,11 @@ Status spåras i `docs/status.md` och `docs/sprint-1.md`.
 | TASK-902 | game-designer | Playtesting analysis + recommendations |
 | TASK-903 | game-designer | Difficulty curve design |
 | TASK-904 | game-designer | Scoring system iteration |
+| TASK-1001 | visual-content | Asset catalog specification (images/video per phase) |
+| TASK-1002 | visual-content | Gemini prompt library (AI generation prompts) |
+| TASK-1003 | visual-content | Integration guide (tvOS/web asset usage) |
+| TASK-1004 | visual-content | Variation strategy (asset rotation) |
+| TASK-1005 | visual-content | Naming convention + asset organization |
 
 ### Kör TASK-xxx — Routing Rule
 
@@ -155,6 +164,7 @@ När "Kör TASK-xxx" ges, routa till agent enligt nummerserien:
 | 7xx | qa-tester | backend, web, tvos (för bug-fixes) |
 | 8xx | devops | backend, ai-content, web (för deploy-config) |
 | 9xx | game-designer | architect, backend (för balans-ändringar) |
+| 10xx | visual-content | tvos, web (för asset-integration) |
 
 ### Task Execution Rule
 
@@ -231,6 +241,7 @@ Alla specialist-agenter som är aktiva i projektet. För full spec, se `docs/age
 | **qa-tester** | E2E-test, edge-cases, regressions, test-suites | `docs/test-suite.md`, `docs/bugs/BUG-XXX.md` | ✅ Aktiv |
 | **devops** | CI/CD, deploy, miljöhantering, monitoring | `.github/workflows/`, `docs/deploy-spec.md` | ✅ Aktiv |
 | **game-designer** | Spelmekanik-balans, poäng-system, svårighetsgrad | `docs/game-balance-audit.md`, scoring-audit | ✅ Aktiv |
+| **visual-content** | Visuellt innehåll (bilder, video, motion graphics), Gemini prompts | `docs/visual-assets/`, `assets/images/`, `assets/video/` | ✅ Aktiv |
 
 **✅ Aktiv** = Rekryterad och tillgänglig för tasks
 
@@ -294,6 +305,27 @@ Alla specialist-agenter som är aktiva i projektet. För full spec, se `docs/age
 **Handoff från game-designer:**
 - Balans-förslag → architect approvar + uppdaterar contracts/ → backend implementerar → qa-tester verifierar
 - Playtesting-feedback → game-designer analyserar → docs/playtesting-report.md → architect/backend implementerar
+
+#### visual-content (Visual Content Designer / Motion Graphics Specialist)
+
+**När du ska använda visual-content:**
+- Spec för visuella assets (bilder, video-loopar) per game-phase (lobby, clue, reveal, followup, finale)
+- Gemini prompt-bibliotek för AI-generering av assets (konsekventa stilar, tekniska specs)
+- Asset-integration guide (hur tvOS/web laddar och spelar upp assets)
+- Variation-strategi (rotation av innehåll mellan sessioner)
+- Asset-optimering (tvOS 4K constraints, web responsive/bandwidth)
+
+**Handoff till visual-content:**
+1. Identifiera vilka phases som behöver visuellt innehåll (t.ex. "clue phase känns tom, vill ha 'resan'-video")
+2. Peka på design-specs (docs/tvos-redesign-spec.md, docs/web-redesign-spec.md)
+3. Peka på tvOS/web-struktur (apps/tvos/Sources/, apps/web-player/src/)
+4. visual-content skapar docs/visual-assets/ med asset-katalog + Gemini prompts
+5. Användaren genererar assets i Gemini baserat på prompts → sparar i assets/
+
+**Handoff från visual-content:**
+- Asset-katalog + Gemini prompts klara → användaren genererar assets → tvos/web implementerar asset-integration
+- Integration-guide klar → tvos/web läser spec → implementerar AVPlayer/lazy-loading → visual-content verifierar performance
+- Feedback från tvos/web (filstorlek för stor, choppy playback) → visual-content itererar prompts/specs
 
 ---
 
