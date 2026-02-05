@@ -41,6 +41,31 @@ Alla agenter och alla TASK-körningar måste följa dessa reglar utan undantag:
 
 ## Routing & Ownership Rules
 
+### Agent Selection Rule (Mandatory)
+
+**Inför varje uppgift:** Analysera uppgiftens TYP och välj rätt agent-typ baserat på expertis-område. Överbelasta inte en agent med arbete utanför dess expertis.
+
+| Uppgifts-typ | Rätt agent | Fel agent (använd EJ) |
+|--------------|------------|-----------------------|
+| Pacing/timing-beslut (hur spelet KÄNNS) | producer | backend |
+| UI/UX design (hur spelet SER UT) | web-designer, tvos-designer | web, tvos |
+| Backend state-machine-logik | backend | producer, architect |
+| Contract-ändring (event/state schema) | architect | backend, web, tvos |
+| Svenska språk-granskning (TTS, UI-text) | swedish-script, i18n-reviewer | backend, web |
+| Audio-produktion (SFX/musik) | sound-designer | backend, audio-director |
+| Integration-test (E2E, edge-cases) | qa-tester | backend, ceo |
+| Deploy, CI/CD, miljö | devops | backend, ceo |
+
+**Specialister äger besluten, implementatörer implementerar:**
+- Producer beslutar pacing → backend implementerar
+- Web-designer beslutar UI/UX → web implementerar
+- Architect beslutar contracts → alla implementerar
+
+**Samarbete via docs:**
+- Producer + backend: `pacing-spec.md` → `pacing-implementation-batch-X.md`
+- Web-designer + tvos-designer: `design-decisions.md` (synkad design)
+- Swedish-script + i18n-reviewer: `swedish-audit-report.md` → alla fixar
+
 ### Ownership Map
 
 Varje path har en utsedd ägaragent. Code-ändringar till en path kräver ägaren som reviewer eller instruktion.
@@ -162,6 +187,28 @@ När arbete skiftar från en agent till en annan skickas:
 2. **Input / Output** — vad mottagaren konsumerar (event shape) och producerar (UI, logic, test).
 3. **Testkriterier** — hur mottagaren verifierar (test-script, curl, checklista).
 4. **Referensdok** — länk till spec i `docs/` (ex. `ws-quick-reference.md`, `sprint-1.md`).
+
+---
+
+## Agent Registry
+
+Alla specialist-agenter som är aktiva i projektet. För full spec, se `docs/agent-recruiting-*.md`.
+
+| Agent-typ | Expertis | Äger / Producerar | Status |
+|-----------|----------|-------------------|--------|
+| **producer** | Game-show pacing, dramaturgi, timing-beslut | `docs/pacing-spec.md`, pacing-implementation-batch-X.md | ✅ Aktiv |
+| **web-designer** | UX/UI för web-player, mobile-first, game-show vibes | `docs/web-redesign-spec.md`, design-decisions.md | ✅ Aktiv |
+| **tvos-designer** | UX/UI för tvOS, TV-distance design, synk med web | `docs/tvos-redesign-spec.md`, Design/ system | ✅ Aktiv |
+| **swedish-script** | Korrekt svenska i TTS-manus, banter, voice-lines | `docs/tts-script.md`, swedish-audit-report.md | ✅ Aktiv |
+| **i18n-reviewer** | Svenska UI-text i alla clients (web, tvOS, ios-host) | `docs/i18n-review.md`, swedish-audit-report.md | ✅ Aktiv |
+| **sound-designer** | SFX/musik-produktion, genererings-prompts | `docs/sfx-prompts.md` | ✅ Aktiv |
+| **qa-tester** | E2E-test, edge-cases, regressions, test-suites | `docs/test-suite.md`, `docs/e2e_*.py` | 🔵 Rekommenderad |
+| **devops** | CI/CD, deploy, miljöhantering, monitoring | `.github/workflows/`, deploy-docs | 🔵 Rekommenderad |
+| **game-designer** | Spelmekanik-balans, poäng-system, svårighetsgrad | `docs/game-balance.md`, scoring-audit | 🟡 Nice-to-have |
+
+**✅ Aktiv** = Redan rekryterad och levererat
+**🔵 Rekommenderad** = Bör rekryteras för robust produktion
+**🟡 Nice-to-have** = Värdefull men inte blocker
 
 ---
 
