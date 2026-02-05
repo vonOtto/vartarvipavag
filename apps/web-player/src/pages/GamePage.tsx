@@ -15,7 +15,9 @@ const HostGameView: React.FC<{
   currentClue: { points: ClueLevelPoints; text: string } | null;
   isConnected: boolean;
   error: string | null;
-}> = ({ gameState, currentClue, isConnected, error }) => {
+  sendMessage: (type: string, payload: Record<string, unknown>) => void;
+  sessionId: string;
+}> = ({ gameState, currentClue, isConnected, error, sendMessage, sessionId }) => {
   const hostPlayerId = gameState?.players?.find(p => p.role === 'host')?.playerId;
 
   const brakeOwnerName = gameState.brakeOwnerPlayerId
@@ -156,6 +158,16 @@ const HostGameView: React.FC<{
               )}
             </div>
           </>
+        )}
+
+        {/* Host control: advance clue */}
+        {(gameState.phase === 'CLUE_LEVEL' || gameState.phase === 'PAUSED_FOR_BRAKE') && (
+          <button
+            className="start-game-button"
+            onClick={() => sendMessage('HOST_NEXT_CLUE', { sessionId })}
+          >
+            Nästa ledtråd
+          </button>
         )}
 
         {/* Scoreboard — always visible */}
@@ -358,6 +370,8 @@ export const GamePage: React.FC = () => {
         currentClue={currentClue}
         isConnected={isConnected}
         error={error}
+        sendMessage={sendMessage}
+        sessionId={session.sessionId}
       />
     );
   }
