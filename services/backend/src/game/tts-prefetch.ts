@@ -62,15 +62,6 @@ function buildBanterLines(): Array<{ phraseId: string; text: string }> {
   return lines;
 }
 
-// ── ordinal map for clue-level → Swedish ordinal (variant A templates) ─────
-const CLUE_ORDINALS: Record<number, string> = {
-  10: 'Första',
-  8:  'Andra',
-  6:  'Tredje',
-  4:  'Fjärde',
-  2:  'Femte',
-};
-
 // ── variant B templates keyed by clue level ─────────────────────────────────
 const CLUE_VARIANT_B: Record<number, string> = {
   10: 'Ledtråd på nivå tio',
@@ -93,16 +84,19 @@ export async function generateClueVoice(
 ): Promise<TtsManifestEntry | null> {
   // Pick variant A or B at random (contracts/banter.md §7 selection rule)
   const useVariantA = Math.random() < 0.5;
-  const prefix = useVariantA
-    ? CLUE_ORDINALS[clueLevel]
-    : CLUE_VARIANT_B[clueLevel];
 
-  if (!prefix) {
-    logger.warn('generateClueVoice: unknown clueLevel', { sessionId: session.sessionId, clueLevel });
-    return null;
-  }
+  const text = useVariantA
+    ? `Ledtråden — ${clueLevel} poäng: ${clueText}`
+    : (() => {
+        const prefix = CLUE_VARIANT_B[clueLevel];
+        if (!prefix) {
+          logger.warn('generateClueVoice: unknown clueLevel for variant B', { sessionId: session.sessionId, clueLevel });
+          return null;
+        }
+        return `${prefix}: ${clueText}`;
+      })();
 
-  const text = useVariantA ? `${prefix} ledtråd: ${clueText}` : `${prefix}: ${clueText}`;
+  if (!text) return null;
 
   try {
     const res = await fetch(`${AI_CONTENT_URL}/tts`, {

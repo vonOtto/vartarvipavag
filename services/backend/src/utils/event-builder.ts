@@ -108,13 +108,15 @@ export function buildCluePresentEvent(
   clueText: string,
   clueLevelPoints: 10 | 8 | 6 | 4 | 2,
   roundIndex: number,
-  clueIndex: number
+  clueIndex: number,
+  textRevealAfterMs: number = 0
 ): EventEnvelope {
   return buildEvent('CLUE_PRESENT', sessionId, {
     clueText,
     clueLevelPoints,
     roundIndex,
     clueIndex,
+    ...(textRevealAfterMs > 0 ? { textRevealAfterMs } : {}),
   });
 }
 
