@@ -23,6 +23,7 @@ import {
   buildUiEffectTriggerEvent,
 } from '../utils/event-builder';
 import { getServerTimeMs } from '../utils/time';
+import { logger } from '../utils/logger';
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -221,6 +222,36 @@ export function onAnswerLocked(session: Session): EventEnvelope[] {
   return [
     buildSfxPlayEvent(sessionId, 'sfx_lock', now, 0.9),
     buildMusicSetEvent(sessionId, 'music_travel_loop', 'loop', now),
+  ];
+}
+
+/**
+ * Emits a before_clue banter clip 500 ms before the clue TTS plays.
+ * Called from server.ts autoAdvanceClue only for levels 8, 6, 4 (pacing-spec section 3).
+ */
+export function onBeforeClue(session: Session, targetLevel: number): EventEnvelope[] {
+  const manifest = getManifest(session);
+  if (!manifest) {
+    logger.debug('onBeforeClue: no TTS manifest available, skipping', {
+      sessionId: session.sessionId,
+      targetLevel,
+    });
+    return [];
+  }
+
+  // Pick a random banter_before_clue clip from manifest
+  const clip = pickRandomClip(manifest, 'banter_before_clue');
+  if (!clip) {
+    logger.debug('onBeforeClue: no banter_before_clue clips in manifest, skipping', {
+      sessionId: session.sessionId,
+      targetLevel,
+    });
+    return [];
+  }
+
+  const now = getServerTimeMs();
+  return [
+    buildAudioPlayEvent(session.sessionId, clip.clipId, clip.url, clip.durationMs, now, '', false, 1.0),
   ];
 }
 

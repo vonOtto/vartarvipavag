@@ -38,12 +38,14 @@ import {
   onClueAdvance,
   onBrakeAccepted,
   onAnswerLocked,
+  onBeforeClue,
   onRevealStart,
   onDestinationReveal,
   onDestinationResults,
   onFollowupStart,
   onFollowupQuestionPresent,
   onFollowupSequenceEnd,
+  onFinalResults,
 } from './game/audio-director';
 import { prefetchRoundTts, generateClueVoice, generateQuestionVoice, generateFollowupIntroVoice } from './game/tts-prefetch';
 
@@ -1468,10 +1470,38 @@ async function autoAdvanceClue(sessionId: string): Promise<void> {
       );
       sessionStore.broadcastEventToSession(sessionId, clueEvent);
 
-      // Audio: resume music if needed + optional clue TTS
+      // Audio: resume music if needed
       onClueAdvance(session, result.clueLevelPoints!, result.clueText!).forEach((e) =>
         sessionStore.broadcastEventToSession(sessionId, e)
       );
+
+      // NEW: Emit before_clue banter 500 ms before clue TTS on levels 8, 6, 4 (pacing-spec section 3)
+      const shouldPlayBeforeClue = [8, 6, 4].includes(result.clueLevelPoints!);
+      if (shouldPlayBeforeClue) {
+        onBeforeClue(session, result.clueLevelPoints!).forEach((e) =>
+          sessionStore.broadcastEventToSession(sessionId, e)
+        );
+        // Wait 500 ms for banter clip to start before playing clue voice
+        await new Promise((resolve) => setTimeout(resolve, 500));
+      }
+
+      // Emit clue voice after banter (if any)
+      if (clueClip) {
+        sessionStore.broadcastEventToSession(sessionId, {
+          type: 'AUDIO_PLAY',
+          sessionId,
+          serverTimeMs: getServerTimeMs(),
+          payload: {
+            clipId: clueClip.clipId,
+            url: clueClip.url,
+            durationMs: clueClip.durationMs,
+            volume: 1.4,
+            category: 'voice',
+            text: result.clueText!,
+            showText: false,
+          },
+        });
+      }
 
       // Schedule timer for the new clue level
       scheduleClueTimer(sessionId);
@@ -1569,6 +1599,16 @@ function scheduleFollowupTimer(sessionId: string, durationMs: number): void {
       // Sequence done — broadcast SCOREBOARD_UPDATE
       const scoreboardEvent = buildScoreboardUpdateEvent(sessionId, sess.state.scoreboard, false);
       sessionStore.broadcastEventToSession(sessionId, scoreboardEvent);
+
+      // NEW: Schedule transition to FINAL_RESULTS after 4 s scoreboard hold (pacing-spec section 10)
+      setTimeout(() => {
+        const session = sessionStore.getSession(sessionId);
+        if (!session || session.state.phase !== 'SCOREBOARD') {
+          logger.debug('SCOREBOARD hold expired but phase changed, ignoring', { sessionId });
+          return;
+        }
+        transitionToFinalResults(sessionId);
+      }, 4000);
     }
   }, durationMs);
 
@@ -1576,4 +1616,101 @@ function scheduleFollowupTimer(sessionId: string, durationMs: number): void {
   (sessionStore.getSession(sessionId) as any)._followupTimer = timeoutId;
 
   logger.info('Followup timer scheduled', { sessionId, durationMs });
+}
+
+/**
+ * Orchestrates the FINAL_RESULTS ceremony:
+ * 4 s scoreboard hold, then 10-12 s timeline with SFX + confetti + podium + standings.
+ * Based on pacing-spec section 11 and blueprint.md section 12.7.
+ */
+function transitionToFinalResults(sessionId: string): void {
+  const session = sessionStore.getSession(sessionId);
+  if (!session) return;
+
+  logger.info('Transitioning to FINAL_RESULTS', { sessionId });
+
+  // Update phase to FINAL_RESULTS
+  session.state.phase = 'FINAL_RESULTS';
+
+  // Calculate winner(s) from scoreboard
+  const standings = session.state.scoreboard;
+  const sorted = [...standings].sort((a, b) => b.score - a.score);
+  const topScore = sorted[0]?.score ?? 0;
+  const winners = sorted.filter((s) => s.score === topScore);
+  const isTie = winners.length > 1;
+  const winnerPlayerId = isTie ? null : winners[0]?.playerId ?? null;
+
+  // Build FINAL_RESULTS_PRESENT event
+  const finalResultsEvent = {
+    type: 'FINAL_RESULTS_PRESENT' as const,
+    sessionId,
+    serverTimeMs: getServerTimeMs(),
+    payload: {
+      winnerPlayerId,
+      isTie,
+      tieWinners: isTie ? winners.map((w) => w.playerId) : undefined,
+      standingsTop: sorted.slice(0, 3).map((s) => ({
+        playerId: s.playerId,
+        name: s.name,
+        points: s.score,
+      })),
+      standingsFull: sorted.map((s) => ({
+        playerId: s.playerId,
+        name: s.name,
+        points: s.score,
+      })),
+    },
+  };
+
+  sessionStore.broadcastEventToSession(sessionId, finalResultsEvent);
+
+  // Audio timeline: onFinalResults returns immediate + scheduled events
+  const audioResult = onFinalResults(session);
+
+  // Broadcast immediate events (MUSIC_STOP + sting + banter)
+  audioResult.immediate.forEach((e) =>
+    sessionStore.broadcastEventToSession(sessionId, e)
+  );
+
+  // Schedule delayed SFX/UI events
+  audioResult.scheduled.forEach(({ event, delayMs }) => {
+    setTimeout(() => {
+      const sess = sessionStore.getSession(sessionId);
+      if (!sess || sess.state.phase !== 'FINAL_RESULTS') return;
+      sessionStore.broadcastEventToSession(sessionId, event);
+    }, delayMs);
+  });
+
+  // Server-driven UI events at t=7.0 s (podium) and t=10.5 s (full standings)
+  setTimeout(() => {
+    const sess = sessionStore.getSession(sessionId);
+    if (!sess || sess.state.phase !== 'FINAL_RESULTS') return;
+    sessionStore.broadcastEventToSession(sessionId, {
+      type: 'UI_EFFECT_TRIGGER',
+      sessionId,
+      serverTimeMs: getServerTimeMs(),
+      payload: { effectId: 'podium_reveal', intensity: 'med', durationMs: 3500 },
+    });
+  }, 7000);
+
+  setTimeout(() => {
+    const sess = sessionStore.getSession(sessionId);
+    if (!sess || sess.state.phase !== 'FINAL_RESULTS') return;
+    sessionStore.broadcastEventToSession(sessionId, {
+      type: 'UI_EFFECT_TRIGGER',
+      sessionId,
+      serverTimeMs: getServerTimeMs(),
+      payload: { effectId: 'full_standings', intensity: 'low', durationMs: 3500 },
+    });
+  }, 10500);
+
+  // Transition to ROUND_END at t=11.0 s
+  setTimeout(() => {
+    const sess = sessionStore.getSession(sessionId);
+    if (!sess || sess.state.phase !== 'FINAL_RESULTS') return;
+
+    logger.info('FINAL_RESULTS ceremony complete, transitioning to ROUND_END', { sessionId });
+    sess.state.phase = 'ROUND_END';
+    broadcastStateSnapshot(sessionId);
+  }, 11000);
 }

@@ -20,6 +20,14 @@ const BANTER_POOL: Record<string, string[]> = {
     'Dags att ge er en ledtråd. Vart är vi på väg?',
     'Härbärbär… Vilken resa blir det här?',
   ],
+  // NEW: before_clue (contracts/banter.md section 2)
+  banter_before_clue: [
+    'Nästa ledtråd kommer här...',
+    'Kanske blir det tydligare nu?',
+    'Lyssna noga på den här!',
+    'Den här kan vara avgörande.',
+    'Här får ni nästa pusselbiten.',
+  ],
   banter_after_brake: [
     'Där bromsar vi! Låt se vad ni kommit fram till.',
     'Och där fick vi broms! Vad säger ni?',
