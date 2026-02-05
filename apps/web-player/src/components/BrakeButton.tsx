@@ -8,7 +8,7 @@ interface BrakeButtonProps {
 export const BrakeButton: React.FC<BrakeButtonProps> = ({ disabled, onPullBrake }) => {
   return (
     <button className="brake-button" disabled={disabled} onClick={onPullBrake}>
-      BRAKE
+      BROMS
     </button>
   );
 };

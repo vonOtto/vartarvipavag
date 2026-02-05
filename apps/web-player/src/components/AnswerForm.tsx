@@ -17,9 +17,9 @@ export const AnswerForm: React.FC<AnswerFormProps> = ({ onSubmitAnswer, isSubmit
 
   return (
     <form className="answer-form" onSubmit={handleSubmit}>
-      <div className="brake-owner-message">You pulled the brake!</div>
+      <div className="brake-owner-message">Du bromsade!</div>
       <div className="form-group">
-        <label htmlFor="answer-input">What is the destination?</label>
+        <label htmlFor="answer-input">Vad är destinationen?</label>
         <input
           id="answer-input"
           type="text"
@@ -31,7 +31,7 @@ export const AnswerForm: React.FC<AnswerFormProps> = ({ onSubmitAnswer, isSubmit
         />
       </div>
       <button type="submit" disabled={!answerText.trim() || isSubmitting}>
-        {isSubmitting ? 'Submitting...' : 'Submit Answer'}
+        {isSubmitting ? 'Skickar...' : 'Skicka svar'}
       </button>
     </form>
   );

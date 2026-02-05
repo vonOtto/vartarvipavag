@@ -61,14 +61,14 @@ function ResumeRoute() {
         {error ? (
           <>
             <div className="error-message">{error}</div>
-            <button className="leave-button" onClick={handleLeave}>Leave game</button>
+            <button className="leave-button" onClick={handleLeave}>Lämna spelet</button>
           </>
         ) : (
           <>
             <div className="waiting-message">
-              {isConnected ? 'Restoring session...' : 'Reconnecting...'}
+              {isConnected ? 'Återställer session...' : 'Återansluter...'}
             </div>
-            <button className="leave-button" onClick={handleLeave}>Leave game</button>
+            <button className="leave-button" onClick={handleLeave}>Lämna spelet</button>
           </>
         )}
       </div>

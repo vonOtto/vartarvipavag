@@ -77,21 +77,21 @@ export const LobbyPage: React.FC = () => {
   return (
     <div className="page lobby-page">
       <div className="container">
-        <h1>Lobby</h1>
+        <h1>Lobbyn</h1>
 
         {error && <div className="error-message">{error}</div>}
 
         <div className="connection-status">
           {isConnected ? (
-            <span className="status-connected">Connected</span>
+            <span className="status-connected">Ansluten</span>
           ) : (
-            <span className="status-disconnected">Connecting...</span>
+            <span className="status-disconnected">Ansluter...</span>
           )}
         </div>
 
         {gameState && (
           <div className="join-code-display">
-            Join code: <strong>{gameState.joinCode.toUpperCase()}</strong>
+            Anslutningskod: <strong>{gameState.joinCode.toUpperCase()}</strong>
           </div>
         )}
 
@@ -109,11 +109,11 @@ export const LobbyPage: React.FC = () => {
           </button>
         ) : (
           <div className="waiting-message">
-            Waiting for host to start game...
+            Väntar på att värd startar spelet...
           </div>
         )}
 
-        <button className="leave-button" onClick={() => { clearSession(); navigate('/'); }}>Leave game</button>
+        <button className="leave-button" onClick={() => { clearSession(); navigate('/'); }}>Lämna spelet</button>
       </div>
     </div>
   );

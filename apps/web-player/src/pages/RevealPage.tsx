@@ -106,28 +106,28 @@ export const RevealPage: React.FC = () => {
 
         <div className="connection-status">
           {isConnected ? (
-            <span className="status-connected">Connected</span>
+            <span className="status-connected">Ansluten</span>
           ) : (
-            <span className="status-disconnected">Reconnecting...</span>
+            <span className="status-disconnected">Återansluter...</span>
           )}
         </div>
 
         {destination ? (
           <div className="destination-reveal">
-            <h2>It was...</h2>
+            <h2>Det var...</h2>
             <div className="destination-name">{destination.name}</div>
             <div className="destination-country">{destination.country}</div>
           </div>
         ) : (
-          <div className="waiting-message">Revealing destination...</div>
+          <div className="waiting-message">Avslöjar destination...</div>
         )}
 
         {/* Own answer result */}
         {myResult && (
           <div className={`my-result ${myResult.isCorrect ? 'result-correct' : 'result-incorrect'}`}>
-            <div className="my-result-answer">Your answer: <strong>{myResult.answerText}</strong></div>
+            <div className="my-result-answer">Ditt svar: <strong>{myResult.answerText}</strong></div>
             <div className="my-result-verdict">
-              {myResult.isCorrect ? 'Correct!' : 'Incorrect'} — +{myResult.pointsAwarded} points (locked at {myResult.lockedAtLevelPoints})
+              {myResult.isCorrect ? 'Rätt!' : 'Fel'} — +{myResult.pointsAwarded} poäng (låst vid {myResult.lockedAtLevelPoints})
             </div>
           </div>
         )}
@@ -138,7 +138,7 @@ export const RevealPage: React.FC = () => {
         )}
 
         {gameState?.phase === 'FINAL_RESULTS' && (
-          <div className="game-complete">Game complete!</div>
+          <div className="game-complete">Spelet klart!</div>
         )}
       </div>
     </div>

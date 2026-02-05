@@ -54,9 +54,9 @@ const HostGameView: React.FC<{
         {/* Connection badge */}
         <div className="connection-status">
           {isConnected ? (
-            <span className="status-connected">Connected</span>
+            <span className="status-connected">Ansluten</span>
           ) : (
-            <span className="status-disconnected">Reconnecting...</span>
+            <span className="status-disconnected">Återansluter...</span>
           )}
         </div>
 
@@ -122,7 +122,7 @@ const HostGameView: React.FC<{
             {currentClue ? (
               <ClueDisplay points={currentClue.points} clueText={currentClue.text} />
             ) : (
-              <div className="waiting-message">Waiting for next clue...</div>
+              <div className="waiting-message">Väntar på nästa ledtråd...</div>
             )}
 
             {/* Brake status */}
@@ -259,12 +259,12 @@ export const GamePage: React.FC = () => {
         setBraking(false);
         const payload = lastEvent.payload as BrakeRejectedPayload;
         const messages: Record<string, string> = {
-          too_late: 'Someone else was faster!',
-          already_paused: 'Game is already paused.',
-          rate_limited: 'Wait before trying again.',
-          invalid_phase: 'Cannot brake right now.',
+          too_late: 'Någon annan var snabbarre!',
+          already_paused: 'Spelet är redan pausat.',
+          rate_limited: 'Vänta innan du försöker igen.',
+          invalid_phase: 'Kan inte bromsa just nu.',
         };
-        setRejectionMessage(messages[payload.reason] || 'Brake rejected.');
+        setRejectionMessage(messages[payload.reason] || 'Broms avvisad.');
         const timer = setTimeout(() => setRejectionMessage(null), 2500);
         return () => clearTimeout(timer);
       }
@@ -386,16 +386,16 @@ export const GamePage: React.FC = () => {
 
         <div className="connection-status">
           {isConnected ? (
-            <span className="status-connected">Connected</span>
+            <span className="status-connected">Ansluten</span>
           ) : (
-            <span className="status-disconnected">Reconnecting...</span>
+            <span className="status-disconnected">Återansluter...</span>
           )}
         </div>
 
         {currentClue ? (
           <ClueDisplay points={currentClue.points} clueText={currentClue.text} />
         ) : (
-          <div className="waiting-message">Waiting for next clue...</div>
+          <div className="waiting-message">Väntar på nästa ledtråd...</div>
         )}
 
         {/* Brake rejection toast */}
@@ -409,7 +409,7 @@ export const GamePage: React.FC = () => {
             <BrakeButton disabled={!canBrake} onPullBrake={handlePullBrake} />
             {hasLockedAnswer && (
               <div className="answer-locked">
-                Your answer is locked at {lockedAtPoints} points
+                Ditt svar är låst vid {lockedAtPoints} poäng
               </div>
             )}
           </>
@@ -420,7 +420,7 @@ export const GamePage: React.FC = () => {
           isMyBrake ? (
             isLocked ? (
               <div className="answer-locked">
-                Your answer is locked at {lockedAtPoints} points
+                Ditt svar är låst vid {lockedAtPoints} poäng
               </div>
             ) : (
               <AnswerForm onSubmitAnswer={handleSubmitAnswer} isSubmitting={submitting} />

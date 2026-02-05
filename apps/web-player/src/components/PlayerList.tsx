@@ -19,7 +19,7 @@ export const PlayerList: React.FC<PlayerListProps> = ({ players }) => {
           <li key={player.playerId} className={player.isConnected ? 'connected' : 'disconnected'}>
             {player.name}
             <span className="status">
-              {player.isConnected ? ' (connected)' : ' (disconnected)'}
+              {player.isConnected ? ' (ansluten)' : ' (frånlämnad)'}
             </span>
           </li>
         ))}
