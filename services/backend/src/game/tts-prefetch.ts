@@ -122,11 +122,18 @@ export async function generateClueVoice(
       generatedAtMs: Date.now(),
     };
 
-    // Append to manifest (create if absent)
+    // Replace existing entry with same clipId (cache-bust on re-generate),
+    // or append if this is the first time.
     if (!(session as any)._ttsManifest) {
       (session as any)._ttsManifest = [];
     }
-    (session as any)._ttsManifest.push(entry);
+    const manifest: TtsManifestEntry[] = (session as any)._ttsManifest;
+    const idx = manifest.findIndex((c) => c.clipId === entry.clipId);
+    if (idx >= 0) {
+      manifest[idx] = entry;
+    } else {
+      manifest.push(entry);
+    }
 
     logger.info('generateClueVoice: clip added to manifest', {
       sessionId: session.sessionId, clueLevel, durationMs: data.durationMs,

@@ -234,6 +234,12 @@ export interface TtsPrefetchPayload {
   }>;
 }
 
+export interface VoiceLinePayload {
+  text: string;
+  phraseId: string;
+  displayDurationMs: number;
+}
+
 export interface UiEffectTriggerPayload {
   effectId: 'confetti' | 'flash' | 'spotlight';
   intensity?: 'low' | 'med' | 'high';
@@ -281,6 +287,7 @@ export type EventType =
   | 'AUDIO_STOP'
   | 'TTS_PREFETCH'
   | 'UI_EFFECT_TRIGGER'
+  | 'VOICE_LINE'
   | 'HOST_MUSIC_GAIN_SET'
   | 'FINAL_RESULTS_PRESENT'
   | 'ERROR';

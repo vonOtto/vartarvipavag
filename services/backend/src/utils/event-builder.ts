@@ -345,6 +345,15 @@ export function buildAudioStopEvent(
   return buildEvent('AUDIO_STOP', sessionId, { clipId, fadeOutMs });
 }
 
+export function buildVoiceLineEvent(
+  sessionId: string,
+  text: string,
+  phraseId: string,
+  displayDurationMs: number
+): EventEnvelope {
+  return buildEvent('VOICE_LINE', sessionId, { text, phraseId, displayDurationMs });
+}
+
 export function buildTtsPrefetchEvent(
   sessionId: string,
   clips: Array<{ clipId: string; url: string; durationMs: number }>

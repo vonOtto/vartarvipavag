@@ -26,6 +26,7 @@ import {
   buildFollowupAnswersLockedEvent,
   buildFollowupResultsEvent,
   buildAudioPlayEvent,
+  buildVoiceLineEvent,
 } from './utils/event-builder';
 import { projectState } from './utils/state-projection';
 import { buildLobbyUpdatedEvent } from './utils/lobby-events';
@@ -693,7 +694,7 @@ async function handleHostNextClue(
         const introClip = await generateFollowupIntroVoice(session, result.destinationName!);
         const introDurationMs = introClip?.durationMs ?? 3000;
 
-        // 3) Emit AUDIO_PLAY for the intro clip (skip if no real URL — ai-content was down)
+        // 3) Emit AUDIO_PLAY for the intro clip; fall back to VOICE_LINE when ai-content was down
         if (introClip && introClip.url) {
           const introAudioEvent = buildAudioPlayEvent(
             sessionId,
@@ -706,6 +707,16 @@ async function handleHostNextClue(
             1.4    // volume boost
           );
           sessionStore.broadcastEventToSession(sessionId, introAudioEvent);
+        } else if (introClip) {
+          // ai-content down — no audio URL, but we still want clients to show
+          // the text overlay for the duration so the pause feels intentional.
+          const voiceLineEvent = buildVoiceLineEvent(
+            sessionId,
+            `Nu ska vi se vad ni kan om ${result.destinationName!}`,
+            'voice_followup_intro',
+            introClip.durationMs
+          );
+          sessionStore.broadcastEventToSession(sessionId, voiceLineEvent);
         }
 
         // 4) Wait for clip to finish + 1500 ms breathing window, then present first followup
@@ -1319,7 +1330,7 @@ async function autoAdvanceClue(sessionId: string): Promise<void> {
         const introClip = await generateFollowupIntroVoice(session, result.destinationName!);
         const introDurationMs = introClip?.durationMs ?? 3000;
 
-        // 3) Emit AUDIO_PLAY for the intro clip (skip if no real URL — ai-content was down)
+        // 3) Emit AUDIO_PLAY for the intro clip; fall back to VOICE_LINE when ai-content was down
         if (introClip && introClip.url) {
           const introAudioEvent = buildAudioPlayEvent(
             sessionId,
@@ -1332,6 +1343,16 @@ async function autoAdvanceClue(sessionId: string): Promise<void> {
             1.4    // volume boost
           );
           sessionStore.broadcastEventToSession(sessionId, introAudioEvent);
+        } else if (introClip) {
+          // ai-content down — no audio URL, but we still want clients to show
+          // the text overlay for the duration so the pause feels intentional.
+          const voiceLineEvent = buildVoiceLineEvent(
+            sessionId,
+            `Nu ska vi se vad ni kan om ${result.destinationName!}`,
+            'voice_followup_intro',
+            introClip.durationMs
+          );
+          sessionStore.broadcastEventToSession(sessionId, voiceLineEvent);
         }
 
         // 4) Wait for clip to finish + 1500 ms breathing window, then present first followup
@@ -1443,8 +1464,12 @@ function scheduleFollowupTimer(sessionId: string, durationMs: number): void {
     const resultsEvent = buildFollowupResultsEvent(sessionId, currentIdx, correctAnswer, results, nextQuestionIndex);
     sessionStore.broadcastEventToSession(sessionId, resultsEvent);
 
-    // Broadcast updated scoreboard state
-    broadcastStateSnapshot(sessionId);
+    // NOTE: STATE_SNAPSHOT is intentionally NOT sent here when there is a next
+    // question.  scoreFollowupQuestion has already mutated followupQuestion to
+    // the next question; sending the snapshot now would leak that question to
+    // clients before the 4 s results-display pause is over.
+    // The snapshot is emitted inside the 4 s setTimeout (next-question branch)
+    // or immediately in the else branch (last question — no next question to leak).
 
     if (nextQuestionIndex !== null && sess.state.followupQuestion) {
       // ── 4 s pause so FOLLOWUP_RESULTS stays visible before next question ──
@@ -1460,6 +1485,10 @@ function scheduleFollowupTimer(sessionId: string, durationMs: number): void {
 
         // Next question — generate voice BEFORE audio-director searches manifest
         await generateQuestionVoice(s, nextFq.currentQuestionIndex, nextFq.questionText);
+
+        // Now safe to push STATE_SNAPSHOT — clients will see the next question
+        // only after the 4 s results pause has elapsed.
+        broadcastStateSnapshot(sessionId);
 
         broadcastFollowupQuestionPresent(sessionId, {
           question: {
