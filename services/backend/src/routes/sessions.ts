@@ -69,7 +69,7 @@ router.post('/v1/sessions', (_req: Request, res: Response) => {
 router.post('/v1/sessions/:id/join', (req: Request, res: Response) => {
   try {
     const sessionId = req.params.id;
-    const { name } = req.body;
+    const { name, role } = req.body;
 
     // Validate input
     if (!name || typeof name !== 'string' || name.trim().length === 0) {
@@ -83,6 +83,14 @@ router.post('/v1/sessions/:id/join', (req: Request, res: Response) => {
       return res.status(400).json({
         error: 'Validation error',
         message: 'Player name must be 50 characters or less',
+      });
+    }
+
+    // Validate optional role field
+    if (role !== undefined && role !== 'player' && role !== 'host') {
+      return res.status(400).json({
+        error: 'Validation error',
+        message: 'role must be "player" or "host"',
       });
     }
 
@@ -103,13 +111,39 @@ router.post('/v1/sessions/:id/join', (req: Request, res: Response) => {
       });
     }
 
-    // Add player to session
+    // If the client wants to claim the host role, verify the slot is free.
+    // This check runs while we are still single-threaded (no await above it)
+    // so it is effectively atomic for the in-memory store.
+    const claimingHost = role === 'host';
+    if (claimingHost && sessionStore.hasActiveHost(sessionId)) {
+      return res.status(409).json({
+        error: 'Host already taken',
+      });
+    }
+
+    // Add player to session (always creates with role 'player' internally)
     const player = sessionStore.addPlayer(sessionId, name.trim());
 
-    // Generate auth token
+    // If claiming host, patch the role on both the canonical player list and
+    // the game-state player list so that projections and lobby events reflect
+    // the new role immediately.
+    if (claimingHost) {
+      const playerInList = session.players.find((p) => p.playerId === player.playerId);
+      if (playerInList) {
+        playerInList.role = 'host';
+      }
+      const playerInState = session.state.players.find((p) => p.playerId === player.playerId);
+      if (playerInState) {
+        playerInState.role = 'host';
+      }
+    }
+
+    // Sign the auth token.  When claiming host the token carries role 'host'
+    // so the WS handler will register this connection as the host.
+    const effectiveRole = claimingHost ? 'host' : 'player';
     const playerAuthToken = signToken({
       sessionId: session.sessionId,
-      role: 'player',
+      role: effectiveRole,
       playerId: player.playerId,
     });
 
@@ -120,6 +154,7 @@ router.post('/v1/sessions/:id/join', (req: Request, res: Response) => {
       sessionId,
       playerId: player.playerId,
       name: player.name,
+      role: effectiveRole,
     });
 
     // Broadcast LOBBY_UPDATED to all connected clients
@@ -215,6 +250,7 @@ router.get('/v1/sessions/by-code/:joinCode', (req: Request, res: Response) => {
       joinCode: session.joinCode,
       phase: session.state.phase,
       playerCount: session.players.filter((p) => p.role === 'player').length,
+      hasHost: sessionStore.hasActiveHost(session.sessionId),
     });
   } catch (error) {
     logger.error('Failed to get session by join code', { error });

@@ -287,6 +287,21 @@ class SessionStore {
   }
 
   /**
+   * Returns true when at least one currently-connected WebSocket in the
+   * session carries the 'host' role.  Used by the join endpoint to decide
+   * whether the host slot is available for claiming.
+   */
+  hasActiveHost(sessionId: string): boolean {
+    const session = this.sessions.get(sessionId);
+    if (!session) return false;
+
+    for (const connection of session.connections.values()) {
+      if (connection.role === 'host') return true;
+    }
+    return false;
+  }
+
+  /**
    * Removes a WebSocket connection from a session
    */
   removeConnection(sessionId: string, playerId: string): void {
