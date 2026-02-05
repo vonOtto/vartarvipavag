@@ -27,7 +27,7 @@ app.post('/tts/batch', async (req, res) => {
             return {
                 clipId:        `banter_${line.phraseId}_${roundId}`,
                 phraseId:      line.phraseId,
-                url:           `${PUBLIC_URL}/cache/${clip.assetId}.wav`,
+                url:           `${PUBLIC_URL}/cache/${clip.assetId}.${clip.ext}`,
                 durationMs:    clip.durationMs,
                 generatedAtMs: Date.now(),
             };
@@ -68,7 +68,7 @@ app.post('/tts', async (req, res) => {
         const clip = await generateOrFetch(text, voiceId);
         res.json({
             assetId:    clip.assetId,
-            url:        `${PUBLIC_URL}/cache/${clip.assetId}.wav`,
+            url:        `${PUBLIC_URL}/cache/${clip.assetId}.${clip.ext}`,
             durationMs: clip.durationMs,
         });
     } catch (err) {

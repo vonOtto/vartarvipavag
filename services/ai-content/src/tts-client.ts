@@ -11,7 +11,7 @@ const ELEVEN_BASE = 'https://api.elevenlabs.io/v1/text-to-speech';
 const RETRIES     = 3;
 
 // ── types ───────────────────────────────────────────────────────────────────
-export interface TtsClip { assetId: string; durationMs: number }
+export interface TtsClip { assetId: string; durationMs: number; ext: string }
 
 // ── public ──────────────────────────────────────────────────────────────────
 
@@ -23,34 +23,53 @@ export async function generateOrFetch(text: string, voiceId: string): Promise<Tt
     const hash    = crypto.createHash('sha256')
                           .update(`${text}\0${voiceId}`).digest('hex').slice(0, 16);
     const assetId = `tts_${hash}`;
-    const file    = path.join(CACHE_DIR, `${assetId}.wav`);
 
-    // cache hit
-    if (fs.existsSync(file)) {
-        return { assetId, durationMs: wavDurationMs(fs.readFileSync(file)) };
+    // Try MP3 cache first, then legacy WAV cache
+    const mp3File = path.join(CACHE_DIR, `${assetId}.mp3`);
+    const wavFile = path.join(CACHE_DIR, `${assetId}.wav`);
+
+    if (fs.existsSync(mp3File)) {
+        const size = fs.statSync(mp3File).size;
+        return { assetId, durationMs: mp3DurationMs(size), ext: 'mp3' };
+    }
+    if (fs.existsSync(wavFile)) {
+        return { assetId, durationMs: wavDurationMs(fs.readFileSync(wavFile)), ext: 'wav' };
     }
 
-    // generate – fall back to mock on any ElevenLabs failure
-    const wav = API_KEY ? await generate(text, voiceId) : mockWav(600);
-
     fs.mkdirSync(CACHE_DIR, { recursive: true });
-    fs.writeFileSync(file, wav);
-    return { assetId, durationMs: wavDurationMs(wav) };
+
+    if (!API_KEY) {
+        // mock mode – write silent WAV
+        const wav = mockWav(600);
+        fs.writeFileSync(wavFile, wav);
+        return { assetId, durationMs: wavDurationMs(wav), ext: 'wav' };
+    }
+
+    // generate MP3 from ElevenLabs
+    const mp3 = await generate(text, voiceId);
+    if (!mp3) {
+        // ElevenLabs failed – write mock WAV as fallback
+        const wav = mockWav(600);
+        fs.writeFileSync(wavFile, wav);
+        return { assetId, durationMs: wavDurationMs(wav), ext: 'wav' };
+    }
+    fs.writeFileSync(mp3File, mp3);
+    return { assetId, durationMs: mp3DurationMs(mp3.length), ext: 'mp3' };
 }
 
 // ── ElevenLabs fetch (retry ×3, exp back-off, graceful fallback) ────────────
 
-async function generate(text: string, voiceId: string): Promise<Buffer> {
+async function generate(text: string, voiceId: string): Promise<Buffer | null> {
     for (let i = 1; i <= RETRIES; i++) {
         try {
             const res = await fetch(
-                `${ELEVEN_BASE}/${voiceId}?output_format=wav`,
+                `${ELEVEN_BASE}/${voiceId}?output_format=mp3_44100_128`,
                 {
                     method: 'POST',
                     headers: {
                         'xi-api-key':   API_KEY!,
                         'Content-Type': 'application/json',
-                        Accept:         'audio/wav',
+                        Accept:         'audio/mpeg',
                     },
                     body: JSON.stringify({
                         text,
@@ -62,22 +81,16 @@ async function generate(text: string, voiceId: string): Promise<Buffer> {
 
             if (!res.ok) throw new Error(`${res.status} ${await res.text()}`);
 
-            const buf = Buffer.from(await res.arrayBuffer());
-            // Guard: must be PCM WAV; fall back to mock otherwise
-            if (buf.toString('ascii', 0, 4) !== 'RIFF') {
-                console.warn('[tts] ElevenLabs returned non-WAV; using mock');
-                return mockWav(600);
-            }
-            return buf;
+            return Buffer.from(await res.arrayBuffer());
         } catch (err) {
             if (i === RETRIES) {
-                console.warn(`[tts] ElevenLabs failed after ${RETRIES} retries; using mock:`, err);
-                return mockWav(600);
+                console.warn(`[tts] ElevenLabs failed after ${RETRIES} retries:`, err);
+                return null;
             }
             await sleep(1000 * 2 ** i);   // 2 s / 4 s / 8 s
         }
     }
-    return mockWav(600);   // unreachable – satisfies TS
+    return null;   // unreachable – satisfies TS
 }
 
 // ── mock WAV (silent, 16 kHz mono 16-bit PCM) ──────────────────────────────
@@ -114,6 +127,12 @@ function wavDurationMs(buf: Buffer): number {
         off += 8 + size;
     }
     return 0;
+}
+
+// ── MP3 duration estimate (128 kbps = 16 000 bytes / sec) ───────────────────
+
+function mp3DurationMs(sizeBytes: number): number {
+    return Math.round((sizeBytes * 1000) / 16_000);   // 128 kbps = 16 KB/s
 }
 
 // ── util ────────────────────────────────────────────────────────────────────
