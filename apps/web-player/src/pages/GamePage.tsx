@@ -427,7 +427,7 @@ export const GamePage: React.FC = () => {
             )
           ) : (
             <div className="brake-message">
-              {brakeOwnerName || 'Someone'} pulled the brake!
+              {brakeOwnerName || 'Någon'} bromsade!
             </div>
           )
         )}
