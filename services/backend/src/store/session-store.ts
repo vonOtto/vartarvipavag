@@ -28,6 +28,8 @@ export interface Session {
   // Internal state for brake fairness and rate limiting
   _brakeTimestamps?: Map<string, number>; // playerId -> last brake timestamp
   _brakeFairness?: Map<string, { playerId: string; timestamp: number }>; // clue_key -> first brake
+  // Grace period cleanup timers for disconnected players
+  _disconnectTimers?: Map<string, NodeJS.Timeout>; // playerId -> cleanup timer
 }
 
 class SessionStore {
@@ -130,6 +132,7 @@ class SessionStore {
       isConnected: false,
       joinedAtMs: now,
       score: 0,
+      // disconnectedAt is undefined initially (player hasn't disconnected yet)
     };
 
     session.players.push(player);

@@ -21,6 +21,7 @@ export interface Player {
   isConnected: boolean;
   joinedAtMs: number;
   score: number;
+  disconnectedAt?: number; // Timestamp when player disconnected (for grace period)
 }
 
 export interface Destination {

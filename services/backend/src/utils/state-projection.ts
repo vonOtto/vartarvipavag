@@ -43,8 +43,14 @@ export function projectState(
   }
 
   // Filter players: TV and PLAYER only see role=player entries
+  // Also strip internal fields like disconnectedAt for all roles
   if (role === 'tv' || role === 'player') {
-    projected.players = fullState.players.filter((p) => p.role === 'player');
+    projected.players = fullState.players
+      .filter((p) => p.role === 'player')
+      .map(({ disconnectedAt, ...player }) => player);
+  } else if (role === 'host') {
+    // HOST sees all players but still strip internal disconnectedAt field
+    projected.players = fullState.players.map(({ disconnectedAt, ...player }) => player);
   }
 
   // Filter locked answers based on role

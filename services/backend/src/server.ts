@@ -259,8 +259,59 @@ export function createWebSocketServer(server: HTTPServer) {
         );
         sessionStore.broadcastEventToSession(sessionId, lobbyEvent);
       } else {
-        // Active-gameplay path: broadcast PLAYER_LEFT so clients can react
-        // (e.g. show "disconnected" badge) but keep the player in the list
+        // Active-gameplay path: mark player as disconnected with timestamp
+        // and schedule grace period cleanup
+        const player = updatedSession.state.players.find((p) => p.playerId === actualPlayerId);
+        if (player && role === 'player') {
+          player.disconnectedAt = getServerTimeMs();
+
+          // Initialize disconnect timers map if needed
+          if (!updatedSession._disconnectTimers) {
+            updatedSession._disconnectTimers = new Map();
+          }
+
+          // Clear any existing timer for this player
+          const existingTimer = updatedSession._disconnectTimers.get(actualPlayerId);
+          if (existingTimer) {
+            clearTimeout(existingTimer);
+          }
+
+          // Schedule cleanup after 60 second grace period
+          const GRACE_PERIOD_MS = 60000;
+          const cleanupTimer = setTimeout(() => {
+            const sess = sessionStore.getSession(sessionId);
+            if (!sess) return;
+
+            const p = sess.state.players.find((pl) => pl.playerId === actualPlayerId);
+            if (p && !p.isConnected) {
+              // Player did not reconnect within grace period - remove them
+              sessionStore.removePlayer(sessionId, actualPlayerId);
+
+              logger.info('Player removed after grace period expired', {
+                sessionId,
+                playerId: actualPlayerId,
+                gracePeriodMs: GRACE_PERIOD_MS,
+              });
+
+              // Broadcast PLAYER_LEFT with reason 'timeout'
+              const leftEvent = buildPlayerLeftEvent(sessionId, actualPlayerId, 'timeout');
+              sessionStore.broadcastEventToSession(sessionId, leftEvent);
+
+              // Clean up timer reference
+              sess._disconnectTimers?.delete(actualPlayerId);
+            }
+          }, GRACE_PERIOD_MS);
+
+          updatedSession._disconnectTimers.set(actualPlayerId, cleanupTimer);
+
+          logger.info('Player marked as disconnected with grace period', {
+            sessionId,
+            playerId: actualPlayerId,
+            gracePeriodMs: GRACE_PERIOD_MS,
+          });
+        }
+
+        // Broadcast PLAYER_LEFT so clients can react (e.g. show "disconnected" badge)
         const leftEvent = buildPlayerLeftEvent(sessionId, actualPlayerId, 'disconnect');
         sessionStore.broadcastToSession(sessionId, JSON.stringify(leftEvent), actualPlayerId);
 
@@ -381,6 +432,62 @@ function handleResumeSession(
     );
     ws.send(JSON.stringify(errorEvent));
     return;
+  }
+
+  // Check if player exists in session and was disconnected (within grace period)
+  const player = session.state.players.find((p) => p.playerId === playerId);
+  if (player && player.disconnectedAt) {
+    // Player is reconnecting within grace period
+    // Note: isConnected is already true from addConnection call in ws.on('connection')
+    logger.info('RESUME_SESSION: Player reconnecting within grace period', {
+      sessionId,
+      playerId,
+      role,
+      disconnectedAt: player.disconnectedAt,
+      elapsedMs: getServerTimeMs() - player.disconnectedAt,
+    });
+
+    // Cancel the grace period cleanup timer
+    if (session._disconnectTimers) {
+      const timer = session._disconnectTimers.get(playerId);
+      if (timer) {
+        clearTimeout(timer);
+        session._disconnectTimers.delete(playerId);
+        logger.info('RESUME_SESSION: Cancelled grace period timer', {
+          sessionId,
+          playerId,
+        });
+      }
+    }
+
+    // Clear disconnectedAt timestamp
+    delete player.disconnectedAt;
+
+    logger.info('RESUME_SESSION: Player successfully reconnected', {
+      sessionId,
+      playerId,
+      playerName: player.name,
+    });
+
+    // Broadcast STATE_SNAPSHOT to all OTHER clients to update player connection status
+    // This ensures all clients see the player as reconnected
+    // The reconnecting player already got STATE_SNAPSHOT in the connection handler
+    session.connections.forEach((connection, connPlayerId) => {
+      if (connPlayerId !== playerId && connection.ws.readyState === 1) {
+        const projectedState = projectState(
+          session.state,
+          connection.role as any,
+          connPlayerId
+        );
+        const snapshotEvent = buildStateSnapshotEvent(sessionId, projectedState);
+        connection.ws.send(JSON.stringify(snapshotEvent));
+      }
+    });
+
+    logger.debug('Broadcasted STATE_SNAPSHOT to other clients after reconnect', {
+      sessionId,
+      reconnectedPlayerId: playerId,
+    });
   }
 
   logger.info('RESUME_SESSION: Sending state snapshot', {
