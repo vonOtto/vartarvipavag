@@ -641,8 +641,19 @@ async function handleHostNextClue(
         sessionStore.broadcastEventToSession(sessionId, e)
       );
 
+      // Wait 800 ms after music fade before broadcasting snapshot
+      await new Promise((resolve) => setTimeout(resolve, 800));
+
       // Broadcast STATE_SNAPSHOT to all clients
       broadcastStateSnapshot(sessionId);
+
+      // Extract banter clip duration from onRevealStart events (AUDIO_PLAY)
+      const revealStartEvents = onRevealStart(session);
+      const banterEvent = revealStartEvents.find((e) => e.type === 'AUDIO_PLAY');
+      const banterDurationMs = banterEvent ? (banterEvent.payload as any).durationMs : 0;
+
+      // Wait for banter to finish + 1 200 ms pre-reveal pause
+      await new Promise((resolve) => setTimeout(resolve, banterDurationMs + 1200));
 
       // Broadcast DESTINATION_REVEAL event
       const revealEvent = buildDestinationRevealEvent(
@@ -653,10 +664,13 @@ async function handleHostNextClue(
       );
       sessionStore.broadcastEventToSession(sessionId, revealEvent);
 
-      // Audio: reveal sting SFX
+      // Audio: reveal sting SFX (simultaneous with REVEAL)
       onDestinationReveal(session).forEach((e) =>
         sessionStore.broadcastEventToSession(sessionId, e)
       );
+
+      // Wait 2 000 ms — let destination name sit on screen
+      await new Promise((resolve) => setTimeout(resolve, 2000));
 
       // Build and broadcast DESTINATION_RESULTS event
       const results = session.state.lockedAnswers.map((answer) => {
@@ -675,6 +689,9 @@ async function handleHostNextClue(
 
       const resultsEvent = buildDestinationResultsEvent(sessionId, results);
       sessionStore.broadcastEventToSession(sessionId, resultsEvent);
+
+      // Wait 400 ms before result banter
+      await new Promise((resolve) => setTimeout(resolve, 400));
 
       // Audio: correct/incorrect banter
       const anyCorrect = results.some((r) => r.isCorrect);
@@ -989,8 +1006,16 @@ function handleBrakeAnswerSubmit(
       sessionStore.broadcastEventToSession(sessionId, e)
     );
 
-    // Auto-advance to next clue (or reveal) now that the answer is locked
-    autoAdvanceClue(sessionId);
+    // Wait 1 200 ms to let the lock moment land before auto-advancing
+    setTimeout(() => {
+      const sess = sessionStore.getSession(sessionId);
+      if (!sess || sess.state.phase !== 'CLUE_LEVEL') {
+        logger.debug('Answer-lock delay expired but phase changed, ignoring', { sessionId });
+        return;
+      }
+      // Auto-advance to next clue (or reveal) now that the answer is locked
+      autoAdvanceClue(sessionId);
+    }, 1200);
 
   } catch (error: any) {
     logger.error('BRAKE_ANSWER_SUBMIT: Failed', { sessionId, playerId, error: error.message });
@@ -1180,8 +1205,14 @@ function broadcastFollowupAnswersLocked(sessionId: string, currentQuestionIndex:
 // CLUE AUTO-ADVANCE TIMER
 // ============================================================================
 
-/** Time (ms) players get to discuss after the TTS clue clip finishes. */
-const DISCUSSION_DELAY_MS = 12_000;
+/** Graduated discussion windows per clue level (pacing-spec.md section 3) */
+const DISCUSSION_DELAY_BY_LEVEL: Record<number, number> = {
+  10: 14_000,
+  8: 12_000,
+  6: 9_000,
+  4: 7_000,
+  2: 5_000,
+};
 
 /** Fallback total delay when no TTS clip is available for the current clue. */
 const CLUE_FALLBACK_DURATION_MS = 30_000;
@@ -1205,13 +1236,14 @@ function scheduleClueTimer(sessionId: string): void {
   // Look up TTS duration from the round manifest
   const manifest: any[] | undefined = (session as any)._ttsManifest;
   const currentLevel = session.state.clueLevelPoints; // 10 | 8 | 6 | 4 | 2 | null
+  const discussionDelayMs = currentLevel ? DISCUSSION_DELAY_BY_LEVEL[currentLevel] : 12_000;
   const clip = manifest?.find((c: any) => c.phraseId === `voice_clue_${currentLevel}`);
   const ttsDuration: number = clip?.durationMs ?? 0;
   const totalDelay = ttsDuration > 0
-    ? ttsDuration + DISCUSSION_DELAY_MS
+    ? ttsDuration + discussionDelayMs
     : CLUE_FALLBACK_DURATION_MS;
 
-  logger.info('Clue timer scheduled', { sessionId, currentLevel, ttsDuration, totalDelay });
+  logger.info('Clue timer scheduled', { sessionId, currentLevel, ttsDuration, discussionDelayMs, totalDelay });
 
   const timeoutId = setTimeout(() => {
     // Guard: session must still exist and be in CLUE_LEVEL
@@ -1277,8 +1309,19 @@ async function autoAdvanceClue(sessionId: string): Promise<void> {
         sessionStore.broadcastEventToSession(sessionId, e)
       );
 
+      // Wait 800 ms after music fade before broadcasting snapshot
+      await new Promise((resolve) => setTimeout(resolve, 800));
+
       // Broadcast STATE_SNAPSHOT to all clients
       broadcastStateSnapshot(sessionId);
+
+      // Extract banter clip duration from onRevealStart events (AUDIO_PLAY)
+      const revealStartEvents = onRevealStart(session);
+      const banterEvent = revealStartEvents.find((e) => e.type === 'AUDIO_PLAY');
+      const banterDurationMs = banterEvent ? (banterEvent.payload as any).durationMs : 0;
+
+      // Wait for banter to finish + 1 200 ms pre-reveal pause
+      await new Promise((resolve) => setTimeout(resolve, banterDurationMs + 1200));
 
       // Broadcast DESTINATION_REVEAL event
       const revealEvent = buildDestinationRevealEvent(
@@ -1289,10 +1332,13 @@ async function autoAdvanceClue(sessionId: string): Promise<void> {
       );
       sessionStore.broadcastEventToSession(sessionId, revealEvent);
 
-      // Audio: reveal sting SFX
+      // Audio: reveal sting SFX (simultaneous with REVEAL)
       onDestinationReveal(session).forEach((e) =>
         sessionStore.broadcastEventToSession(sessionId, e)
       );
+
+      // Wait 2 000 ms — let destination name sit on screen
+      await new Promise((resolve) => setTimeout(resolve, 2000));
 
       // Build and broadcast DESTINATION_RESULTS event
       const results = session.state.lockedAnswers.map((answer) => {
@@ -1311,6 +1357,9 @@ async function autoAdvanceClue(sessionId: string): Promise<void> {
 
       const resultsEvent = buildDestinationResultsEvent(sessionId, results);
       sessionStore.broadcastEventToSession(sessionId, resultsEvent);
+
+      // Wait 400 ms before result banter
+      await new Promise((resolve) => setTimeout(resolve, 400));
 
       // Audio: correct/incorrect banter
       const anyCorrect = results.some((r) => r.isCorrect);
