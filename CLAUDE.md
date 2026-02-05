@@ -55,6 +55,9 @@ Alla agenter och alla TASK-körningar måste följa dessa reglar utan undantag:
 | Audio-produktion (SFX/musik) | sound-designer | backend, audio-director |
 | Integration-test (E2E, edge-cases) | qa-tester | backend, ceo |
 | Deploy, CI/CD, miljö | devops | backend, ceo |
+| Spelmekanik-balans (poäng, timers, fairness) | game-designer | backend, producer |
+| Bug-rapportering + verifiering | qa-tester | backend, web, tvos |
+| Error tracking + monitoring | devops | backend |
 
 **Specialister äger besluten, implementatörer implementerar:**
 - Producer beslutar pacing → backend implementerar
@@ -79,6 +82,12 @@ Varje path har en utsedd ägaragent. Code-ändringar till en path kräver ägare
 | `apps/ios-host/` | ios-host |
 | `apps/tvos/` | tvos |
 | `docs/` | ceo |
+| `test/e2e/` | qa-tester |
+| `.github/workflows/` | devops |
+| `docs/bugs/` | qa-tester |
+| `docs/deploy-spec.md` | devops |
+| `docs/test-suite.md` | qa-tester |
+| `docs/game-balance-audit.md` | game-designer |
 
 ### TASK → Agent
 
@@ -116,6 +125,20 @@ Status spåras i `docs/status.md` och `docs/sprint-1.md`.
 | TASK-601 | ceo | E2E integration test |
 | TASK-602 | ceo | Reconnect stress test |
 | TASK-603 | ceo | Brake fairness stress test |
+| TASK-701 | qa-tester | E2E test suite creation (happy path) |
+| TASK-702 | qa-tester | Edge-case test scenarios (from pacing-audit-2) |
+| TASK-703 | qa-tester | Regression test scenarios |
+| TASK-704 | qa-tester | Stress tests (simultaneous brake, reconnect) |
+| TASK-705 | qa-tester | Bug report creation + verification |
+| TASK-801 | devops | Deploy audit + staging setup |
+| TASK-802 | devops | CI/CD pipeline (GitHub Actions) |
+| TASK-803 | devops | Error tracking setup (Sentry/LogRocket) |
+| TASK-804 | devops | Monitoring + uptime setup |
+| TASK-805 | devops | Secrets management + .env.example |
+| TASK-901 | game-designer | Game balance audit (scoring, timers) |
+| TASK-902 | game-designer | Playtesting analysis + recommendations |
+| TASK-903 | game-designer | Difficulty curve design |
+| TASK-904 | game-designer | Scoring system iteration |
 
 ### Kör TASK-xxx — Routing Rule
 
@@ -129,6 +152,9 @@ När "Kör TASK-xxx" ges, routa till agent enligt nummerserien:
 | 4xx | ios-host | — |
 | 5xx | tvos | — |
 | 6xx | ceo | backend, web |
+| 7xx | qa-tester | backend, web, tvos (för bug-fixes) |
+| 8xx | devops | backend, ai-content, web (för deploy-config) |
+| 9xx | game-designer | architect, backend (för balans-ändringar) |
 
 ### Task Execution Rule
 
@@ -202,13 +228,72 @@ Alla specialist-agenter som är aktiva i projektet. För full spec, se `docs/age
 | **swedish-script** | Korrekt svenska i TTS-manus, banter, voice-lines | `docs/tts-script.md`, swedish-audit-report.md | ✅ Aktiv |
 | **i18n-reviewer** | Svenska UI-text i alla clients (web, tvOS, ios-host) | `docs/i18n-review.md`, swedish-audit-report.md | ✅ Aktiv |
 | **sound-designer** | SFX/musik-produktion, genererings-prompts | `docs/sfx-prompts.md` | ✅ Aktiv |
-| **qa-tester** | E2E-test, edge-cases, regressions, test-suites | `docs/test-suite.md`, `docs/e2e_*.py` | 🔵 Rekommenderad |
-| **devops** | CI/CD, deploy, miljöhantering, monitoring | `.github/workflows/`, deploy-docs | 🔵 Rekommenderad |
-| **game-designer** | Spelmekanik-balans, poäng-system, svårighetsgrad | `docs/game-balance.md`, scoring-audit | 🟡 Nice-to-have |
+| **qa-tester** | E2E-test, edge-cases, regressions, test-suites | `docs/test-suite.md`, `docs/bugs/BUG-XXX.md` | ✅ Aktiv |
+| **devops** | CI/CD, deploy, miljöhantering, monitoring | `.github/workflows/`, `docs/deploy-spec.md` | ✅ Aktiv |
+| **game-designer** | Spelmekanik-balans, poäng-system, svårighetsgrad | `docs/game-balance-audit.md`, scoring-audit | ✅ Aktiv |
 
-**✅ Aktiv** = Redan rekryterad och levererat
-**🔵 Rekommenderad** = Bör rekryteras för robust produktion
-**🟡 Nice-to-have** = Värdefull men inte blocker
+**✅ Aktiv** = Rekryterad och tillgänglig för tasks
+
+### Nya Agenter — Expertis & Handoff-protokoll
+
+#### qa-tester (QA Engineer / Test Specialist)
+
+**När du ska använda qa-tester:**
+- E2E-testning av hela game-flowet (lobby → clue → brake → reveal → followup → finale)
+- Edge-case-verifiering (reconnect under brake, simultaneous brake-pull, timer race conditions)
+- Regression-testning efter pacing/audio/state-machine-ändringar
+- Bug-rapporter med reproducerbara steg + logs/screenshots
+
+**Handoff till qa-tester:**
+1. Identifiera vilka features/flows som behöver testas (t.ex. "pacing-batch-1 implementerad, vill verifiera att graduated timers känns rätt")
+2. Peka på relevanta contracts (events.schema.json, state.schema.json, audio_timeline.md)
+3. Peka på implementationer (services/backend/src/server.ts, apps/web-player/src/, apps/tvos/Sources/)
+4. qa-tester skapar test-suite.md med test-scenarios och kör tester
+5. qa-tester rapporterar resultat i docs/test-results-YYYY-MM-DD.md eller docs/bugs/BUG-XXX.md
+
+**Handoff från qa-tester:**
+- Bug-rapport (docs/bugs/BUG-XXX.md) → backend/web/tvos fixar → qa-tester verifierar fix
+- Pacing känns fel → producer gör pacing-audit → backend implementerar → qa-tester verifierar
+
+#### devops (DevOps Engineer / Infrastructure Specialist)
+
+**När du ska använda devops:**
+- Setup av staging/production-miljöer (Railway, Vercel, Fly.io)
+- CI/CD pipeline (GitHub Actions: auto-test, auto-deploy på main-push)
+- Error tracking (Sentry för backend/ai-content, LogRocket för web-player)
+- Monitoring (uptime checks, structured logs)
+- Secrets management (.env.example, GitHub Secrets, Railway env vars)
+
+**Handoff till devops:**
+1. Identifiera vad som behöver deployas (backend, ai-content, web-player)
+2. Dokumentera vilka env-vars som behövs (.env-filer i services/backend/, services/ai-content/, apps/web-player/)
+3. devops skapar docs/deploy-spec.md med staging/prod-setup
+4. devops implementerar CI/CD pipeline (.github/workflows/)
+5. devops sätter upp error tracking (Sentry/LogRocket)
+
+**Handoff från devops:**
+- Staging-miljö klar → qa-tester kör E2E-tester på staging
+- Error tracking aktivt → backend/web får alerts vid crashes → fixar → devops verifierar i dashboard
+
+#### game-designer (Game Designer / Balance Specialist)
+
+**När du ska använda game-designer:**
+- Balans-beslut för poäng-system (10/8/6/4/2 för destination, 2p för followup)
+- Timer-balans (14s → 5s graduated timers, 15s followup-timer)
+- Brake-fairness-mekanik (first brake wins, multiple brakes, silent lock?)
+- Svårighetsgrad-design (Easy/Normal/Hard settings?)
+- Playtesting-analys (feedback → balans-ändringar)
+
+**Handoff till game-designer:**
+1. Identifiera vilka balans-frågor som behöver besvaras (t.ex. "känns 10p för clue 1 för högt?")
+2. Peka på contracts/scoring.md och contracts/audio_timeline.md
+3. Peka på services/backend/src/game/scoring.ts (implementation)
+4. game-designer skapar docs/game-balance-audit.md med analys + förslag
+5. game-designer diskuterar med architect (om scoring.md-ändringar) och producer (om timing-ändringar)
+
+**Handoff från game-designer:**
+- Balans-förslag → architect approvar + uppdaterar contracts/ → backend implementerar → qa-tester verifierar
+- Playtesting-feedback → game-designer analyserar → docs/playtesting-report.md → architect/backend implementerar
 
 ---
 
