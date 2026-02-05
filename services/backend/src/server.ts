@@ -462,7 +462,7 @@ async function handleHostStartGame(
     await generateClueVoice(session, gameData.clueLevelPoints, gameData.clueText);
 
     // Audio: mutate audioState first so STATE_SNAPSHOT includes it
-    const audioEvents = onGameStart(session, gameData.clueText);
+    const audioEvents = onGameStart(session, gameData.clueLevelPoints, gameData.clueText);
 
     // Broadcast STATE_SNAPSHOT to all clients (with role-based projection)
     broadcastStateSnapshot(sessionId);
@@ -634,7 +634,7 @@ async function handleHostNextClue(
         await generateQuestionVoice(session, followupStart.currentQuestionIndex, followupStart.question.questionText);
 
         // Audio: mutate audioState before snapshot so reconnect sees followup music
-        const fqAudioEvents = onFollowupStart(session, followupStart.question.questionText);
+        const fqAudioEvents = onFollowupStart(session, followupStart.currentQuestionIndex, followupStart.question.questionText);
 
         broadcastStateSnapshot(sessionId);
         broadcastFollowupQuestionPresent(sessionId, followupStart);
@@ -680,7 +680,7 @@ async function handleHostNextClue(
       sessionStore.broadcastEventToSession(sessionId, clueEvent);
 
       // Audio: resume music if needed + optional clue TTS
-      onClueAdvance(session, result.clueText!).forEach((e) =>
+      onClueAdvance(session, result.clueLevelPoints!, result.clueText!).forEach((e) =>
         sessionStore.broadcastEventToSession(sessionId, e)
       );
 
@@ -1221,7 +1221,7 @@ async function autoAdvanceClue(sessionId: string): Promise<void> {
         await generateQuestionVoice(session, followupStart.currentQuestionIndex, followupStart.question.questionText);
 
         // Audio: mutate audioState before snapshot so reconnect sees followup music
-        const fqAudioEvents = onFollowupStart(session, followupStart.question.questionText);
+        const fqAudioEvents = onFollowupStart(session, followupStart.currentQuestionIndex, followupStart.question.questionText);
 
         broadcastStateSnapshot(sessionId);
         broadcastFollowupQuestionPresent(sessionId, followupStart);
@@ -1267,7 +1267,7 @@ async function autoAdvanceClue(sessionId: string): Promise<void> {
       sessionStore.broadcastEventToSession(sessionId, clueEvent);
 
       // Audio: resume music if needed + optional clue TTS
-      onClueAdvance(session, result.clueText!).forEach((e) =>
+      onClueAdvance(session, result.clueLevelPoints!, result.clueText!).forEach((e) =>
         sessionStore.broadcastEventToSession(sessionId, e)
       );
 
@@ -1332,7 +1332,7 @@ function scheduleFollowupTimer(sessionId: string, durationMs: number): void {
       });
 
       // Audio: seamless question TTS (music keeps playing)
-      onFollowupQuestionPresent(sess, nextFq.questionText).forEach((e) =>
+      onFollowupQuestionPresent(sess, nextFq.currentQuestionIndex, nextFq.questionText).forEach((e) =>
         sessionStore.broadcastEventToSession(sessionId, e)
       );
 

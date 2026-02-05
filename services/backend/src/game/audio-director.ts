@@ -30,20 +30,20 @@ function getManifest(session: Session): TtsManifestEntry[] | null {
   return (session as any)._ttsManifest || null;
 }
 
-/** First entry whose phraseId starts with the given prefix, or null. */
-function findClip(manifest: TtsManifestEntry[], phrasePrefix: string): TtsManifestEntry | null {
-  return manifest.find((c) => c.phraseId.startsWith(phrasePrefix)) || null;
+/** First entry whose phraseId matches exactly, or null. */
+function findClip(manifest: TtsManifestEntry[], phraseId: string): TtsManifestEntry | null {
+  return manifest.find((c) => c.phraseId === phraseId) || null;
 }
 
 /** Emit AUDIO_PLAY + mutate activeVoiceClip if the clip exists in manifest. */
 function emitVoiceClip(
   session: Session,
   manifest: TtsManifestEntry[],
-  phrasePrefix: string,
+  phraseId: string,
   text: string,
   events: EventEnvelope[]
 ): void {
-  const clip = findClip(manifest, phrasePrefix);
+  const clip = findClip(manifest, phraseId);
   if (!clip) return;
 
   const now = getServerTimeMs();
@@ -63,7 +63,7 @@ function emitVoiceClip(
  * LOBBY → CLUE_LEVEL (game start).
  * Starts travel music, prefetches + plays first clue read if TTS is available.
  */
-export function onGameStart(session: Session, clueText: string): EventEnvelope[] {
+export function onGameStart(session: Session, clueLevel: number, clueText: string): EventEnvelope[] {
   const now = getServerTimeMs();
   const sessionId = session.sessionId;
   const events: EventEnvelope[] = [];
@@ -82,7 +82,7 @@ export function onGameStart(session: Session, clueText: string): EventEnvelope[]
       url: c.url,
       durationMs: c.durationMs,
     }))));
-    emitVoiceClip(session, manifest, 'voice_clue_', clueText, events);
+    emitVoiceClip(session, manifest, `voice_clue_${clueLevel}`, clueText, events);
   }
 
   return events;
@@ -93,7 +93,7 @@ export function onGameStart(session: Session, clueText: string): EventEnvelope[]
  * If music was stopped (e.g. host override after brake) it resumes.
  * Plays the new clue TTS if available.
  */
-export function onClueAdvance(session: Session, clueText: string): EventEnvelope[] {
+export function onClueAdvance(session: Session, clueLevel: number, clueText: string): EventEnvelope[] {
   const now = getServerTimeMs();
   const sessionId = session.sessionId;
   const events: EventEnvelope[] = [];
@@ -109,7 +109,7 @@ export function onClueAdvance(session: Session, clueText: string): EventEnvelope
 
   const manifest = getManifest(session);
   if (manifest) {
-    emitVoiceClip(session, manifest, 'voice_clue_', clueText, events);
+    emitVoiceClip(session, manifest, `voice_clue_${clueLevel}`, clueText, events);
   }
 
   return events;
@@ -208,7 +208,7 @@ export function onDestinationResults(session: Session, anyCorrect: boolean): Eve
  * REVEAL_DESTINATION → FOLLOWUP_QUESTION (first question).
  * Starts followup music + plays question TTS if available.
  */
-export function onFollowupStart(session: Session, questionText: string): EventEnvelope[] {
+export function onFollowupStart(session: Session, questionIndex: number, questionText: string): EventEnvelope[] {
   const now = getServerTimeMs();
   const sessionId = session.sessionId;
   const events: EventEnvelope[] = [];
@@ -223,7 +223,7 @@ export function onFollowupStart(session: Session, questionText: string): EventEn
 
   const manifest = getManifest(session);
   if (manifest) {
-    emitVoiceClip(session, manifest, 'voice_question_', questionText, events);
+    emitVoiceClip(session, manifest, `voice_question_${questionIndex}`, questionText, events);
   }
 
   return events;
@@ -233,12 +233,12 @@ export function onFollowupStart(session: Session, questionText: string): EventEn
  * Subsequent followup question (seamless — music keeps playing).
  * Plays question TTS if available.
  */
-export function onFollowupQuestionPresent(session: Session, questionText: string): EventEnvelope[] {
+export function onFollowupQuestionPresent(session: Session, questionIndex: number, questionText: string): EventEnvelope[] {
   const events: EventEnvelope[] = [];
 
   const manifest = getManifest(session);
   if (manifest) {
-    emitVoiceClip(session, manifest, 'voice_question_', questionText, events);
+    emitVoiceClip(session, manifest, `voice_question_${questionIndex}`, questionText, events);
   }
 
   return events;
