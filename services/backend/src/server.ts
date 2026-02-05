@@ -498,6 +498,9 @@ async function handleHostStartGame(
         // BEFORE onGameStart so audio-director finds it and emits AUDIO_PLAY.
         await generateClueVoice(sess, gameData.clueLevelPoints, gameData.clueText);
 
+        // Advance phase before snapshot so clients see CLUE_LEVEL
+        sess.state.phase = 'CLUE_LEVEL';
+
         // Audio: mutate audioState first so STATE_SNAPSHOT includes it
         const audioEvents = onGameStart(sess, gameData.clueLevelPoints, gameData.clueText);
 
