@@ -81,20 +81,24 @@ Varje path har en utsedd ägaragent. Code-ändringar till en path kräver ägare
 |------|-----------|
 | `contracts/` | architect |
 | `services/backend/` | backend |
+| `services/backend/test/` | backend (spelar qa-tester-roll) |
 | `services/ai-content/` | ai-content |
 | `apps/web-player/` | web |
+| `apps/web-player/test/` | web (spelar qa-tester-roll) |
 | `apps/ios-host/` | ios-host |
 | `apps/tvos/` | tvos |
+| `apps/tvos/Tests/` | tvos (spelar qa-tester-roll) |
 | `docs/` | ceo |
-| `test/e2e/` | qa-tester |
-| `docs/bugs/` | qa-tester |
-| `docs/test-suite.md` | qa-tester |
-| `.github/workflows/` | devops |
-| `docs/deploy-spec.md` | devops |
-| `docs/game-balance-audit.md` | game-designer |
-| `docs/visual-assets/` | visual-content |
-| `assets/images/` | visual-content |
-| `assets/video/` | visual-content |
+| `test/e2e/` | ceo (koordinerar integration testing) |
+| `docs/bugs/` | ceo (triagerar bugs) |
+| `docs/test-suite.md` | ceo (koordinerar test-strategi) |
+| `.github/workflows/backend.yml` | backend (spelar devops-roll) |
+| `.github/workflows/web.yml` | web (spelar devops-roll) |
+| `docs/deploy-spec.md` | backend + web (deploy-spec per komponent) |
+| `docs/game-balance-audit.md` | ceo (spelar game-designer-roll) |
+| `docs/visual-assets/` | tvos + web + ceo (koordination) |
+| `assets/images/` | tvos + web (implementerar) |
+| `assets/video/` | tvos (äger video-assets) |
 
 ### TASK → Agent
 
@@ -132,42 +136,42 @@ Status spåras i `docs/status.md` och `docs/sprint-1.md`.
 | TASK-601 | ceo | E2E integration test |
 | TASK-602 | ceo | Reconnect stress test |
 | TASK-603 | ceo | Brake fairness stress test |
-| TASK-701 | qa-tester | E2E test suite creation (happy path) |
-| TASK-702 | qa-tester | Edge-case test scenarios (from pacing-audit-2) |
-| TASK-703 | qa-tester | Regression test scenarios |
-| TASK-704 | qa-tester | Stress tests (simultaneous brake, reconnect) |
-| TASK-705 | qa-tester | Bug report creation + verification |
-| TASK-801 | devops | Deploy audit + staging setup |
-| TASK-802 | devops | CI/CD pipeline (GitHub Actions) |
-| TASK-803 | devops | Error tracking setup (Sentry/LogRocket) |
-| TASK-804 | devops | Monitoring + uptime setup |
-| TASK-805 | devops | Secrets management + .env.example |
-| TASK-901 | game-designer | Game balance audit (scoring, timers) |
-| TASK-902 | game-designer | Playtesting analysis + recommendations |
-| TASK-903 | game-designer | Difficulty curve design |
-| TASK-904 | game-designer | Scoring system iteration |
-| TASK-1001 | visual-content | Asset catalog specification (images/video per phase) |
-| TASK-1002 | visual-content | Gemini prompt library (AI generation prompts) |
-| TASK-1003 | visual-content | Integration guide (tvOS/web asset usage) |
-| TASK-1004 | visual-content | Variation strategy (asset rotation) |
-| TASK-1005 | visual-content | Naming convention + asset organization |
+| TASK-701 | backend | E2E backend tests (REST + WS integration, event flow verification) |
+| TASK-702 | web | E2E web-player tests (Playwright: brake, answer, reconnect) |
+| TASK-703 | tvos | tvOS smoke tests (XCTest: lobby, clue, audio, followup) |
+| TASK-704 | ios-host | iOS host smoke tests (XCTest: session creation, pro-view) |
+| TASK-705 | ceo | Cross-client integration test coordination + bug triage |
+| TASK-801 | backend | Backend deploy + staging (Railway: env vars, WS config, health check) |
+| TASK-802 | backend | Backend CI/CD (GitHub Actions: lint, test, deploy on push) |
+| TASK-803 | backend | Error tracking (Sentry backend setup, structured logging) |
+| TASK-804 | web | Web deploy + CI/CD (Vercel: build config, env vars) |
+| TASK-805 | backend | Secrets management (.env.example, docs/deploy-spec.md) |
+| TASK-901 | ceo | Game balance audit (analyze contracts/scoring.md + audio_timeline.md) |
+| TASK-902 | ceo | Playtesting coordination (collect feedback, identify balance issues) |
+| TASK-903 | architect | Difficulty curve design (update contracts/ with Easy/Normal/Hard) |
+| TASK-904 | backend | Scoring iteration (implement architect spec, update scoring.ts) |
+| TASK-1001 | tvos | tvOS visual assets spec (background videos, asset catalog for phases) |
+| TASK-1002 | web | Web visual assets spec (responsive images, lazy loading strategy) |
+| TASK-1003 | tvos | tvOS asset integration (AVPlayer implementation, prefetch strategy) |
+| TASK-1004 | web | Web asset integration (img lazy-loading, WebP/AVIF support) |
+| TASK-1005 | ceo | Asset naming convention + organization (docs/visual-assets-guide.md) |
 
 ### Kör TASK-xxx — Routing Rule
 
 När "Kör TASK-xxx" ges, routa till agent enligt nummerserien:
 
-| Serie | Agent | Stöd |
-|-------|-------|------|
-| 1xx | architect | — |
-| 2xx | backend | — |
-| 3xx | web | — |
-| 4xx | ios-host | — |
-| 5xx | tvos | — |
-| 6xx | ceo | backend, web |
-| 7xx | qa-tester | backend, web, tvos (för bug-fixes) |
-| 8xx | devops | backend, ai-content, web (för deploy-config) |
-| 9xx | game-designer | architect, backend (för balans-ändringar) |
-| 10xx | visual-content | tvos, web (för asset-integration) |
+| Serie | Agent | Motivering |
+|-------|-------|------------|
+| 1xx | architect | Contracts, schema, arkitektur-beslut |
+| 2xx | backend | Backend implementation, state machine |
+| 3xx | web | Web-player implementation |
+| 4xx | ios-host | iOS host implementation |
+| 5xx | tvos | tvOS implementation |
+| 6xx | ceo | Integration, koordination, cross-team tasks |
+| 7xx | backend, web, tvos, ios-host, ceo | Testing: komponent-ägare gör sina tester, ceo koordinerar integration |
+| 8xx | backend, web | Deploy: backend (Railway), web (Vercel) |
+| 9xx | ceo, architect, backend | Balans: ceo (audit) → architect (spec) → backend (impl) |
+| 10xx | tvos, web, ceo | Assets: tvos/web (impl) + ceo (koordination) |
 
 ### Task Execution Rule
 
@@ -231,30 +235,35 @@ När arbete skiftar från en agent till en annan skickas:
 
 ## Agent Registry
 
-Specialist-roller som används i projektet. Vissa roller är virtuella (dokumentation + handoff-protokoll) medan andra är riktiga Claude Code subagent types.
+**Tillgängliga Claude Code Subagents (hårdkodade i systemet):**
 
-| Agent-typ | Expertis | Äger / Producerar | Status |
-|-----------|----------|-------------------|--------|
-| **architect** | Contracts, schema, arkitektur-beslut | `contracts/` | ✅ Subagent |
-| **backend** | Backend implementation, state machine, deploy | `services/backend/` | ✅ Subagent |
-| **web** | Web-player implementation, deploy | `apps/web-player/` | ✅ Subagent |
-| **tvos** | tvOS implementation, audio system | `apps/tvos/` | ✅ Subagent |
-| **ios-host** | iOS host implementation | `apps/ios-host/` | ✅ Subagent |
-| **ai-content** | AI pipeline, TTS generation | `services/ai-content/` | ✅ Subagent |
-| **ceo** | Koordination, planning, cross-team tasks | `docs/` | ✅ Subagent |
-| **qa-tester** | E2E-test, edge-cases, regressions, bug-rapporter | `docs/test-suite.md`, `docs/bugs/` | ✅ Subagent |
-| **devops** | CI/CD, deploy, miljöhantering, monitoring | `.github/workflows/`, `docs/deploy-spec.md` | ✅ Subagent |
-| **game-designer** | Spelmekanik-balans, poäng-system, svårighetsgrad | `docs/game-balance-audit.md` | ✅ Subagent |
-| **visual-content** | Visuellt innehåll (bilder, video, motion graphics) | `docs/visual-assets/`, `assets/` | ✅ Subagent |
-| **producer** | Game-show pacing, dramaturgi, timing-beslut | `docs/pacing-spec.md` | 🔷 Virtuell roll |
-| **web-designer** | UX/UI för web-player | `docs/web-redesign-spec.md` | 🔷 Virtuell roll |
-| **tvos-designer** | UX/UI för tvOS | `docs/tvos-redesign-spec.md` | 🔷 Virtuell roll |
-| **swedish-script** | Korrekt svenska i TTS-manus | `docs/tts-script.md` | 🔷 Virtuell roll |
-| **i18n-reviewer** | Svenska UI-text | `docs/i18n-review.md` | 🔷 Virtuell roll |
-| **sound-designer** | SFX/musik-produktion | `docs/sfx-prompts.md` | 🔷 Virtuell roll |
+| Agent-typ | Expertis | Äger / Producerar |
+|-----------|----------|-------------------|
+| **architect** | Contracts, schema, arkitektur-beslut | `contracts/` |
+| **backend** | Backend implementation, state machine, deploy, testing, CI/CD | `services/backend/`, `.github/workflows/backend.yml` |
+| **web** | Web-player implementation, deploy, testing, CI/CD | `apps/web-player/`, `.github/workflows/web.yml` |
+| **tvos** | tvOS implementation, audio system, visual assets | `apps/tvos/` |
+| **ios-host** | iOS host implementation, testing | `apps/ios-host/` |
+| **ai-content** | AI pipeline, TTS generation | `services/ai-content/` |
+| **ceo** | Koordination, planning, cross-team tasks, balance audit, asset coordination | `docs/` |
+| **audio** | Audio system (används sällan, mest för audio-spec) | Audio-relaterade specs |
+| **hr** | Agent rekrytering (används sällan) | Agent definitions |
+| **git** | Git operations (används sällan) | Git workflows |
 
-**✅ Subagent** = Faktisk Claude Code subagent type med `.claude/agents/X.md` fil (kan anropas via "Kör TASK-XXX")
-**🔷 Virtuell roll** = Dokumenterad expertis-roll (task körs av subagent enligt handoff-protokoll)
+**Virtuella Roller (spelade av subagents ovan):**
+
+| Virtuell roll | Spelas av subagent | Används för |
+|---------------|-------------------|-------------|
+| **qa-tester** | backend, web, tvos, ios-host, ceo | Testing: komponent-ägare gör sina tester, ceo koordinerar |
+| **devops** | backend, web | Deploy + CI/CD: backend (Railway), web (Vercel) |
+| **game-designer** | ceo, architect, backend | Balans: ceo (audit) → architect (spec) → backend (impl) |
+| **visual-content** | tvos, web, ceo | Assets: tvos/web (impl) + ceo (koordination) |
+| **producer** | ceo | Pacing-spec, dramaturgi, timing-beslut |
+| **web-designer** | ceo | UX/UI-spec för web-player → web implementerar |
+| **tvos-designer** | ceo | UX/UI-spec för tvOS → tvos implementerar |
+| **swedish-script** | ceo | Svenska TTS-manus audit → alla implementerar |
+| **i18n-reviewer** | ceo | Svenska UI-text audit → alla implementerar |
+| **sound-designer** | ceo, audio | SFX/musik-spec → audio implementerar |
 
 ### Nya Agenter — Expertis & Handoff-protokoll
 
