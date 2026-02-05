@@ -134,35 +134,35 @@ interpolates `{clueText}` with the actual clue before sending to TTS.
 
 | Variant | phraseId                  | template                                     |
 |---------|---------------------------|----------------------------------------------|
-| A       | `voice_clue_read_10`      | Första ledtråd: {clueText}                   |
+| A       | `voice_clue_read_10`      | Ledtråden — 10 poäng: {clueText}             |
 | B       | `voice_clue_read_10`      | Ledtråd på nivå tio: {clueText}              |
 
 ### voice_clue_read_8
 
 | Variant | phraseId                  | template                                     |
 |---------|---------------------------|----------------------------------------------|
-| A       | `voice_clue_read_8`       | Andra ledtråd: {clueText}                    |
+| A       | `voice_clue_read_8`       | Ledtråden — 8 poäng: {clueText}              |
 | B       | `voice_clue_read_8`       | Ledtråd på nivå åtta: {clueText}             |
 
 ### voice_clue_read_6
 
 | Variant | phraseId                  | template                                     |
 |---------|---------------------------|----------------------------------------------|
-| A       | `voice_clue_read_6`       | Tredje ledtråd: {clueText}                   |
+| A       | `voice_clue_read_6`       | Ledtråden — 6 poäng: {clueText}              |
 | B       | `voice_clue_read_6`       | Ledtråd på nivå sex: {clueText}              |
 
 ### voice_clue_read_4
 
 | Variant | phraseId                  | template                                     |
 |---------|---------------------------|----------------------------------------------|
-| A       | `voice_clue_read_4`       | Fjärde ledtråd: {clueText}                   |
+| A       | `voice_clue_read_4`       | Ledtråden — 4 poäng: {clueText}              |
 | B       | `voice_clue_read_4`       | Ledtråd på nivå fyra: {clueText}             |
 
 ### voice_clue_read_2
 
 | Variant | phraseId                  | template                                     |
 |---------|---------------------------|----------------------------------------------|
-| A       | `voice_clue_read_2`       | Femte och sista ledtråd: {clueText}          |
+| A       | `voice_clue_read_2`       | Ledtråden — 2 poäng: {clueText}              |
 | B       | `voice_clue_read_2`       | Ledtråd på nivå två: {clueText}              |
 
 **Selection rule**: Backend picks variant A or B at random for each clue
@@ -184,7 +184,7 @@ text.
 | A       | `voice_question_read_0`     | Frågan är: {questionText}                  |
 | B       | `voice_question_read_1`     | Nästa fråga: {questionText}                |
 | C       | `voice_question_read_0`     | Lyssna på frågan: {questionText}           |
-| D       | `voice_question_read_1`     | Alright, frågan blir: {questionText}       |
+| D       | `voice_question_read_1`     | Okej, frågan blir: {questionText}          |
 
 **Selection rule**: Backend picks one variant at random per followup
 question.  `phraseId` uses `_0` / `_1` to distribute across two manifest

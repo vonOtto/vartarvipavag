@@ -235,7 +235,8 @@
             "clueText": { "type": "string" },
             "clueLevelPoints": { "type": "integer", "enum": [10, 8, 6, 4, 2] },
             "roundIndex": { "type": "integer" },
-            "clueIndex": { "type": "integer", "description": "0-indexed clue within round" }
+            "clueIndex": { "type": "integer", "description": "0-indexed clue within round" },
+            "textRevealAfterMs": { "type": "integer", "minimum": 0, "description": "Delay in ms before clueText should be shown on screen. Equal to the TTS clip durationMs when a voice clip is available; 0 when TTS is unavailable (text shown immediately). Clients use this as a pure display delay — not game logic. Absent or 0 means show immediately." }
           },
           "additionalProperties": false
         }
