@@ -288,7 +288,7 @@ struct GameHostView: View {
 
     private func secretCard(_ name: String) -> some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text("DESTINATION (hemligt)")
+            Text("Destinationen (hemligt)")
                 .font(.caption)
                 .foregroundColor(.secondary)
                 .textCase(.uppercase)

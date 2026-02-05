@@ -297,7 +297,7 @@ class HostState: ObservableObject {
         reconnectAttempt += 1
 
         guard reconnectAttempt <= Self.maxAttempts, hostAuthToken != nil else {
-            error = "Connection lost — restart the app."
+            error = "Anslutningen förlorad — starta appen igen."
             return
         }
 

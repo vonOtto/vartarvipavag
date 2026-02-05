@@ -462,7 +462,7 @@ export const GamePage: React.FC = () => {
         {/* Locked count */}
         {lockedCount > 0 && gameState?.phase !== 'FOLLOWUP_QUESTION' && (
           <div className="locked-count">
-            {lockedCount} answer{lockedCount !== 1 ? 's' : ''} locked this round
+            {lockedCount} svar låst den här omgången
           </div>
         )}
 

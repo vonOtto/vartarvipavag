@@ -393,7 +393,7 @@ class AppState: ObservableObject {
         reconnectAttempt += 1
 
         guard reconnectAttempt <= Self.maxAttempts, token != nil else {
-            error = "Connection lost — restart the app."
+            error = "Anslutningen förlorad — starta appen igen."
             return
         }
 

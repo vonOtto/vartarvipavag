@@ -13,7 +13,7 @@ export const LandingPage: React.FC = () => {
           En resegissa för sällskapet. Fem ledtrådar, fem chänser —
           poängen sjunker från 10 till 2 desto längre du väntar.
           Tro på din känsla och dra bromsen innan det är för sent.
-          Mellan rundorna väntar planeta på er med byggfrågor.
+          Mellan rundorna väntar er frågor om destinationerna.
         </p>
 
         <button className="landing-join-btn" onClick={() => navigate('/join')}>

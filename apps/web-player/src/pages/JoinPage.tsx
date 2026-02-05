@@ -124,7 +124,7 @@ export const JoinPage: React.FC = () => {
               onClick={() => handleRoleClick('host')}
             >
               <span className="role-card__label">Gå med som värd</span>
-              <span className="role-card__note">Styrden spelets gång</span>
+              <span className="role-card__note">Styr spelets gång</span>
             </button>
           </div>
         </div>
