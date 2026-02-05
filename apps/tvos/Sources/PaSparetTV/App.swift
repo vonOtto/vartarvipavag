@@ -19,7 +19,7 @@ struct PaSparetTVApp: App {
 struct RootView: View {
     @EnvironmentObject var appState: AppState
 
-    private static let lobbyPhases     : Set<String> = ["LOBBY", "PREPARING_ROUND", "ROUND_INTRO"]
+    private static let lobbyPhases     : Set<String> = ["LOBBY", "PREPARING_ROUND"]
     private static let cluePhases      : Set<String> = ["CLUE_LEVEL", "PAUSED_FOR_BRAKE"]
     private static let scoreboardPhases: Set<String> = ["SCOREBOARD", "ROUND_END", "FINAL_RESULTS"]
 
@@ -31,6 +31,8 @@ struct RootView: View {
                 ConnectingView()
             } else if Self.lobbyPhases.contains(appState.phase) {
                 LobbyView()
+            } else if appState.phase == "ROUND_INTRO" {
+                RoundIntroView()
             } else if Self.cluePhases.contains(appState.phase) {
                 TVClueView()
             } else if appState.phase == "REVEAL_DESTINATION" {

@@ -18,6 +18,7 @@
 		AA000009 /* TVFollowupView.swift in Sources */     = {isa = PBXBuildFile; fileRef = BB000009 /* TVFollowupView.swift */; };
 		AA00000A /* TVRevealView.swift in Sources */       = {isa = PBXBuildFile; fileRef = BB00000A /* TVRevealView.swift */; };
 		AA00000B /* TVScoreboardView.swift in Sources */   = {isa = PBXBuildFile; fileRef = BB00000B /* TVScoreboardView.swift */; };
+		AA000013 /* RoundIntroView.swift in Sources */    = {isa = PBXBuildFile; fileRef = BB000013 /* RoundIntroView.swift */; };
 		AA00000C /* music_followup_loop.wav in Resources */ = {isa = PBXBuildFile; fileRef = BB00000C /* music_followup_loop.wav */; };
 		AA00000D /* music_travel_loop.wav in Resources */  = {isa = PBXBuildFile; fileRef = BB00000D /* music_travel_loop.wav */; };
 		AA00000E /* sfx_brake.wav in Resources */          = {isa = PBXBuildFile; fileRef = BB00000E /* sfx_brake.wav */; };
@@ -39,6 +40,7 @@
 		BB000009 /* TVFollowupView.swift */   = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TVFollowupView.swift;   sourceTree = "<group>"; };
 		BB00000A /* TVRevealView.swift */     = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TVRevealView.swift;     sourceTree = "<group>"; };
 		BB00000B /* TVScoreboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TVScoreboardView.swift; sourceTree = "<group>"; };
+		BB000013 /* RoundIntroView.swift */   = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoundIntroView.swift;   sourceTree = "<group>"; };
 		BB00000C /* music_followup_loop.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = music_followup_loop.wav; sourceTree = "<group>"; };
 		BB00000D /* music_travel_loop.wav */  = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = music_travel_loop.wav;  sourceTree = "<group>"; };
 		BB00000E /* sfx_brake.wav */          = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = sfx_brake.wav;          sourceTree = "<group>"; };
@@ -73,6 +75,7 @@
 				BB000009 /* TVFollowupView.swift */,
 				BB00000A /* TVRevealView.swift */,
 				BB00000B /* TVScoreboardView.swift */,
+				BB000013 /* RoundIntroView.swift */,
 				BB000099 /* Info.plist */,
 				BB0000AD /* Resources */,
 			);
@@ -151,6 +154,7 @@
 				AA000009 /* TVFollowupView.swift in Sources */,
 				AA00000A /* TVRevealView.swift in Sources */,
 				AA00000B /* TVScoreboardView.swift in Sources */,
+				AA000013 /* RoundIntroView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
