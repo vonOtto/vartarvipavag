@@ -1,11 +1,36 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@700;900&family=Inter:wght@300;400;600;700&display=swap');
+
 :root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  /* Fonts */
+  --font-heading: 'Montserrat', 'Helvetica Neue', Arial, sans-serif;
+  --font-body: 'Inter', system-ui, -apple-system, sans-serif;
+
+  /* Colors */
+  --bg-primary: linear-gradient(135deg, #0a0a14 0%, #12121e 100%);
+  --bg-card: rgba(30, 30, 46, 0.9);
+  --bg-card-hover: rgba(40, 40, 60, 0.95);
+  --accent-blue: #646cff;
+  --accent-blue-bright: #7c84ff;
+  --accent-blue-glow: 0 0 20px rgba(100, 108, 255, 0.4);
+  --success-green: #4ade80;
+  --success-glow: 0 0 15px rgba(74, 222, 128, 0.5);
+  --error-red: #ff453a;
+  --error-glow: 0 0 15px rgba(255, 69, 58, 0.5);
+  --warning-yellow: #fbbf24;
+  --brake-active: #ff453a;
+  --brake-glow: 0 0 30px rgba(255, 69, 58, 0.7);
+  --gold: #ffd700;
+  --text-primary: rgba(255, 255, 255, 0.95);
+  --text-secondary: rgba(255, 255, 255, 0.7);
+  --text-muted: rgba(255, 255, 255, 0.5);
+
+  /* Base styles */
+  font-family: var(--font-body);
   line-height: 1.5;
   font-weight: 400;
-
   color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
+  color: var(--text-primary);
+  background: #12121e;
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -28,6 +53,8 @@ body {
   place-items: center;
   min-width: 320px;
   min-height: 100vh;
+  background: var(--bg-primary);
+  background-attachment: fixed;
 }
 
 h1 {
