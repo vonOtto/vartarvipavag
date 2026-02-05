@@ -7,11 +7,22 @@ struct TVScoreboardView: View {
 
     var body: some View {
         ZStack(alignment: .top) {
-            HStack(spacing: 80) {
-                resultsColumn
-                standingsColumn
+            VStack(spacing: 0) {
+                HStack(spacing: 80) {
+                    resultsColumn
+                    standingsColumn
+                }
+                .padding(60)
+                .frame(maxHeight: .infinity)
+
+                // "Frågor om {X} väntar…" — visas enbart under SCOREBOARD-pausen
+                // innan första followup.  Villkor: phase är SCOREBOARD (inte
+                // ROUND_END / FINAL_RESULTS) och destinationName är populerad.
+                // Design-decisions.md: centered italic, opacity 0.7, no border.
+                if appState.phase == "SCOREBOARD", let dest = appState.destinationName {
+                    followupIncomingBanner(destination: dest)
+                }
             }
-            .padding(60)
 
             if !appState.isConnected { reconnectBanner }
 
@@ -73,6 +84,21 @@ struct TVScoreboardView: View {
             Spacer()
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    // MARK: – followup-incoming banner ──────────────────────────────────────
+    // design-decisions.md: centered italic, 1.05 rem (~38 pt tvOS), opacity 0.7.
+    // tvOS mirror: subtitle line pinnad till botten, under scoreboard.
+
+    @ViewBuilder
+    private func followupIncomingBanner(destination: String) -> some View {
+        Text("Frågor om \(destination) väntar…")
+            .font(.system(size: 38, weight: .light))
+            .foregroundColor(.white)
+            .italic()
+            .opacity(0.7)
+            .multilineTextAlignment(.center)
+            .padding(.bottom, 40)
     }
 
     // MARK: – reconnect banner ─────────────────────────────────────────────

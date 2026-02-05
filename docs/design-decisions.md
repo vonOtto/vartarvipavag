@@ -79,3 +79,23 @@ when non-zero ("+2p").
 Centered italic text, `1.05 rem`, opacity 0.7.  No border or background -- it
 is a quiet, non-intrusive nudge that the next phase is coming.  tvOS can mirror
 this as a subtitle line below the scoreboard.
+
+### tvOS deviations (logged 2026-02-05)
+
+1. **ResultsOverlay — answerText column omitted.**  The web spec includes a
+   per-player "submitted answer" column in the result rows.  The server does not
+   forward `answerText` to the TV projection (see `GameModels.FollowupResultRow`
+   — intentional security boundary).  The TV overlay therefore shows only
+   `[name] [verdict badge + points]`.  The verdict pill itself carries the
+   points suffix (e.g. "Rätt +2p") so information density remains equivalent
+   without leaking free-text answers.
+
+2. **Typography scaling.**  Web rem values are mapped to tvOS point sizes at
+   roughly 36 pt per rem to fill the 1920x1080 / 2560x1440 TV viewport:
+   `1.8 rem` correct-answer heading -> 64 pt bold; player name -> 32 pt
+   semibold; verdict badge -> 26 pt bold.  These exceed the web px values but
+   are necessary for comfortable read distance on a shared living-room screen.
+
+3. **Followup-incoming banner size.**  Web spec: `1.05 rem`.  tvOS: 38 pt
+   light-weight italic -- same visual weight ratio to the scoreboard rows as
+   the web version achieves against its own row text.
