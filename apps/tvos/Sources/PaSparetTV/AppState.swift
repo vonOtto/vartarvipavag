@@ -324,7 +324,7 @@ class AppState: ObservableObject {
             "sessionId"   : sessionId ?? "",
             "serverTimeMs": Int(Date().timeIntervalSince1970 * 1000),
             "payload"     : [
-                "playerId"            : "",       // TV role has no playerId
+                "playerId"            : "tv",     // must match backend's actualPlayerId for TV role
                 "lastReceivedEventId" : NSNull()
             ] as [String: Any]
         ]
