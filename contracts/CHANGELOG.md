@@ -274,6 +274,57 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.3.2] - 2026-02-05
+
+### Added — banter_round_intro category + ROUND_INTRO audio row
+
+**banter.md**:
+- Section 1 re-scoped from "Intro (Game Start)" to "Round Intro (Ny resa — ROUND_INTRO)".
+  phraseIds renamed from `intro_00X` to `banter_round_intro_00X` to match the
+  `banter_<kategori>_<NNN>` convention used by `tts-prefetch.ts` BANTER_POOL.
+- Four Swedish texts added (`banter_round_intro_001` … `banter_round_intro_004`),
+  all asking "Vart är vi på väg?".
+- Selection Strategy bullet updated: round-intro plays once per round at
+  ROUND_INTRO (not PREPARING_ROUND).
+
+**audio_timeline.md**:
+- Phase-Based Audio Behavior table: new Voice column added across all rows;
+  new ROUND_INTRO row:
+  - Music: MUSIC_SET music_travel fadeIn 2000 ms (starts after intro clip)
+  - Voice: banter_round_intro clip
+  - SFX: —
+  - Notes: "Intro-banter + 1.5 s breathing-window innan CLUE_LEVEL(10)"
+- Banter Moment Mapping: PREPARING_ROUND row cleared; ROUND_INTRO row inserted.
+- VOICE_LINE example payloads updated to reference `banter_round_intro_002`.
+- Document version bumped to 1.3.2.
+
+**Breaking Changes**: None.
+- `banter_round_intro` is additive.  Clients that do not handle ROUND_INTRO
+  voice yet will fall through to text-only (Sprint 1.1 behaviour).
+- `events.schema.json` and `state.schema.json` are unchanged.
+- The old `intro_00X` phraseIds are retired; backend-agent must update
+  tts-prefetch.ts BANTER_POOL (see Migration Notes below).
+
+### Migration Notes
+
+**backend-agent (tts-prefetch.ts)**:
+1. Add `banter_round_intro` key to BANTER_POOL with the four texts from
+   `banter.md` section 1.
+2. Ensure `prefetchRoundTts` / `buildBanterLines` picks one variant and
+   emits phraseId `banter_round_intro_001` (same pattern as the other keys).
+3. Wire ROUND_INTRO phase in audio-director.ts to emit AUDIO_PLAY for the
+   prefetched clip, followed by a 1.5 s delay before CLUE_LEVEL(10).
+
+**Note on sections 2-6 phraseId drift**: banter.md sections 2-6 still use
+short-form phraseIds (`before_clue_001`, `after_brake_001`, etc.) while
+tts-prefetch.ts BANTER_POOL keys are `banter_after_brake`, `banter_before_reveal`,
+etc.  `buildBanterLines` appends `_001` to the BANTER_POOL key, producing
+`banter_after_brake_001`.  The banter.md headings say `after_brake_001`.
+This mismatch pre-dates this change and is out of scope here; file a
+follow-up to normalise sections 2-6 headings to `banter_<kategori>_<NNN>`.
+
+---
+
 ## Future Versions (Planned)
 
 ### [2.0.0] - Sprint 3+ (Breaking Changes)

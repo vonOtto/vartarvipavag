@@ -1,11 +1,11 @@
-# Audio & TV Effects v1.2.0
+# Audio & TV Effects v1.3.2
 
 ## Overview
 
 This document defines the complete audio system for På Spåret Party Edition, including music layers, sound effects, ducking behavior, and the FINAL_RESULTS timeline.
 
-**Version**: 1.2.0 (Sprint 1.3)
-**Status**: TTS voice layer activated; clue-read (`voice_clue_read_*`) and question-read (`voice_question_read_*`) TTS enabled; followup music active; base infrastructure from Sprint 1.1
+**Version**: 1.3.2 (Sprint 1.3)
+**Status**: TTS voice layer activated; clue-read (`voice_clue_read_*`), question-read (`voice_question_read_*`) and round-intro (`banter_round_intro`) TTS enabled; followup music active; base infrastructure from Sprint 1.1
 
 ---
 
@@ -125,7 +125,7 @@ The game includes natural Swedish TV-host phrases (banter) that play at key mome
 
 **Sprint 1.3 (Current)**: TTS Audio active
 - Pre-generate TTS audio via ElevenLabs API before round starts
-- Cache clips with unique ID (e.g., "banter_intro_001_round5")
+- Cache clips with unique ID (e.g., "banter_round_intro_001_round5")
 - Server sends `AUDIO_PLAY` event referencing cached clip
 - TV plays audio + optional text overlay (`showText`)
 - Voice layer triggers music ducking (see Ducking Policy above)
@@ -141,8 +141,8 @@ The game includes natural Swedish TV-host phrases (banter) that play at key mome
 **Payload (Sprint 1.1 - Text Only)**:
 ```json
 {
-  "text": "Välkomna till På Spåret! Låt oss sätta igång resan.",
-  "phraseId": "intro_001",
+  "text": "En ny resa väntar. Vart är vi på väg?",
+  "phraseId": "banter_round_intro_002",
   "displayDurationMs": 3000
 }
 ```
@@ -150,10 +150,10 @@ The game includes natural Swedish TV-host phrases (banter) that play at key mome
 **Payload (Sprint 2+ - TTS Audio)**:
 ```json
 {
-  "text": "Välkomna till På Spåret! Låt oss sätta igång resan.",
-  "phraseId": "intro_001",
-  "clipId": "banter_intro_001_round5",
-  "durationMs": 2800,
+  "text": "En ny resa väntar. Vart är vi på väg?",
+  "phraseId": "banter_round_intro_002",
+  "clipId": "banter_round_intro_002_round5",
+  "durationMs": 2200,
   "startAtServerMs": 1234567890,
   "showText": false
 }
@@ -161,7 +161,7 @@ The game includes natural Swedish TV-host phrases (banter) that play at key mome
 
 **Fields**:
 - `text`: Swedish phrase text (always included as fallback)
-- `phraseId`: Reference to phrase in banter.md (e.g., "intro_001", "after_brake_002")
+- `phraseId`: Reference to phrase in banter.md (e.g., "banter_round_intro_001", "banter_after_brake_001")
 - `displayDurationMs`: How long to show text overlay (Sprint 1.1 only), default 3000ms
 - `clipId`: Pre-generated TTS audio clip ID (Sprint 2+)
 - `durationMs`: Audio clip duration in milliseconds (Sprint 2+)
@@ -180,7 +180,8 @@ When voice lines play as audio (Sprint 2+), they occupy the **Voice/TTS layer** 
 
 | Game Phase | Banter Category | Timing | Notes |
 |------------|-----------------|--------|-------|
-| PREPARING_ROUND | Intro | Once at start | Welcome players |
+| PREPARING_ROUND | — | — | Brief transition; no banter here |
+| ROUND_INTRO | Round intro (`banter_round_intro`) | Once per round | Intro-banter + 1.5 s breathing-window innan CLUE_LEVEL(10) |
 | CLUE_LEVEL | Before clue | Optional per clue | Skip some to avoid repetition |
 | CLUE_LEVEL | Clue read (`voice_clue_read_<nivå>`) | Every clue | Template interpolated; TTS pre-generated |
 | PAUSED_FOR_BRAKE | After brake | Every brake | React to brake press |
@@ -516,16 +517,17 @@ Host can adjust background music volume in real-time via iOS app.
 
 ## Phase-Based Audio Behavior
 
-| Phase | Music | SFX | Notes |
-|-------|-------|-----|-------|
-| LOBBY | None | None | Silent waiting state |
-| PREPARING_ROUND | None | None | Brief transition |
-| CLUE_LEVEL | music_travel_loop | None | Main gameplay music |
-| PAUSED_FOR_BRAKE | Stops | sfx_brake | Music stops when brake pulled |
-| REVEAL_DESTINATION | None | sfx_reveal | Dramatic reveal |
-| SCOREBOARD | None | None | Silent standings display |
-| FINAL_RESULTS | Finale sequence | Sting, drumroll, fanfare | Full 10-12s timeline |
-| FOLLOWUP_QUESTION (Sprint 2+) | music_followup_loop | None | Quiz tempo music |
+| Phase | Music | Voice | SFX | Notes |
+|-------|-------|-------|-----|-------|
+| LOBBY | None | None | None | Silent waiting state |
+| PREPARING_ROUND | None | None | None | Brief transition |
+| ROUND_INTRO | Startar efter intro-clip (MUSIC_SET music_travel fadeIn 2000 ms) | banter_round_intro clip | — | Intro-banter + 1.5 s breathing-window innan CLUE_LEVEL(10) |
+| CLUE_LEVEL | music_travel_loop | voice_clue_read clip | None | Main gameplay music; clue-read TTS on each level |
+| PAUSED_FOR_BRAKE | Stops | banter_after_brake clip | sfx_brake | Music stops when brake pulled |
+| REVEAL_DESTINATION | None | banter_before_reveal / banter_reveal_* clip | sfx_reveal | Dramatic reveal |
+| SCOREBOARD | None | None | None | Silent standings display |
+| FINAL_RESULTS | Finale sequence | banter_before_final clip | Sting, drumroll, fanfare | Full 10-12s timeline |
+| FOLLOWUP_QUESTION (Sprint 2+) | music_followup_loop | voice_question_read clip | None | Quiz tempo music; question-read TTS |
 
 ---
 
@@ -587,6 +589,9 @@ Deferred to future sprints:
 - **v1.1.0**: Complete audio implementation including FINAL_RESULTS timeline (Sprint 1.1)
 - **v1.2.0**: TTS voice layer activated — AUDIO_PLAY, AUDIO_STOP, TTS_PREFETCH; followup music; ducking integration (Sprint 1.3).
   Clue-read (`voice_clue_read_<nivå>`) and question-read (`voice_question_read_<index>`) TTS phrases added to Banter Moment Mapping; see `banter.md` sections 7 and 8.
+- **v1.3.2**: ROUND_INTRO row added to Phase-Based Audio Behavior table (Voice column added to all rows).
+  `banter_round_intro` category added to Banter Moment Mapping.  VOICE_LINE example payloads updated to use `banter_round_intro_*` phraseIds.
+  See `banter.md` section 1 and CHANGELOG [1.3.2].
 
 ---
 

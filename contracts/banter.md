@@ -1,11 +1,11 @@
-# Banter & Voice Lines v1.1.0
+# Banter & Voice Lines v1.1.1
 
 ## Overview
 
 This document contains natural Swedish TV-host phrases for different game moments. These phrases add personality and energy to the game show, inspired by "På Spåret" style.
 
-**Version**: 1.1.0 (Sprint 1.3 — clue-read + question-read TTS added)
-**Status**: Content complete; clue-read and question-read phrases active for TTS pre-generation
+**Version**: 1.1.1 (Sprint 1.3 — clue-read + question-read TTS added; banter_round_intro added)
+**Status**: Content complete; clue-read, question-read and round-intro phrases active for TTS pre-generation
 
 ---
 
@@ -18,19 +18,23 @@ This document contains natural Swedish TV-host phrases for different game moment
 
 ---
 
-## 1. Intro (Game Start)
+## 1. Round Intro (Ny resa — ROUND_INTRO)
 
-### intro_001
-Välkomna till På Spåret! Låt oss sätta igång resan.
+Spelas en gång per round, direkt innan första ledtrådan visas.
+Syftet är att skapa väntan inför destinationen.
+Backend-agent lägger `banter_round_intro` till BANTER_POOL i tts-prefetch.ts.
 
-### intro_002
-Dags att testa er geografi! Första destinationen väntar.
+### banter_round_intro_001
+Var tror ni vi ska? Beredda på resan?
 
-### intro_003
-Här kör vi! Fem ledtrådar - hur många behöver ni?
+### banter_round_intro_002
+En ny resa väntar. Vart är vi på väg?
 
-### intro_004
-Trevlig resa önskas! Första stationen kommer nu.
+### banter_round_intro_003
+Dags att ge er en ledtråd. Vart är vi på väg?
+
+### banter_round_intro_004
+Härbärbär… Vilken resa blir det här?
 
 ---
 
@@ -194,7 +198,7 @@ phrasings per slot.
 
 Server should randomly select from available phrases for each moment to create variety across games:
 
-- **Intro**: Play once at game start (PREPARING_ROUND)
+- **Round intro** (`banter_round_intro`): Play once per round at ROUND_INTRO, before first clue
 - **Before clue**: Optionally before each clue reveal (skip some to avoid repetition)
 - **Clue read** (`voice_clue_read_<nivå>`): Always play when each clue is presented (CLUE_LEVEL). Template interpolated with actual clue text before TTS.
 - **After brake**: Always play when BRAKE_ACCEPTED fires
