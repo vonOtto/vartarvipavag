@@ -195,7 +195,7 @@ class AudioManager {
 
     /// Resolve an asset ID to a bundle URL.
     private func asset(_ id: String) -> URL? {
-        Bundle.module.url(forResource: id, withExtension: "wav")
+        Bundle.main.url(forResource: id, withExtension: "wav")
     }
 
     /// dB → linear gain multiplier.

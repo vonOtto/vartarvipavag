@@ -1,0 +1,250 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 46;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		AA000001 /* App.swift in Sources */                = {isa = PBXBuildFile; fileRef = BB000001 /* App.swift */; };
+		AA000002 /* AppState.swift in Sources */           = {isa = PBXBuildFile; fileRef = BB000002 /* AppState.swift */; };
+		AA000003 /* AudioManager.swift in Sources */       = {isa = PBXBuildFile; fileRef = BB000003 /* AudioManager.swift */; };
+		AA000004 /* ConfettiView.swift in Sources */       = {isa = PBXBuildFile; fileRef = BB000004 /* ConfettiView.swift */; };
+		AA000005 /* GameModels.swift in Sources */         = {isa = PBXBuildFile; fileRef = BB000005 /* GameModels.swift */; };
+		AA000006 /* QRCodeView.swift in Sources */         = {isa = PBXBuildFile; fileRef = BB000006 /* QRCodeView.swift */; };
+		AA000007 /* SessionAPI.swift in Sources */         = {isa = PBXBuildFile; fileRef = BB000007 /* SessionAPI.swift */; };
+		AA000008 /* TVClueView.swift in Sources */         = {isa = PBXBuildFile; fileRef = BB000008 /* TVClueView.swift */; };
+		AA000009 /* TVFollowupView.swift in Sources */     = {isa = PBXBuildFile; fileRef = BB000009 /* TVFollowupView.swift */; };
+		AA00000A /* TVRevealView.swift in Sources */       = {isa = PBXBuildFile; fileRef = BB00000A /* TVRevealView.swift */; };
+		AA00000B /* TVScoreboardView.swift in Sources */   = {isa = PBXBuildFile; fileRef = BB00000B /* TVScoreboardView.swift */; };
+		AA00000C /* music_followup_loop.wav in Resources */ = {isa = PBXBuildFile; fileRef = BB00000C /* music_followup_loop.wav */; };
+		AA00000D /* music_travel_loop.wav in Resources */  = {isa = PBXBuildFile; fileRef = BB00000D /* music_travel_loop.wav */; };
+		AA00000E /* sfx_brake.wav in Resources */          = {isa = PBXBuildFile; fileRef = BB00000E /* sfx_brake.wav */; };
+		AA00000F /* sfx_drumroll.wav in Resources */       = {isa = PBXBuildFile; fileRef = BB00000F /* sfx_drumroll.wav */; };
+		AA000010 /* sfx_lock.wav in Resources */           = {isa = PBXBuildFile; fileRef = BB000010 /* sfx_lock.wav */; };
+		AA000011 /* sfx_reveal.wav in Resources */         = {isa = PBXBuildFile; fileRef = BB000011 /* sfx_reveal.wav */; };
+		AA000012 /* sfx_winner_fanfare.wav in Resources */ = {isa = PBXBuildFile; fileRef = BB000012 /* sfx_winner_fanfare.wav */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		BB000001 /* App.swift */              = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App.swift;              sourceTree = "<group>"; };
+		BB000002 /* AppState.swift */         = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift;         sourceTree = "<group>"; };
+		BB000003 /* AudioManager.swift */     = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioManager.swift;     sourceTree = "<group>"; };
+		BB000004 /* ConfettiView.swift */     = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfettiView.swift;     sourceTree = "<group>"; };
+		BB000005 /* GameModels.swift */       = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameModels.swift;       sourceTree = "<group>"; };
+		BB000006 /* QRCodeView.swift */       = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRCodeView.swift;       sourceTree = "<group>"; };
+		BB000007 /* SessionAPI.swift */       = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionAPI.swift;       sourceTree = "<group>"; };
+		BB000008 /* TVClueView.swift */       = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TVClueView.swift;       sourceTree = "<group>"; };
+		BB000009 /* TVFollowupView.swift */   = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TVFollowupView.swift;   sourceTree = "<group>"; };
+		BB00000A /* TVRevealView.swift */     = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TVRevealView.swift;     sourceTree = "<group>"; };
+		BB00000B /* TVScoreboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TVScoreboardView.swift; sourceTree = "<group>"; };
+		BB00000C /* music_followup_loop.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = music_followup_loop.wav; sourceTree = "<group>"; };
+		BB00000D /* music_travel_loop.wav */  = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = music_travel_loop.wav;  sourceTree = "<group>"; };
+		BB00000E /* sfx_brake.wav */          = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = sfx_brake.wav;          sourceTree = "<group>"; };
+		BB00000F /* sfx_drumroll.wav */       = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = sfx_drumroll.wav;       sourceTree = "<group>"; };
+		BB000010 /* sfx_lock.wav */           = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = sfx_lock.wav;           sourceTree = "<group>"; };
+		BB000011 /* sfx_reveal.wav */         = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = sfx_reveal.wav;         sourceTree = "<group>"; };
+		BB000012 /* sfx_winner_fanfare.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = sfx_winner_fanfare.wav; sourceTree = "<group>"; };
+		BB000099 /* Info.plist */             = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		BB0000F0 /* PaSparetTV.app */         = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PaSparetTV.app; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		BB0000AA /* PaSparetTV (root) */ = {
+			isa = PBXGroup;
+			children = (
+				BB0000AB /* Sources */,
+				BB0000AC /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		BB0000AB /* Sources */ = {
+			isa = PBXGroup;
+			children = (
+				BB000001 /* App.swift */,
+				BB000002 /* AppState.swift */,
+				BB000003 /* AudioManager.swift */,
+				BB000004 /* ConfettiView.swift */,
+				BB000005 /* GameModels.swift */,
+				BB000006 /* QRCodeView.swift */,
+				BB000007 /* SessionAPI.swift */,
+				BB000008 /* TVClueView.swift */,
+				BB000009 /* TVFollowupView.swift */,
+				BB00000A /* TVRevealView.swift */,
+				BB00000B /* TVScoreboardView.swift */,
+				BB000099 /* Info.plist */,
+				BB0000AD /* Resources */,
+			);
+			path = Sources/PaSparetTV;
+			sourceTree = "<group>";
+		};
+		BB0000AD /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				BB00000C /* music_followup_loop.wav */,
+				BB00000D /* music_travel_loop.wav */,
+				BB00000E /* sfx_brake.wav */,
+				BB00000F /* sfx_drumroll.wav */,
+				BB000010 /* sfx_lock.wav */,
+				BB000011 /* sfx_reveal.wav */,
+				BB000012 /* sfx_winner_fanfare.wav */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		BB0000AC /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				BB0000F0 /* PaSparetTV.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		BB000050 /* PaSparetTV */ = {
+			isa = PBXNativeTarget;
+			buildPhases = (
+				BB000051 /* Sources */,
+				BB000052 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = PaSparetTV;
+			productName = PaSparetTV;
+			productReference = BB0000F0 /* PaSparetTV.app */;
+			productType = "com.apple.product-type.application";
+			buildConfigurationList = BB000070 /* Build Configurations for PBXNativeTarget "PaSparetTV" */;
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		BB000040 /* Project object */ = {
+			isa = PBXProject;
+			buildConfigurationList = BB000071 /* Build Configurations for PBXProject "PaSparetTV" */;
+			compatibilityVersion = "Xcode 3.2";
+			developmentRegion = en;
+			mainGroup = BB0000AA /* PaSparetTV (root) */;
+			productRefGroup = BB0000AC /* Products */;
+			targets = (
+				BB000050 /* PaSparetTV */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		BB000051 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			files = (
+				AA000001 /* App.swift in Sources */,
+				AA000002 /* AppState.swift in Sources */,
+				AA000003 /* AudioManager.swift in Sources */,
+				AA000004 /* ConfettiView.swift in Sources */,
+				AA000005 /* GameModels.swift in Sources */,
+				AA000006 /* QRCodeView.swift in Sources */,
+				AA000007 /* SessionAPI.swift in Sources */,
+				AA000008 /* TVClueView.swift in Sources */,
+				AA000009 /* TVFollowupView.swift in Sources */,
+				AA00000A /* TVRevealView.swift in Sources */,
+				AA00000B /* TVScoreboardView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXResourcesBuildPhase section */
+		BB000052 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			files = (
+				AA00000C /* music_followup_loop.wav in Resources */,
+				AA00000D /* music_travel_loop.wav in Resources */,
+				AA00000E /* sfx_brake.wav in Resources */,
+				AA00000F /* sfx_drumroll.wav in Resources */,
+				AA000010 /* sfx_lock.wav in Resources */,
+				AA000011 /* sfx_reveal.wav in Resources */,
+				AA000012 /* sfx_winner_fanfare.wav in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		BB000060 /* Debug (project) */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CODE_SIGN_IDENTITY = "";
+				CODE_SIGNING_REQUIRED = NO;
+				ENABLE_TESTABILITY = YES;
+				SDKROOT = appletvsimulator;
+				SWIFT_VERSION = "5.9";
+				TVOS_DEPLOYMENT_TARGET = 16.0;
+			};
+			name = Debug;
+		};
+		BB000061 /* Release (project) */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CODE_SIGN_IDENTITY = "";
+				CODE_SIGNING_REQUIRED = NO;
+				SDKROOT = appletvsimulator;
+				SWIFT_VERSION = "5.9";
+				TVOS_DEPLOYMENT_TARGET = 16.0;
+			};
+			name = Release;
+		};
+		BB000062 /* Debug (target) */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				INFOPLIST_FILE = Sources/PaSparetTV/Info.plist;
+				PRODUCT_NAME = PaSparetTV;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.pasparet.tvos";
+				PRODUCT_TYPE = "com.apple.product-type.application";
+				SWIFT_VERSION = "5.9";
+				TVOS_DEPLOYMENT_TARGET = 16.0;
+			};
+			name = Debug;
+		};
+		BB000063 /* Release (target) */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				INFOPLIST_FILE = Sources/PaSparetTV/Info.plist;
+				PRODUCT_NAME = PaSparetTV;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.pasparet.tvos";
+				PRODUCT_TYPE = "com.apple.product-type.application";
+				SWIFT_VERSION = "5.9";
+				TVOS_DEPLOYMENT_TARGET = 16.0;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		BB000070 /* Build Configurations for PBXNativeTarget "PaSparetTV" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				BB000062 /* Debug */,
+				BB000063 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		BB000071 /* Build Configurations for PBXProject "PaSparetTV" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				BB000060 /* Debug */,
+				BB000061 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+	};
+	rootObject = BB000040 /* Project object */;
+}
