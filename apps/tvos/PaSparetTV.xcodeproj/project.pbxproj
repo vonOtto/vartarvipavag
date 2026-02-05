@@ -26,6 +26,8 @@
 		AA000010 /* sfx_lock.wav in Resources */           = {isa = PBXBuildFile; fileRef = BB000010 /* sfx_lock.wav */; };
 		AA000011 /* sfx_reveal.wav in Resources */         = {isa = PBXBuildFile; fileRef = BB000011 /* sfx_reveal.wav */; };
 		AA000012 /* sfx_winner_fanfare.wav in Resources */ = {isa = PBXBuildFile; fileRef = BB000012 /* sfx_winner_fanfare.wav */; };
+		AA000014 /* music_travel.wav in Resources */       = {isa = PBXBuildFile; fileRef = BB000014 /* music_travel.wav */; };
+		AA000015 /* sfx_sting_build.wav in Resources */    = {isa = PBXBuildFile; fileRef = BB000015 /* sfx_sting_build.wav */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -48,6 +50,8 @@
 		BB000010 /* sfx_lock.wav */           = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = sfx_lock.wav;           sourceTree = "<group>"; };
 		BB000011 /* sfx_reveal.wav */         = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = sfx_reveal.wav;         sourceTree = "<group>"; };
 		BB000012 /* sfx_winner_fanfare.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = sfx_winner_fanfare.wav; sourceTree = "<group>"; };
+		BB000014 /* music_travel.wav */       = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = music_travel.wav;       sourceTree = "<group>"; };
+		BB000015 /* sfx_sting_build.wav */    = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = sfx_sting_build.wav;    sourceTree = "<group>"; };
 		BB000099 /* Info.plist */             = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		BB0000F0 /* PaSparetTV.app */         = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PaSparetTV.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -92,6 +96,8 @@
 				BB000010 /* sfx_lock.wav */,
 				BB000011 /* sfx_reveal.wav */,
 				BB000012 /* sfx_winner_fanfare.wav */,
+				BB000014 /* music_travel.wav */,
+				BB000015 /* sfx_sting_build.wav */,
 			);
 			path = Resources;
 			sourceTree = "<group>";
@@ -171,6 +177,8 @@
 				AA000010 /* sfx_lock.wav in Resources */,
 				AA000011 /* sfx_reveal.wav in Resources */,
 				AA000012 /* sfx_winner_fanfare.wav in Resources */,
+				AA000014 /* music_travel.wav in Resources */,
+				AA000015 /* sfx_sting_build.wav in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
