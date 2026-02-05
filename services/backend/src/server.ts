@@ -511,13 +511,18 @@ async function handleHostStartGame(
         // Broadcast audio events (MUSIC_SET, TTS_PREFETCH) before CLUE_PRESENT per audio-flow.md
         audioEvents.forEach((e) => sessionStore.broadcastEventToSession(sessionId, e));
 
+        // Resolve TTS clip duration for textRevealAfterMs
+        const clueClipId = `voice_clue_${gameData.clueLevelPoints}`;
+        const clueClip = (sess as any)._ttsManifest?.find((c: any) => c.clipId === clueClipId);
+
         // Broadcast CLUE_PRESENT event
         const clueEvent = buildCluePresentEvent(
           sessionId,
           gameData.clueText,
           gameData.clueLevelPoints,
           sess.state.roundIndex || 0,
-          gameData.clueIndex
+          gameData.clueIndex,
+          clueClip?.durationMs ?? 0
         );
         sessionStore.broadcastEventToSession(sessionId, clueEvent);
 
@@ -749,6 +754,10 @@ async function handleHostNextClue(
       // On-demand: generate clue voice BEFORE audio-director searches manifest
       await generateClueVoice(session, result.clueLevelPoints!, result.clueText!);
 
+      // Resolve TTS clip duration for textRevealAfterMs
+      const clueClipId = `voice_clue_${result.clueLevelPoints!}`;
+      const clueClip = (session as any)._ttsManifest?.find((c: any) => c.clipId === clueClipId);
+
       // Broadcast STATE_SNAPSHOT to all clients
       broadcastStateSnapshot(sessionId);
 
@@ -758,7 +767,8 @@ async function handleHostNextClue(
         result.clueText!,
         result.clueLevelPoints!,
         session.state.roundIndex || 0,
-        result.clueIndex!
+        result.clueIndex!,
+        clueClip?.durationMs ?? 0
       );
       sessionStore.broadcastEventToSession(sessionId, clueEvent);
 
@@ -1370,6 +1380,10 @@ async function autoAdvanceClue(sessionId: string): Promise<void> {
       // On-demand: generate clue voice BEFORE audio-director searches manifest
       await generateClueVoice(session, result.clueLevelPoints!, result.clueText!);
 
+      // Resolve TTS clip duration for textRevealAfterMs
+      const clueClipId = `voice_clue_${result.clueLevelPoints!}`;
+      const clueClip = (session as any)._ttsManifest?.find((c: any) => c.clipId === clueClipId);
+
       // Broadcast STATE_SNAPSHOT to all clients
       broadcastStateSnapshot(sessionId);
 
@@ -1379,7 +1393,8 @@ async function autoAdvanceClue(sessionId: string): Promise<void> {
         result.clueText!,
         result.clueLevelPoints!,
         session.state.roundIndex || 0,
-        result.clueIndex!
+        result.clueIndex!,
+        clueClip?.durationMs ?? 0
       );
       sessionStore.broadcastEventToSession(sessionId, clueEvent);
 
