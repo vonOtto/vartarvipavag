@@ -1,6 +1,6 @@
 // Type definitions from contracts/events.schema.json and contracts/state.schema.json
 
-export type Role = 'HOST' | 'PLAYER' | 'TV';
+export type Role = 'host' | 'player' | 'tv';
 
 export type GamePhase =
   | 'LOBBY'

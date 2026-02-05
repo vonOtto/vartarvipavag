@@ -16,7 +16,7 @@ const HostGameView: React.FC<{
   isConnected: boolean;
   error: string | null;
 }> = ({ gameState, currentClue, isConnected, error }) => {
-  const hostPlayerId = gameState?.players?.find(p => p.role === 'HOST')?.playerId;
+  const hostPlayerId = gameState?.players?.find(p => p.role === 'host')?.playerId;
 
   const brakeOwnerName = gameState.brakeOwnerPlayerId
     ? gameState.players.find(p => p.playerId === gameState.brakeOwnerPlayerId)?.name ?? 'Okänd'
