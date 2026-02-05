@@ -8,6 +8,45 @@ app.use(express.json());
 // serve cached audio clips as static files
 app.use('/cache', express.static(CACHE_DIR));
 
+app.post('/tts/batch', async (req, res) => {
+    const roundId   = req.body?.roundId as string | undefined;
+    const voiceLines = req.body?.voiceLines as Array<{ phraseId: string; text: string; voiceId: string }> | undefined;
+
+    if (!roundId || !Array.isArray(voiceLines)) {
+        res.status(400).json({ error: 'roundId (string) and voiceLines (array) are required' });
+        return;
+    }
+
+    const results = await Promise.allSettled(
+        voiceLines.map(async (line) => {
+            const text = line.text?.trim();
+            if (!text) throw new Error('empty text');
+
+            const vid  = line.voiceId ?? process.env.ELEVENLABS_DEFAULT_VOICE_ID ?? 'mock';
+            const clip = await generateOrFetch(text, vid);
+            return {
+                clipId:        `banter_${line.phraseId}_${roundId}`,
+                phraseId:      line.phraseId,
+                url:           `${PUBLIC_URL}/cache/${clip.assetId}.wav`,
+                durationMs:    clip.durationMs,
+                generatedAtMs: Date.now(),
+            };
+        })
+    );
+
+    const clips = results
+        .map((r, i) => {
+            if (r.status === 'rejected') {
+                console.warn(`[tts/batch] phraseId=${voiceLines[i].phraseId} failed:`, (r.reason as Error).message);
+                return null;
+            }
+            return r.value;
+        })
+        .filter((c): c is NonNullable<typeof c> => c !== null);
+
+    res.json({ roundId, clips });
+});
+
 /**
  * POST /tts  —  { text, voiceId? } → { assetId, url, durationMs }
  *
