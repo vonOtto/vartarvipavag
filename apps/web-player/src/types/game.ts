@@ -137,6 +137,7 @@ export interface CluePresentPayload {
   clueLevelPoints: ClueLevelPoints;
   roundIndex: number;
   clueIndex?: number;
+  textRevealAfterMs?: number;   // TTS clip duration — text hidden until this many ms have elapsed
 }
 
 export interface ClueAdvancePayload {

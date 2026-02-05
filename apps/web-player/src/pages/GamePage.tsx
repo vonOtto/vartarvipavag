@@ -330,6 +330,38 @@ export const GamePage: React.FC = () => {
     return null;
   }, [lastEvent, gameState]);
 
+  // ---------------------------------------------------------------------------
+  // TTS-gated text reveal — player branch only
+  // ---------------------------------------------------------------------------
+  // displayedClueText is null while TTS plays; once the delay has elapsed (or
+  // when there is no delay) it equals currentClue.text.
+  const [displayedClueText, setDisplayedClueText] = useState<string | null>(null);
+
+  useEffect(() => {
+    // No clue active at all — reset.
+    if (!currentClue) {
+      setDisplayedClueText(null);
+      return;
+    }
+
+    // Determine whether this clue arrived via a live CLUE_PRESENT event that
+    // carries a TTS duration, or via STATE_SNAPSHOT / gameState fallback (reconnect).
+    const isLiveCluePresentEvent = lastEvent?.type === 'CLUE_PRESENT';
+    const textRevealAfterMs = isLiveCluePresentEvent
+      ? (lastEvent.payload as CluePresentPayload).textRevealAfterMs ?? 0
+      : 0;                          // reconnect / snapshot -> show immediately
+
+    if (textRevealAfterMs > 0) {
+      // Hide text while TTS is playing.
+      setDisplayedClueText(null);
+      const timer = setTimeout(() => setDisplayedClueText(currentClue.text), textRevealAfterMs);
+      return () => clearTimeout(timer);
+    }
+
+    // No delay (or reconnect) — reveal instantly.
+    setDisplayedClueText(currentClue.text);
+  }, [gameState?.clueText, gameState?.clueLevelPoints, lastEvent]);
+
   // Derived state
   const hasLockedAnswer = gameState?.lockedAnswers?.some(a => a.playerId === session?.playerId) ?? false;
   const lockedAtPoints = gameState?.lockedAnswers?.find(a => a.playerId === session?.playerId)?.lockedAtLevelPoints;
@@ -420,7 +452,11 @@ export const GamePage: React.FC = () => {
         )}
 
         {currentClue ? (
-          <ClueDisplay points={currentClue.points} clueText={currentClue.text} />
+          displayedClueText !== null ? (
+            <ClueDisplay points={currentClue.points} clueText={displayedClueText} />
+          ) : (
+            <div className="waiting-message">Lyssnar på ledtrådan...</div>
+          )
         ) : (
           <div className="waiting-message">Väntar på nästa ledtråd...</div>
         )}

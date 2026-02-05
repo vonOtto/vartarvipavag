@@ -105,9 +105,20 @@ class HostState: ObservableObject {
 
         case "CLUE_PRESENT":
             guard let payload = json["payload"] as? [String: Any] else { break }
-            if let t = payload["clueText"]        as? String { clueText    = t }
+            let revealDelay = payload["textRevealAfterMs"] as? Int ?? 0
+            if let t = payload["clueText"] as? String {
+                if revealDelay > 0 {
+                    clueText = nil                          // hide until TTS finishes
+                    Task { [self] in
+                        try? await Task.sleep(nanoseconds: UInt64(revealDelay) * 1_000_000)
+                        await MainActor.run { self.clueText = t }
+                    }
+                } else {
+                    clueText = t                            // show immediately (default)
+                }
+            }
             if let p = payload["clueLevelPoints"] as? Int    { levelPoints = p }
-            phase          = "CLUE_LEVEL"
+            phase              = "CLUE_LEVEL"
             brakeOwnerPlayerId = nil
 
         case "LOBBY_UPDATED":
