@@ -114,23 +114,58 @@ All animations are **0.2-0.3s slower** than web equivalents to account for TV vi
 
 ### 1. Lobby Screen
 
-**Purpose:** Show QR code for player join + player list
+**Purpose:** Show QR code for player join + player list with game-show energy
 
 **Layout:**
-- Two-column: QR code (left) + player list (right)
-- QR code: 400x400 pt with 20 pt padding
-- Join code: 48 pt bold, spaced letters (e.g., "A  B  C  1  2  3")
-- Player rows: 28 pt name + 14 pt status indicator (green/gray circle)
-- "Ny spel" button: bottom-right, 20 pt medium, subtle secondary style
+- **Top:** Game show title "PÅ SPÅRET" (96 pt black rounded) with gradient (accentBlueBright -> accentBlue) and "PARTY EDITION" subtitle (28 pt, tracked)
+- **Main:** Two-column layout with 80 pt horizontal spacing
+  - **Left column:** QR code section
+    - QR code: 320x320 pt with 24 pt padding, white background with blue glow (radius 30/60)
+    - Card background: bgCard with 32 pt padding, 24 pt corner radius
+    - Join code: 52 pt bold monospaced, tracked, accentBlueBright
+    - Instructions: 32 pt semibold heading + 24 pt body text
+  - **Right column:** Player list (max 600 pt wide)
+    - Section header: "SPELARE" (28 pt bold, tracked) with green pulse indicator + count
+    - Divider line (white 15% opacity)
+    - Host row: Star icon + name (34 pt semibold goldYellow) + "VÄRD" badge
+    - Player rows: Enhanced cards with connection pulse, name (32 pt), player number badge
+    - Empty state: Icon + "Väntar på spelare..." message
+- **Bottom:** Status indicator (waiting or ready state) with icons and colored backgrounds
+- **Bottom-right:** "Ny spel" button (subtle secondary style)
+
+**Player Row Design:**
+- Card: 16 pt rounded corners, white 6% background (connected) or 3% (disconnected)
+- Border: successGreen 20% opacity (connected) or white 5% (disconnected)
+- Connection indicator: 16 pt circle with 24 pt pulse ring animation
+- Player number badge: Capsule with accentBlue 15% background, 22 pt bold text
+- Padding: 20 pt horizontal, 16 pt vertical
 
 **Animations:**
-- Player join: fade-in + slide-up (0.4s)
-- Status indicator: pulse when connected (1.5s cycle)
+- Title: Continuous breathing animation (scale 1.0 <-> 1.05, opacity 1.0 <-> 0.85, 2.0s cycle)
+- Player join: Scale-pop entrance (0.8 -> 1.0) with opacity fade, spring animation (0.5s response, 0.7 damping)
+- Join sparkles: 15 burst particles with 0.6-1.2s duration, blue/green/gold/white colors
+- Connection pulse: Expanding ring (1.0 -> 1.4 scale) fading out (1.2s cycle)
+- Status indicators: Icons with colors (progressView for waiting, checkmark for ready)
 
 **Colors:**
-- Host name: `goldYellow` (distinctive)
-- Player names: white
-- Reconnecting banner: red background, 22 pt
+- Background: Linear gradient (bgPrimary -> darker variant) for depth
+- Title gradient: accentBlueBright -> accentBlue with double shadow (radius 40 + 20)
+- QR card: White background with accentBlue glow (opacity 0.4/0.2, radius 30/60)
+- Host badge: goldYellow with 15% opacity background
+- Player cards: Dynamic opacity based on connection state
+- Status indicators: successGreenBright (ready) or accentBlueBright (waiting)
+- Reconnect banner: errorRed 90% opacity with 20 pt glow
+
+**Status Indicators:**
+- **Waiting:** ProgressView + "Väntar på spelare att ansluta..." (30 pt medium, white 60%)
+- **Ready:** Checkmark icon (32 pt) + "Redo att starta! Värden startar spelet." (30 pt semibold)
+  - Background: successGreen 15% with 2 pt border (successGreenBright 30%) and 20 pt glow
+
+**Visual Hierarchy:**
+1. Title with gradient and glow (primary attention)
+2. QR code with prominent card and glow (secondary attention)
+3. Player list with animated entries (tertiary attention)
+4. Status indicator at bottom (contextual information)
 
 ---
 

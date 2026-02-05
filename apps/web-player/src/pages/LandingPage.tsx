@@ -7,7 +7,10 @@ export const LandingPage: React.FC = () => {
   return (
     <div className="page landing-page">
       <div className="container landing-container">
-        <h1 className="landing-title">På Spåret</h1>
+        <h1 className="landing-title">
+          <span className="landing-title-main">PÅ SPÅRET</span>
+          <span className="landing-title-sub">PARTY EDITION</span>
+        </h1>
 
         <p className="landing-description">
           En resegissa för sällskapet. Fem ledtrådar, fem chänser —

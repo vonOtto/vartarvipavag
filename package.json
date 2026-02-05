@@ -1,0 +1,17 @@
+{
+  "name": "pa-sparet-party",
+  "private": true,
+  "version": "1.0.0",
+  "description": "På Spåret Party Edition - E2E Test Suite",
+  "scripts": {
+    "test:e2e": "playwright test",
+    "test:e2e:headless": "playwright test --headed=false",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:debug": "playwright test --debug"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.49.0",
+    "@types/node": "^24.10.1",
+    "typescript": "^5.9.3"
+  }
+}

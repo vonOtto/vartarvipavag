@@ -45,30 +45,33 @@ Alla agenter och alla TASK-körningar måste följa dessa reglar utan undantag:
 
 **Inför varje uppgift:** Analysera uppgiftens TYP och välj rätt agent-typ baserat på expertis-område. Överbelasta inte en agent med arbete utanför dess expertis.
 
-| Uppgifts-typ | Rätt agent | Fel agent (använd EJ) |
-|--------------|------------|-----------------------|
-| Pacing/timing-beslut (hur spelet KÄNNS) | producer | backend |
-| UI/UX design (hur spelet SER UT) | web-designer, tvos-designer | web, tvos |
-| Backend state-machine-logik | backend | producer, architect |
-| Contract-ändring (event/state schema) | architect | backend, web, tvos |
-| Svenska språk-granskning (TTS, UI-text) | swedish-script, i18n-reviewer | backend, web |
-| Audio-produktion (SFX/musik) | sound-designer | backend, audio-director |
-| Integration-test (E2E, edge-cases) | qa-tester | backend, ceo |
-| Deploy, CI/CD, miljö | devops | backend, ceo |
-| Spelmekanik-balans (poäng, timers, fairness) | game-designer | backend, producer |
-| Bug-rapportering + verifiering | qa-tester | backend, web, tvos |
-| Error tracking + monitoring | devops | backend |
-| Visuellt innehåll (bilder, video, motion graphics) | visual-content | tvos, web, web-designer |
+| Uppgifts-typ | Rätt agent (subagent) | Virtuell roll (docs only) |
+|--------------|----------------------|---------------------------|
+| Pacing/timing-beslut (hur spelet KÄNNS) | backend (impl) | producer (spec) |
+| UI/UX design (hur spelet SER UT) | web, tvos (impl) | web-designer, tvos-designer (spec) |
+| Backend state-machine-logik | backend | — |
+| Contract-ändring (event/state schema) | architect | — |
+| Svenska språk-granskning (TTS, UI-text) | backend, web, tvos (impl) | swedish-script, i18n-reviewer (audit) |
+| Audio-produktion (SFX/musik) | audio (impl) | sound-designer (spec) |
+| E2E-testning (happy path, edge-cases, regressions) | qa-tester | — |
+| Bug-rapportering + verifiering | qa-tester | — |
+| Deploy + staging setup (Railway, Vercel) | devops | — |
+| CI/CD pipeline (GitHub Actions) | devops | — |
+| Error tracking + monitoring (Sentry, logs) | devops | — |
+| Spelmekanik-balans (poäng, timers, fairness) | game-designer | — |
+| Playtesting-analys + recommendations | game-designer | — |
+| Visuellt innehåll (assets, video, Gemini prompts) | visual-content | — |
+| Asset integration (tvOS AVPlayer, web lazy-load) | visual-content + tvos/web (samarbete) | — |
 
-**Specialister äger besluten, implementatörer implementerar:**
-- Producer beslutar pacing → backend implementerar
-- Web-designer beslutar UI/UX → web implementerar
-- Architect beslutar contracts → alla implementerar
+**Specialister äger besluten, subagents implementerar:**
+- Virtuell roll skapar spec i `docs/` → Subagent implementerar enligt spec
+- Exempel: producer (virtuell) skapar `pacing-spec.md` → backend (subagent) implementerar
+- Exempel: architect (subagent) uppdaterar `contracts/scoring.md` → backend (subagent) implementerar
 
 **Samarbete via docs:**
-- Producer + backend: `pacing-spec.md` → `pacing-implementation-batch-X.md`
-- Web-designer + tvos-designer: `design-decisions.md` (synkad design)
-- Swedish-script + i18n-reviewer: `swedish-audit-report.md` → alla fixar
+- Producer (virtuell) + backend (subagent): `pacing-spec.md` → `pacing-implementation-batch-X.md`
+- Web-designer (virtuell) + web (subagent): `web-redesign-spec.md` → implementation
+- Swedish-script (virtuell) + alla subagents: `swedish-audit-report.md` → alla fixar
 
 ### Ownership Map
 
@@ -84,10 +87,10 @@ Varje path har en utsedd ägaragent. Code-ändringar till en path kräver ägare
 | `apps/tvos/` | tvos |
 | `docs/` | ceo |
 | `test/e2e/` | qa-tester |
-| `.github/workflows/` | devops |
 | `docs/bugs/` | qa-tester |
-| `docs/deploy-spec.md` | devops |
 | `docs/test-suite.md` | qa-tester |
+| `.github/workflows/` | devops |
+| `docs/deploy-spec.md` | devops |
 | `docs/game-balance-audit.md` | game-designer |
 | `docs/visual-assets/` | visual-content |
 | `assets/images/` | visual-content |
@@ -228,22 +231,30 @@ När arbete skiftar från en agent till en annan skickas:
 
 ## Agent Registry
 
-Alla specialist-agenter som är aktiva i projektet. För full spec, se `docs/agent-recruiting-*.md`.
+Specialist-roller som används i projektet. Vissa roller är virtuella (dokumentation + handoff-protokoll) medan andra är riktiga Claude Code subagent types.
 
 | Agent-typ | Expertis | Äger / Producerar | Status |
 |-----------|----------|-------------------|--------|
-| **producer** | Game-show pacing, dramaturgi, timing-beslut | `docs/pacing-spec.md`, pacing-implementation-batch-X.md | ✅ Aktiv |
-| **web-designer** | UX/UI för web-player, mobile-first, game-show vibes | `docs/web-redesign-spec.md`, design-decisions.md | ✅ Aktiv |
-| **tvos-designer** | UX/UI för tvOS, TV-distance design, synk med web | `docs/tvos-redesign-spec.md`, Design/ system | ✅ Aktiv |
-| **swedish-script** | Korrekt svenska i TTS-manus, banter, voice-lines | `docs/tts-script.md`, swedish-audit-report.md | ✅ Aktiv |
-| **i18n-reviewer** | Svenska UI-text i alla clients (web, tvOS, ios-host) | `docs/i18n-review.md`, swedish-audit-report.md | ✅ Aktiv |
-| **sound-designer** | SFX/musik-produktion, genererings-prompts | `docs/sfx-prompts.md` | ✅ Aktiv |
-| **qa-tester** | E2E-test, edge-cases, regressions, test-suites | `docs/test-suite.md`, `docs/bugs/BUG-XXX.md` | ✅ Aktiv |
-| **devops** | CI/CD, deploy, miljöhantering, monitoring | `.github/workflows/`, `docs/deploy-spec.md` | ✅ Aktiv |
-| **game-designer** | Spelmekanik-balans, poäng-system, svårighetsgrad | `docs/game-balance-audit.md`, scoring-audit | ✅ Aktiv |
-| **visual-content** | Visuellt innehåll (bilder, video, motion graphics), Gemini prompts | `docs/visual-assets/`, `assets/images/`, `assets/video/` | ✅ Aktiv |
+| **architect** | Contracts, schema, arkitektur-beslut | `contracts/` | ✅ Subagent |
+| **backend** | Backend implementation, state machine, deploy | `services/backend/` | ✅ Subagent |
+| **web** | Web-player implementation, deploy | `apps/web-player/` | ✅ Subagent |
+| **tvos** | tvOS implementation, audio system | `apps/tvos/` | ✅ Subagent |
+| **ios-host** | iOS host implementation | `apps/ios-host/` | ✅ Subagent |
+| **ai-content** | AI pipeline, TTS generation | `services/ai-content/` | ✅ Subagent |
+| **ceo** | Koordination, planning, cross-team tasks | `docs/` | ✅ Subagent |
+| **qa-tester** | E2E-test, edge-cases, regressions, bug-rapporter | `docs/test-suite.md`, `docs/bugs/` | ✅ Subagent |
+| **devops** | CI/CD, deploy, miljöhantering, monitoring | `.github/workflows/`, `docs/deploy-spec.md` | ✅ Subagent |
+| **game-designer** | Spelmekanik-balans, poäng-system, svårighetsgrad | `docs/game-balance-audit.md` | ✅ Subagent |
+| **visual-content** | Visuellt innehåll (bilder, video, motion graphics) | `docs/visual-assets/`, `assets/` | ✅ Subagent |
+| **producer** | Game-show pacing, dramaturgi, timing-beslut | `docs/pacing-spec.md` | 🔷 Virtuell roll |
+| **web-designer** | UX/UI för web-player | `docs/web-redesign-spec.md` | 🔷 Virtuell roll |
+| **tvos-designer** | UX/UI för tvOS | `docs/tvos-redesign-spec.md` | 🔷 Virtuell roll |
+| **swedish-script** | Korrekt svenska i TTS-manus | `docs/tts-script.md` | 🔷 Virtuell roll |
+| **i18n-reviewer** | Svenska UI-text | `docs/i18n-review.md` | 🔷 Virtuell roll |
+| **sound-designer** | SFX/musik-produktion | `docs/sfx-prompts.md` | 🔷 Virtuell roll |
 
-**✅ Aktiv** = Rekryterad och tillgänglig för tasks
+**✅ Subagent** = Faktisk Claude Code subagent type med `.claude/agents/X.md` fil (kan anropas via "Kör TASK-XXX")
+**🔷 Virtuell roll** = Dokumenterad expertis-roll (task körs av subagent enligt handoff-protokoll)
 
 ### Nya Agenter — Expertis & Handoff-protokoll
 

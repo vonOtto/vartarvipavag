@@ -32,6 +32,7 @@
 		AA000017 /* Colors.swift in Sources */             = {isa = PBXBuildFile; fileRef = BB000017 /* Colors.swift */; };
 		AA000018 /* Fonts.swift in Sources */              = {isa = PBXBuildFile; fileRef = BB000018 /* Fonts.swift */; };
 		AA000019 /* Layout.swift in Sources */             = {isa = PBXBuildFile; fileRef = BB000019 /* Layout.swift */; };
+		AA00001A /* background.png in Resources */         = {isa = PBXBuildFile; fileRef = BB00001A /* background.png */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -60,6 +61,7 @@
 		BB000017 /* Colors.swift */           = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Design/Colors.swift;     sourceTree = "<group>"; };
 		BB000018 /* Fonts.swift */            = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Design/Fonts.swift;      sourceTree = "<group>"; };
 		BB000019 /* Layout.swift */           = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Design/Layout.swift;     sourceTree = "<group>"; };
+		BB00001A /* background.png */         = {isa = PBXFileReference; lastKnownFileType = image.png; path = background.png; sourceTree = "<group>"; };
 		BB000099 /* Info.plist */             = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		BB0000F0 /* PaSparetTV.app */         = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PaSparetTV.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -110,6 +112,7 @@
 				BB000012 /* sfx_winner_fanfare.wav */,
 				BB000014 /* music_travel.wav */,
 				BB000015 /* sfx_sting_build.wav */,
+				BB00001A /* background.png */,
 			);
 			path = Resources;
 			sourceTree = "<group>";
@@ -195,6 +198,7 @@
 				AA000012 /* sfx_winner_fanfare.wav in Resources */,
 				AA000014 /* music_travel.wav in Resources */,
 				AA000015 /* sfx_sting_build.wav in Resources */,
+				AA00001A /* background.png in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

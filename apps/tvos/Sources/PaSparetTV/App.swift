@@ -168,59 +168,33 @@ private let PUBLIC_BASE_URL = ProcessInfo.processInfo.environment["PUBLIC_BASE_U
 
 struct LobbyView: View {
     @EnvironmentObject var appState: AppState
+
+    // Animation states
     @State private var titleScale: CGFloat = 1.0
     @State private var titleOpacity: Double = 1.0
     @State private var lastPlayerCount = 0
     @State private var showJoinSparkles = false
 
     var body: some View {
-        ZStack {
-            // Background gradient for depth
-            LinearGradient(
-                gradient: Gradient(colors: [
-                    Color.bgPrimary,
-                    Color(red: 18/255, green: 18/255, blue: 32/255)
-                ]),
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .ignoresSafeArea()
-
-            VStack(spacing: 0) {
-                // Game show title with breathing animation
+        ZStack(alignment: .top) {
+            // Content
+            VStack(spacing: 48) {
                 gameShowTitle
-                    .padding(.top, 60)
-                    .padding(.bottom, 48)
 
-                // Main content: QR + players
-                HStack(alignment: .top, spacing: 80) {
+                HStack(spacing: 80) {
                     qrColumn
                     playerColumn
                 }
-                .padding(.horizontal, 80)
 
                 Spacer()
 
-                // Status indicator
-                if appState.players.isEmpty {
-                    waitingForPlayersIndicator
-                        .padding(.bottom, 60)
-                } else {
-                    readyToStartIndicator
-                        .padding(.bottom, 60)
-                }
+                statusIndicator
             }
+            .padding(60)
 
-            // Reconnect banner overlay
-            if !appState.isConnected {
-                VStack {
-                    reconnectBanner
-                        .padding(.top, Layout.tightSpacing)
-                    Spacer()
-                }
-            }
+            if !appState.isConnected { reconnectBanner }
 
-            // "Nytt spel" button — bottom-right corner
+            // "Nytt spel" button — bottom-right corner, subtle secondary style
             VStack {
                 Spacer()
                 HStack {
@@ -230,7 +204,7 @@ struct LobbyView: View {
             }
             .padding(40)
 
-            // Join sparkles effect
+            // Join sparkles overlay
             if showJoinSparkles {
                 JoinSparklesView {
                     showJoinSparkles = false
@@ -243,17 +217,16 @@ struct LobbyView: View {
         }
         .onChange(of: appState.players.count) { newCount in
             if newCount > lastPlayerCount {
-                // New player joined - trigger sparkles
                 showJoinSparkles = true
             }
             lastPlayerCount = newCount
         }
     }
 
-    // ── Game Show Title ──
+    // ── Game show title ──
     @ViewBuilder
     private var gameShowTitle: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: 8) {
             Text("PÅ SPÅRET")
                 .font(.system(size: 96, weight: .black, design: .rounded))
                 .foregroundStyle(
@@ -269,95 +242,101 @@ struct LobbyView: View {
                 .opacity(titleOpacity)
 
             Text("PARTY EDITION")
-                .font(.system(size: 28, weight: .medium, design: .default))
-                .tracking(8)
+                .font(.system(size: 28, weight: .semibold, design: .rounded))
+                .tracking(4)
                 .foregroundColor(.white.opacity(0.7))
         }
     }
 
-    // ── QR Code Section ──
-    @ViewBuilder
-    private var qrColumn: some View {
-        VStack(spacing: 24) {
-            // QR card with glow
-            VStack(spacing: 20) {
-                QRCodeView(url: joinURL)
-                    .padding(24)
-                    .background(
-                        RoundedRectangle(cornerRadius: 20, style: .continuous)
-                            .fill(Color.white)
-                    )
-                    .shadow(color: .accentBlue.opacity(0.4), radius: 30)
-                    .shadow(color: .accentBlue.opacity(0.2), radius: 60)
-
-                if let code = appState.joinCode {
-                    Text(code.uppercased().map { String($0) }.joined(separator: "  "))
-                        .font(.system(size: 52, weight: .bold, design: .monospaced))
-                        .foregroundColor(.accentBlueBright)
-                        .tracking(6)
-                }
-            }
-            .padding(32)
-            .background(
-                RoundedRectangle(cornerRadius: 24, style: .continuous)
-                    .fill(Color.bgCard)
-                    .shadow(color: .black.opacity(0.3), radius: 20)
-            )
-
-            // Join instructions
-            VStack(spacing: 8) {
-                Text("Skanna QR-koden")
-                    .font(.system(size: 32, weight: .semibold, design: .rounded))
-                    .foregroundColor(.white.opacity(0.9))
-                Text("eller gå till spelet och ange koden")
-                    .font(.system(size: 24, weight: .regular, design: .default))
-                    .foregroundColor(.white.opacity(0.6))
-            }
-            .multilineTextAlignment(.center)
+    private func startTitleAnimation() {
+        withAnimation(
+            .easeInOut(duration: 2.0)
+            .repeatForever(autoreverses: true)
+        ) {
+            titleScale = 1.05
+            titleOpacity = 0.85
         }
     }
 
-    // ── Player List Section ──
+    // ── QR + join code (enhanced) ──
+    @ViewBuilder
+    private var qrColumn: some View {
+        VStack(spacing: 24) {
+            // Enhanced card with glow
+            VStack(spacing: 20) {
+                QRCodeView(url: joinURL)
+                    .padding(24)
+                    .background(Color.white)
+                    .cornerRadius(16)
+
+                Text("Skanna för att ansluta")
+                    .font(.system(size: 24, weight: .medium))
+                    .foregroundColor(.white.opacity(0.8))
+            }
+            .padding(32)
+            .background(Color.bgCard)
+            .cornerRadius(20)
+            .shadow(color: .accentBlue.opacity(0.4), radius: 30)
+            .shadow(color: .accentBlue.opacity(0.2), radius: 60)
+
+            // Join code
+            if let code = appState.joinCode {
+                Text(code.uppercased().map { String($0) }.joined(separator: "  "))
+                    .font(.system(size: 52, weight: .bold, design: .monospaced))
+                    .tracking(8)
+                    .foregroundColor(.accentBlueBright)
+            }
+        }
+    }
+
+    // ── player list (enhanced) ──
     @ViewBuilder
     private var playerColumn: some View {
-        VStack(alignment: .leading, spacing: 24) {
-            // Section header
+        VStack(alignment: .leading, spacing: 20) {
+            // Section header with pulse
             HStack(spacing: 12) {
-                Circle()
-                    .fill(Color.successGreenBright)
-                    .frame(width: 12, height: 12)
-                    .opacity(appState.players.isEmpty ? 0.3 : 1.0)
+                if !appState.players.isEmpty {
+                    Circle()
+                        .fill(Color.successGreen)
+                        .frame(width: 12, height: 12)
+                        .overlay(
+                            Circle()
+                                .stroke(Color.successGreen, lineWidth: 2)
+                                .scaleEffect(1.4)
+                                .opacity(0)
+                                .animation(
+                                    .easeOut(duration: 1.2)
+                                    .repeatForever(autoreverses: false),
+                                    value: appState.players.count
+                                )
+                        )
+                }
 
                 Text("SPELARE")
-                    .font(.system(size: 28, weight: .bold, design: .rounded))
+                    .font(.system(size: 24, weight: .bold, design: .rounded))
                     .tracking(2)
-                    .foregroundColor(.accentBlueBright)
+                    .foregroundColor(.white.opacity(0.6))
 
-                if !appState.players.isEmpty {
-                    Text("(\(appState.players.count))")
-                        .font(.system(size: 28, weight: .medium, design: .rounded))
-                        .foregroundColor(.white.opacity(0.5))
-                }
+                Text("(\(appState.players.count))")
+                    .font(.system(size: 24, weight: .semibold))
+                    .foregroundColor(.accentBlueBright)
             }
 
-            Divider()
-                .background(Color.white.opacity(0.15))
-                .padding(.bottom, 8)
-
-            // Host row
+            // Host row (enhanced)
             if let host = appState.hostName {
-                HStack(spacing: 16) {
+                HStack(spacing: 12) {
                     Image(systemName: "star.fill")
-                        .font(.system(size: 22))
+                        .font(.system(size: 22, weight: .bold))
                         .foregroundColor(.goldYellow)
 
                     Text(host)
-                        .font(.system(size: 34, weight: .semibold, design: .default))
+                        .font(.system(size: 34, weight: .semibold))
                         .foregroundColor(.goldYellow)
 
                     Text("VÄRD")
-                        .font(.system(size: 20, weight: .bold, design: .rounded))
-                        .foregroundColor(.goldYellow.opacity(0.6))
+                        .font(.system(size: 18, weight: .bold, design: .rounded))
+                        .tracking(1)
+                        .foregroundColor(.goldYellow.opacity(0.8))
                         .padding(.horizontal, 12)
                         .padding(.vertical, 4)
                         .background(
@@ -365,95 +344,71 @@ struct LobbyView: View {
                                 .fill(Color.goldYellow.opacity(0.15))
                         )
                 }
-                .padding(.vertical, 8)
+                .padding(.horizontal, 20)
+                .padding(.vertical, 12)
+                .background(Color.goldYellow.opacity(0.08))
+                .cornerRadius(12)
                 .padding(.bottom, 8)
             }
 
-            // Player rows with animated entrance
+            // Player cards
             ForEach(Array(appState.players.enumerated()), id: \.element.id) { index, player in
-                EnhancedPlayerRow(player: player, index: index)
-                    .transition(
-                        .asymmetric(
-                            insertion: .scale(scale: 0.8).combined(with: .opacity),
-                            removal: .opacity
-                        )
-                    )
+                EnhancedPlayerRow(player: player, number: index + 1)
+                    .transition(.scale.combined(with: .opacity))
             }
 
+            // Empty state
             if appState.players.isEmpty {
-                emptyPlayerState
-            }
+                VStack(spacing: 16) {
+                    Image(systemName: "person.2.badge.gearshape")
+                        .font(.system(size: 64, weight: .light))
+                        .foregroundColor(.white.opacity(0.2))
 
-            Spacer()
+                    Text("Väntar på spelare...")
+                        .font(.system(size: 28, weight: .medium))
+                        .italic()
+                        .foregroundColor(.white.opacity(0.4))
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.top, 40)
+            }
         }
-        .frame(maxWidth: 600, alignment: .leading)
         .animation(.spring(response: 0.5, dampingFraction: 0.7), value: appState.players.count)
     }
 
+    // ── Status indicator ──
     @ViewBuilder
-    private var emptyPlayerState: some View {
-        VStack(spacing: 16) {
-            Image(systemName: "person.2.badge.gearshape")
-                .font(.system(size: 64))
-                .foregroundColor(.white.opacity(0.2))
-                .padding(.top, 40)
+    private var statusIndicator: some View {
+        let hasPlayers = !appState.players.isEmpty
 
-            Text("Väntar på spelare...")
-                .font(.system(size: 28, weight: .medium, design: .default))
-                .foregroundColor(.white.opacity(0.4))
-                .italic()
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 40)
-    }
-
-    // ── Status Indicators ──
-    @ViewBuilder
-    private var waitingForPlayersIndicator: some View {
         HStack(spacing: 16) {
-            ProgressView()
-                .progressViewStyle(.circular)
-                .tint(.accentBlueBright)
-                .scaleEffect(0.8)
+            if hasPlayers {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 32, weight: .bold))
+                    .foregroundColor(.successGreen)
+            } else {
+                ProgressView()
+                    .progressViewStyle(CircularProgressViewStyle(tint: .white.opacity(0.5)))
+                    .scaleEffect(1.2)
+            }
 
-            Text("Väntar på spelare att ansluta...")
-                .font(.system(size: 30, weight: .medium, design: .default))
-                .foregroundColor(.white.opacity(0.6))
+            Text(hasPlayers ? "Redo att starta! Värden startar spelet." : "Väntar på spelare att ansluta...")
+                .font(.system(size: 30, weight: hasPlayers ? .semibold : .medium))
+                .foregroundColor(.white.opacity(hasPlayers ? 0.9 : 0.7))
         }
-        .padding(.horizontal, 32)
+        .padding(.horizontal, 40)
         .padding(.vertical, 20)
         .background(
             Capsule()
-                .fill(Color.bgCard)
-                .shadow(color: .black.opacity(0.2), radius: 10)
-        )
-    }
-
-    @ViewBuilder
-    private var readyToStartIndicator: some View {
-        HStack(spacing: 16) {
-            Image(systemName: "checkmark.circle.fill")
-                .font(.system(size: 32))
-                .foregroundColor(.successGreenBright)
-
-            Text("Redo att starta! Värden startar spelet.")
-                .font(.system(size: 30, weight: .semibold, design: .default))
-                .foregroundColor(.white.opacity(0.9))
-        }
-        .padding(.horizontal, 40)
-        .padding(.vertical, 24)
-        .background(
-            Capsule()
-                .fill(Color.successGreen.opacity(0.15))
+                .fill(hasPlayers ? Color.successGreen.opacity(0.15) : Color.white.opacity(0.05))
                 .overlay(
                     Capsule()
-                        .stroke(Color.successGreenBright.opacity(0.3), lineWidth: 2)
+                        .stroke(hasPlayers ? Color.successGreen.opacity(0.3) : Color.clear, lineWidth: 2)
                 )
-                .shadow(color: .successGreen.opacity(0.3), radius: 20)
         )
+        .shadow(color: hasPlayers ? Color.successGreen.opacity(0.3) : Color.clear, radius: 20)
     }
 
-    // ── Utilities ──
     private var joinURL: String {
         "\(PUBLIC_BASE_URL)/join/\(appState.joinCode ?? "")"
     }
@@ -461,12 +416,11 @@ struct LobbyView: View {
     private var reconnectBanner: some View {
         HStack(spacing: 12) {
             ProgressView()
-                .progressViewStyle(.circular)
-                .tint(.errorRedBright)
+                .progressViewStyle(CircularProgressViewStyle(tint: .errorRed))
                 .scaleEffect(0.6)
 
             Text("Återansluter...")
-                .font(.system(size: 24, weight: .semibold, design: .default))
+                .font(.system(size: 24, weight: .semibold))
                 .foregroundColor(.white)
         }
         .padding(.horizontal, 28)
@@ -474,14 +428,143 @@ struct LobbyView: View {
         .background(
             Capsule()
                 .fill(Color.errorRed.opacity(0.9))
-                .shadow(color: .errorRed.opacity(0.6), radius: 20)
         )
+        .shadow(color: .errorRed.opacity(0.5), radius: 20)
+        .padding(.top, 24)
+    }
+}
+
+// MARK: – Enhanced Player Row ────────────────────────────────────────────────
+
+struct EnhancedPlayerRow: View {
+    let player: Player
+    let number: Int
+
+    @State private var pulseScale: CGFloat = 1.0
+
+    var body: some View {
+        HStack(spacing: 16) {
+            // Player number badge
+            Text("#\(number)")
+                .font(.system(size: 20, weight: .bold, design: .rounded))
+                .foregroundColor(.accentBlue.opacity(0.8))
+                .frame(minWidth: 48)
+                .padding(.vertical, 6)
+                .background(
+                    Capsule()
+                        .fill(Color.accentBlue.opacity(0.15))
+                )
+
+            // Connection indicator with pulse
+            ZStack {
+                // Pulse ring
+                if player.isConnected {
+                    Circle()
+                        .stroke(Color.successGreenBright.opacity(0.6), lineWidth: 2)
+                        .frame(width: 24, height: 24)
+                        .scaleEffect(pulseScale)
+                        .opacity(2 - pulseScale)
+                }
+
+                // Connection dot
+                Circle()
+                    .fill(player.isConnected ? Color.successGreenBright : Color.gray)
+                    .frame(width: 16, height: 16)
+            }
+            .onAppear {
+                if player.isConnected {
+                    withAnimation(
+                        .easeOut(duration: 1.2)
+                        .repeatForever(autoreverses: false)
+                    ) {
+                        pulseScale = 1.4
+                    }
+                }
+            }
+
+            // Player name
+            Text(player.name)
+                .font(.system(size: 32, weight: .medium))
+                .foregroundColor(.white)
+
+            Spacer()
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 16)
+        .background(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(Color.bgCard.opacity(0.6))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .stroke(
+                            player.isConnected ? Color.successGreen.opacity(0.3) : Color.clear,
+                            lineWidth: 2
+                        )
+                )
+        )
+        .opacity(player.isConnected ? 1.0 : 0.7)
+    }
+}
+
+// MARK: – Join Sparkles Effect ───────────────────────────────────────────────
+
+struct JoinSparklesView: View {
+    let onComplete: () -> Void
+
+    var body: some View {
+        ZStack {
+            ForEach(0..<15, id: \.self) { index in
+                SparklePiece(index: index)
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .allowsHitTesting(false)
+        .onAppear {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                onComplete()
+            }
+        }
+    }
+}
+
+struct SparklePiece: View {
+    let index: Int
+
+    @State private var scale: CGFloat = 0
+    @State private var opacity: Double = 1
+    @State private var offset: CGSize = .zero
+
+    private var color: Color {
+        let colors: [Color] = [.accentBlueBright, .successGreenBright, .goldYellow, .white]
+        return colors[index % colors.count]
     }
 
-    private func startTitleAnimation() {
-        withAnimation(Animation.easeInOut(duration: 2.0).repeatForever(autoreverses: true)) {
-            titleScale = 1.05
-            titleOpacity = 0.85
+    var body: some View {
+        GeometryReader { geometry in
+            Circle()
+                .fill(color)
+                .frame(width: 12, height: 12)
+                .scaleEffect(scale)
+                .opacity(opacity)
+                .offset(offset)
+                .position(x: geometry.size.width * 0.7, y: geometry.size.height * 0.5)
+        }
+        .onAppear {
+            // Use simple LCG for deterministic random values
+            let seed = index * 48271 % 2147483647
+            let angle = Double(seed % 360) * .pi / 180
+            let distance = CGFloat(80 + (seed % 120))
+
+            let duration = 0.6 + Double(index % 6) * 0.1
+
+            withAnimation(.easeOut(duration: duration)) {
+                scale = 1.5
+                opacity = 0
+                offset = CGSize(
+                    width: cos(angle) * distance,
+                    height: sin(angle) * distance
+                )
+            }
         }
     }
 }
@@ -505,169 +588,6 @@ struct NewGameButton: View {
     }
 }
 
-struct PlayerRow: View {
-    let player: Player
-
-    var body: some View {
-        HStack(spacing: 12) {
-            Circle()
-                .fill(player.isConnected ? Color.successGreenBright : Color.gray)
-                .frame(width: 14, height: 14)
-            Text(player.name)
-                .font(.bodySmall)
-                .foregroundColor(.white)
-        }
-    }
-}
-
-/// Enhanced player row with game-show styling and animations
-struct EnhancedPlayerRow: View {
-    let player: Player
-    let index: Int
-
-    @State private var hasAppeared = false
-
-    var body: some View {
-        HStack(spacing: 16) {
-            // Connection status with pulse
-            ZStack {
-                if player.isConnected {
-                    Circle()
-                        .fill(Color.successGreenBright.opacity(0.3))
-                        .frame(width: 24, height: 24)
-                        .scaleEffect(hasAppeared ? 1.4 : 1.0)
-                        .opacity(hasAppeared ? 0 : 0.6)
-                        .animation(
-                            Animation.easeOut(duration: 1.2).repeatForever(autoreverses: false),
-                            value: hasAppeared
-                        )
-                }
-
-                Circle()
-                    .fill(player.isConnected ? Color.successGreenBright : Color.gray.opacity(0.5))
-                    .frame(width: 16, height: 16)
-            }
-
-            // Player name
-            Text(player.name)
-                .font(.system(size: 32, weight: .medium, design: .default))
-                .foregroundColor(.white.opacity(0.95))
-
-            Spacer()
-
-            // Player number badge
-            Text("#\(index + 1)")
-                .font(.system(size: 22, weight: .bold, design: .rounded))
-                .foregroundColor(.accentBlue)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 6)
-                .background(
-                    Capsule()
-                        .fill(Color.accentBlue.opacity(0.15))
-                        .overlay(
-                            Capsule()
-                                .stroke(Color.accentBlue.opacity(0.3), lineWidth: 1)
-                        )
-                )
-        }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 16)
-        .background(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(Color.white.opacity(player.isConnected ? 0.06 : 0.03))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .stroke(
-                            player.isConnected
-                                ? Color.successGreenBright.opacity(0.2)
-                                : Color.white.opacity(0.05),
-                            lineWidth: 1
-                        )
-                )
-        )
-        .onAppear {
-            // Trigger pulse animation
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                hasAppeared = true
-            }
-        }
-    }
-}
-
-// MARK: – join sparkles effect ──────────────────────────────────────────────
-
-/// Light sparkle effect when a new player joins the lobby.
-/// Shows 15 small sparkles with a quick burst animation.
-struct JoinSparklesView: View {
-    let onDismiss: () -> Void
-
-    var body: some View {
-        GeometryReader { geo in
-            ForEach(0..<15, id: \.self) { i in
-                SparklePiece(index: i, width: geo.size.width, height: geo.size.height)
-            }
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .ignoresSafeArea()
-        .allowsHitTesting(false)
-        .onAppear {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { onDismiss() }
-        }
-    }
-}
-
-private struct SparklePiece: View {
-    @State private var burst = false
-
-    private let x: CGFloat
-    private let y: CGFloat
-    private let targetX: CGFloat
-    private let targetY: CGFloat
-    private let size: CGFloat
-    private let color: Color
-    private let duration: Double
-
-    private static let palette: [Color] = [
-        .accentBlueBright, .successGreenBright, .goldYellow, .white
-    ]
-
-    init(index: Int, width: CGFloat, height: CGFloat) {
-        var s = UInt64(truncatingIfNeeded: index &+ 1) &* 6364136223846793005 &+ 1442695040888963407
-        func next() -> UInt64 {
-            s = s &* 6364136223846793005 &+ 1442695040888963407
-            return s >> 33
-        }
-        func pick(_ n: Int) -> Int { Int(next() % UInt64(max(1, n))) }
-
-        // Start from right side (player list area)
-        self.x = width * 0.7 + CGFloat(pick(Int(width * 0.2)))
-        self.y = height * 0.4 + CGFloat(pick(Int(height * 0.3)))
-
-        // Burst outward
-        let angle = Double(pick(360)) * .pi / 180.0
-        let distance = CGFloat(80 + pick(120))
-        self.targetX = x + cos(angle) * distance
-        self.targetY = y + sin(angle) * distance
-
-        self.size = CGFloat(8 + pick(8))
-        self.color = Self.palette[pick(Self.palette.count)]
-        self.duration = 0.6 + Double(pick(6)) / 10.0
-    }
-
-    var body: some View {
-        Circle()
-            .fill(color)
-            .frame(width: size, height: size)
-            .opacity(burst ? 0.0 : 1.0)
-            .scaleEffect(burst ? 1.5 : 0.3)
-            .position(x: burst ? targetX : x, y: burst ? targetY : y)
-            .onAppear {
-                withAnimation(.easeOut(duration: duration)) {
-                    burst = true
-                }
-            }
-    }
-}
 
 // MARK: – live game screen (placeholder — expanded in TASK 503–504) ──────────
 

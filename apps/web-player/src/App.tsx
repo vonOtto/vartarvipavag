@@ -1,11 +1,12 @@
-import { useState, useEffect, type ReactNode } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { JoinPage } from './pages/JoinPage';
 import { LobbyPage } from './pages/LobbyPage';
 import { GamePage } from './pages/GamePage';
 import { RevealPage } from './pages/RevealPage';
 import { LandingPage } from './pages/LandingPage';
-import { hasSession, loadSession, clearSession } from './services/storage';
+import { LeaveButton } from './components/LeaveButton';
+import { hasSession, loadSession } from './services/storage';
 import { useWebSocket } from './hooks/useWebSocket';
 import './App.css';
 
@@ -13,8 +14,7 @@ import './App.css';
 // waits for STATE_SNAPSHOT, then routes to the correct page based on phase.
 function ResumeRoute() {
   const navigate = useNavigate();
-  const [left, setLeft] = useState(false);
-  const session = left ? null : loadSession();
+  const session = loadSession();
 
   const { isConnected, gameState, error } = useWebSocket(
     session?.wsUrl || null,
@@ -46,29 +46,20 @@ function ResumeRoute() {
     }
   }, [gameState?.phase, navigate]);
 
-  const handleLeave = () => {
-    clearSession();
-    setLeft(true);
-  };
-
-  if (left) {
-    return <LandingPage />;
-  }
-
   return (
     <div className="page home-page">
       <div className="container">
         {error ? (
           <>
             <div className="error-message">{error}</div>
-            <button className="leave-button" onClick={handleLeave}>Lämna spelet</button>
+            <LeaveButton />
           </>
         ) : (
           <>
             <div className="waiting-message">
               {isConnected ? 'Återställer session...' : 'Återansluter...'}
             </div>
-            <button className="leave-button" onClick={handleLeave}>Lämna spelet</button>
+            <LeaveButton />
           </>
         )}
       </div>

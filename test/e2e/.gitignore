@@ -1,0 +1,10 @@
+# Playwright test artifacts
+test-results/
+playwright-report/
+playwright/.cache/
+
+# Node modules (if installed locally)
+node_modules/
+
+# Environment files
+.env.local

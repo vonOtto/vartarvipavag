@@ -11,16 +11,34 @@ interface PlayerListProps {
 }
 
 export const PlayerList: React.FC<PlayerListProps> = ({ players }) => {
+  if (players.length === 0) {
+    return (
+      <div className="player-list-empty">
+        <div className="empty-icon">👥</div>
+        <div className="empty-message">Väntar på spelare...</div>
+      </div>
+    );
+  }
+
   return (
     <div className="player-list">
-      <h3>Players ({players.length})</h3>
       <ul>
-        {players.map((player) => (
-          <li key={player.playerId} className={player.isConnected ? 'connected' : 'disconnected'}>
-            {player.name}
-            <span className="status">
-              {player.isConnected ? ' (ansluten)' : ' (frånlämnad)'}
-            </span>
+        {players.map((player, index) => (
+          <li
+            key={player.playerId}
+            className={`player-card ${player.isConnected ? 'player-connected' : 'player-disconnected'}`}
+            style={{ animationDelay: `${index * 0.05}s` }}
+          >
+            <div className="player-number">#{index + 1}</div>
+            <div className="player-info">
+              <div className="player-name-text">{player.name}</div>
+              <div className="player-status">
+                <span className={`status-dot ${player.isConnected ? 'status-dot-connected' : 'status-dot-disconnected'}`}></span>
+                <span className="status-label">
+                  {player.isConnected ? 'Ansluten' : 'Frånkopplad'}
+                </span>
+              </div>
+            </div>
           </li>
         ))}
       </ul>

@@ -103,7 +103,230 @@ h3 {
   letter-spacing: 0;
 }
 
-/* Status indicators */
+/* ═══════════════════════════════════════════════════════════════════════ */
+/* LOBBY PAGE — Enhanced Design */
+/* ═══════════════════════════════════════════════════════════════════════ */
+
+.lobby-header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.lobby-title {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  margin: 0;
+}
+
+.lobby-title-main {
+  font-family: var(--font-heading);
+  font-size: 2.8rem;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  background: linear-gradient(135deg, var(--accent-blue-bright) 0%, var(--accent-blue) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: titleBreath 3s ease-in-out infinite;
+}
+
+.lobby-title-sub {
+  font-family: var(--font-heading);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  opacity: 0.5;
+  text-transform: uppercase;
+}
+
+/* Connection status card */
+.connection-status-card {
+  text-align: center;
+  font-size: 0.85rem;
+  padding: 0.65rem 1rem;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  margin-bottom: 1rem;
+}
+
+.status-connected {
+  color: var(--success-green);
+  font-weight: 600;
+}
+
+.status-disconnected {
+  color: var(--error-red);
+  font-weight: 600;
+}
+
+/* Join code card */
+.join-code-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1.5rem;
+  background: var(--bg-card);
+  border-radius: 12px;
+  border: 2px solid rgba(100, 108, 255, 0.3);
+  box-shadow: 0 4px 16px rgba(100, 108, 255, 0.2), 0 0 20px rgba(100, 108, 255, 0.15);
+  margin-bottom: 1.5rem;
+  animation: fadeInUp 0.5s ease-out;
+}
+
+.join-code-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  opacity: 0.7;
+}
+
+.join-code-value {
+  font-family: var(--font-heading);
+  font-size: 2.2rem;
+  font-weight: 900;
+  letter-spacing: 0.15em;
+  color: var(--accent-blue-bright);
+  text-shadow: 0 0 20px rgba(100, 108, 255, 0.5);
+}
+
+.join-code-hint {
+  font-size: 0.8rem;
+  opacity: 0.5;
+  font-style: italic;
+}
+
+/* Host card */
+.host-card {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1.25rem;
+  background: rgba(255, 215, 0, 0.1);
+  border: 1px solid rgba(255, 215, 0, 0.3);
+  border-radius: 10px;
+  margin-bottom: 1.5rem;
+}
+
+.host-badge {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  padding: 0.25rem 0.65rem;
+  background: rgba(255, 215, 0, 0.2);
+  border-radius: 6px;
+  color: var(--gold);
+}
+
+.host-name {
+  font-weight: 600;
+  font-size: 1rem;
+  color: var(--gold);
+}
+
+/* Lobby section */
+.lobby-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.lobby-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.lobby-section-header h3 {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+
+.player-count-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 28px;
+  padding: 0 0.5rem;
+  background: rgba(100, 108, 255, 0.2);
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--accent-blue-bright);
+}
+
+/* Lobby actions */
+.lobby-actions {
+  margin-bottom: 1rem;
+}
+
+.start-game-button {
+  width: 100%;
+  padding: 1.25rem;
+  font-family: var(--font-heading);
+  font-size: 1.4rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  background: linear-gradient(135deg, var(--success-green) 0%, #22c55e 100%);
+  color: #1a1a2e;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(74, 222, 128, 0.3);
+}
+
+.start-game-button:hover:not(:disabled) {
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  transform: scale(1.02);
+  box-shadow: 0 6px 16px rgba(74, 222, 128, 0.4);
+}
+
+.start-game-button:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.start-game-button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.waiting-status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 1.25rem;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+  font-size: 1rem;
+  opacity: 0.8;
+}
+
+.waiting-spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(100, 108, 255, 0.3);
+  border-top-color: var(--accent-blue);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Status indicators (legacy - keep for other pages) */
 .connection-status {
   text-align: center;
   font-size: 0.9rem;
@@ -112,15 +335,7 @@ h3 {
   background: rgba(255, 255, 255, 0.05);
 }
 
-.status-connected {
-  color: #4ade80;
-}
-
-.status-disconnected {
-  color: #f87171;
-}
-
-/* Join code display */
+/* Join code display (legacy - keep for other pages) */
 .join-code-display {
   text-align: center;
   font-size: 1.2rem;
@@ -141,11 +356,19 @@ h3 {
 }
 
 .join-title {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  margin-bottom: 1.5rem;
   font-family: var(--font-heading);
   font-size: 2.8rem;
   font-weight: 900;
-  letter-spacing: -0.02em;
-  margin-bottom: 0.5rem;
+  letter-spacing: 0.05em;
+  background: linear-gradient(135deg, var(--accent-blue-bright) 0%, var(--accent-blue) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
   animation: scalePop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
@@ -372,30 +595,103 @@ button:disabled {
   margin: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.65rem;
 }
 
-.player-list li {
-  padding: 0.75rem;
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 6px;
+.player-card {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  background: var(--bg-card);
+  border-radius: 10px;
+  border: 2px solid transparent;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  transition: all 0.3s ease;
+  animation: fadeInUp 0.4s ease-out;
 }
 
-.player-list li.connected {
-  border-left: 3px solid #4ade80;
+.player-card.player-connected {
+  border-color: rgba(74, 222, 128, 0.4);
 }
 
-.player-list li.disconnected {
-  border-left: 3px solid #f87171;
-  opacity: 0.6;
+.player-card.player-disconnected {
+  opacity: 0.5;
+  border-color: rgba(248, 113, 113, 0.3);
 }
 
-.player-list .status {
+.player-number {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background: rgba(100, 108, 255, 0.2);
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--accent-blue-bright);
+  flex-shrink: 0;
+}
+
+.player-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.player-name-text {
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.player-status {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
   font-size: 0.85rem;
-  opacity: 0.7;
+  opacity: 0.8;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.status-dot-connected {
+  background: var(--success-green);
+  box-shadow: 0 0 8px rgba(74, 222, 128, 0.6);
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.status-dot-disconnected {
+  background: var(--error-red);
+}
+
+.status-label {
+  font-size: 0.85rem;
+}
+
+.player-list-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 3rem 1rem;
+  opacity: 0.4;
+}
+
+.empty-icon {
+  font-size: 3rem;
+}
+
+.empty-message {
+  font-size: 1rem;
+  font-style: italic;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════ */
@@ -594,20 +890,30 @@ button:disabled {
 
 /* Leave button */
 .leave-button {
+  width: 100%;
   background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  color: rgba(255, 255, 255, 0.7);
-  font-size: 0.9rem;
-  font-weight: 400;
-  padding: 0.5rem 1rem;
-  border-radius: 6px;
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.95rem;
+  font-weight: 600;
+  font-family: var(--font-body);
+  padding: 0.85rem 1.25rem;
+  border-radius: 10px;
   cursor: pointer;
-  transition: border-color 0.2s, color 0.2s;
+  transition: all 0.2s ease;
+  text-transform: none;
+  letter-spacing: 0;
 }
 
 .leave-button:hover {
-  border-color: rgba(255, 255, 255, 0.6);
-  color: rgba(255, 255, 255, 0.9);
+  border-color: rgba(255, 69, 58, 0.4);
+  color: var(--error-red);
+  background: rgba(255, 69, 58, 0.05);
+  transform: none;
+}
+
+.leave-button:active {
+  transform: scale(0.98);
 }
 
 /* ── Follow-up question ── */
@@ -905,12 +1211,38 @@ button:disabled {
 }
 
 .landing-title {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.landing-title-main {
   font-family: var(--font-heading);
   font-size: 3.2rem;
   font-weight: 900;
-  letter-spacing: -0.02em;
-  margin-bottom: 0;
-  animation: scalePop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+  letter-spacing: 0.05em;
+  background: linear-gradient(135deg, var(--accent-blue-bright) 0%, var(--accent-blue) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-shadow: 0 0 40px rgba(100, 108, 255, 0.3);
+  animation: scalePop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1), titleBreath 3s ease-in-out infinite;
+}
+
+.landing-title-sub {
+  font-family: var(--font-heading);
+  font-size: 0.9rem;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  opacity: 0.6;
+  text-transform: uppercase;
+}
+
+@keyframes titleBreath {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.02); opacity: 0.9; }
 }
 
 .landing-description {
@@ -952,6 +1284,7 @@ button:disabled {
   display: flex;
   flex-direction: column;
   gap: 1rem;
+  animation: fadeInUp 0.5s ease-out;
 }
 
 .role-card {
@@ -959,44 +1292,50 @@ button:disabled {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 0.35rem;
+  gap: 0.5rem;
   width: 100%;
-  padding: 1.75rem 1rem;
+  padding: 2rem 1.5rem;
   border-radius: 12px;
   border: 2px solid rgba(255, 255, 255, 0.15);
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--bg-card);
   color: inherit;
   cursor: pointer;
-  transition: background 0.2s, border-color 0.2s, transform 0.1s;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 .role-card:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--bg-card-hover);
   border-color: rgba(255, 255, 255, 0.35);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
 }
 
 .role-card:active {
-  transform: scale(0.97);
+  transform: scale(0.98);
 }
 
 .role-card--host {
   border-color: rgba(100, 108, 255, 0.4);
   background: rgba(100, 108, 255, 0.1);
+  box-shadow: 0 2px 12px rgba(100, 108, 255, 0.2);
 }
 
 .role-card--host:hover {
   background: rgba(100, 108, 255, 0.2);
-  border-color: #646cff;
+  border-color: var(--accent-blue);
+  box-shadow: 0 4px 20px rgba(100, 108, 255, 0.3);
 }
 
 .role-card__label {
   font-size: 1.3rem;
-  font-weight: 600;
+  font-weight: 700;
+  font-family: var(--font-heading);
 }
 
 .role-card__note {
   font-size: 0.85rem;
-  opacity: 0.6;
+  opacity: 0.7;
   font-weight: 400;
 }
 
@@ -1090,8 +1429,14 @@ button:disabled {
     font-size: 1.8rem;
   }
 
-  .landing-title {
+  .landing-title-main,
+  .lobby-title-main {
     font-size: 2.4rem;
+  }
+
+  .landing-title-sub,
+  .lobby-title-sub {
+    font-size: 0.7rem;
   }
 
   .landing-description {
@@ -1108,6 +1453,20 @@ button:disabled {
 
   .player-score {
     font-size: 1.1rem;
+  }
+
+  .join-code-value {
+    font-size: 1.8rem;
+  }
+
+  .player-card {
+    padding: 0.85rem 1rem;
+  }
+
+  .player-number {
+    width: 32px;
+    height: 32px;
+    font-size: 0.85rem;
   }
 }
 
