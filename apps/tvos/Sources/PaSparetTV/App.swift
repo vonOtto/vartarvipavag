@@ -98,8 +98,6 @@ struct JoinView: View {
 
             TextField("Join code", text: $code)
                 .focused($codeFocused)
-                .textInputAutocapitalization(.characters)
-                .autocorrectionDisabled()
                 .font(.system(size: 72))
                 .frame(width: 500)
                 .textFieldStyle(.plain) // ✅ tvOS-safe
