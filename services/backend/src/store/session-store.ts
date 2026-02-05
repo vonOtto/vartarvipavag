@@ -185,6 +185,47 @@ class SessionStore {
   }
 
   /**
+   * Removes a player entirely from a session.
+   *
+   * Removes the entry from session.players, session.state.players, and
+   * session.state.scoreboard.  The WebSocket connection (if any) must be
+   * removed separately via removeConnection() before calling this.
+   *
+   * Returns true if the player was found and removed, false otherwise.
+   */
+  removePlayer(sessionId: string, playerId: string): boolean {
+    const session = this.sessions.get(sessionId);
+    if (!session) {
+      return false;
+    }
+
+    const indexInPlayers = session.players.findIndex((p) => p.playerId === playerId);
+    if (indexInPlayers === -1) {
+      return false;
+    }
+
+    session.players.splice(indexInPlayers, 1);
+
+    const indexInStatePlayers = session.state.players.findIndex((p) => p.playerId === playerId);
+    if (indexInStatePlayers !== -1) {
+      session.state.players.splice(indexInStatePlayers, 1);
+    }
+
+    const indexInScoreboard = session.state.scoreboard.findIndex((e) => e.playerId === playerId);
+    if (indexInScoreboard !== -1) {
+      session.state.scoreboard.splice(indexInScoreboard, 1);
+    }
+
+    logger.info('Player removed from session', {
+      sessionId,
+      playerId,
+      remainingPlayers: session.players.length,
+    });
+
+    return true;
+  }
+
+  /**
    * Deletes a session
    */
   deleteSession(sessionId: string): boolean {

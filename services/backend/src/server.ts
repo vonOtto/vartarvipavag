@@ -220,6 +220,7 @@ export function createWebSocketServer(server: HTTPServer) {
         reason: reason.toString(),
       });
 
+      // Remove the WebSocket entry and mark player as disconnected
       sessionStore.removeConnection(sessionId, actualPlayerId);
 
       // Get updated session after removing connection
@@ -229,22 +230,47 @@ export function createWebSocketServer(server: HTTPServer) {
         return;
       }
 
-      // Broadcast PLAYER_LEFT event
-      const leftEvent = buildPlayerLeftEvent(sessionId, actualPlayerId, 'disconnect');
-      sessionStore.broadcastToSession(sessionId, JSON.stringify(leftEvent), actualPlayerId);
+      // During LOBBY phase, player-role disconnects are treated as a full
+      // removal: the player has not started playing yet and keeping a ghost
+      // entry in the lobby list is confusing.  Host and TV roles are
+      // structural to the session and must never be removed.
+      //
+      // During active gameplay (any phase after LOBBY) the player is only
+      // marked inactive so they can reconnect and resume.
+      if (updatedSession.state.phase === 'LOBBY' && role === 'player') {
+        sessionStore.removePlayer(sessionId, actualPlayerId);
 
-      // Broadcast LOBBY_UPDATED if still in LOBBY phase
-      if (updatedSession.state.phase === 'LOBBY') {
+        logger.info('Player removed from session during LOBBY disconnect', {
+          sessionId,
+          playerId: actualPlayerId,
+        });
+
+        // Broadcast LOBBY_UPDATED so TV and host refresh their player list
         const lobbyEvent = buildLobbyUpdatedEvent(
           sessionId,
           updatedSession.joinCode,
           updatedSession.state
         );
         sessionStore.broadcastEventToSession(sessionId, lobbyEvent);
-        logger.info('Broadcasted LOBBY_UPDATED after disconnection', {
-          sessionId,
-          playerId: actualPlayerId,
-        });
+      } else {
+        // Active-gameplay path: broadcast PLAYER_LEFT so clients can react
+        // (e.g. show "disconnected" badge) but keep the player in the list
+        const leftEvent = buildPlayerLeftEvent(sessionId, actualPlayerId, 'disconnect');
+        sessionStore.broadcastToSession(sessionId, JSON.stringify(leftEvent), actualPlayerId);
+
+        // If somehow still in LOBBY (host/tv disconnect), also send LOBBY_UPDATED
+        if (updatedSession.state.phase === 'LOBBY') {
+          const lobbyEvent = buildLobbyUpdatedEvent(
+            sessionId,
+            updatedSession.joinCode,
+            updatedSession.state
+          );
+          sessionStore.broadcastEventToSession(sessionId, lobbyEvent);
+          logger.info('Broadcasted LOBBY_UPDATED after host/tv disconnection', {
+            sessionId,
+            playerId: actualPlayerId,
+          });
+        }
       }
     });
 
