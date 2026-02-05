@@ -687,6 +687,66 @@ button:disabled {
   font-weight: 400;
 }
 
+/* ── Host pro-view ── */
+.host-next-clue-btn {
+  width: 100%;
+  max-width: 360px;
+  padding: 1.25rem;
+  font-size: 1.4rem;
+  font-weight: 700;
+  background: #4ade80;
+  color: #1a1a2e;
+  border-radius: 12px;
+  letter-spacing: 0.02em;
+  transition: background 0.2s, transform 0.1s;
+}
+
+.host-next-clue-btn:hover:not(:disabled) {
+  background: #22c55e;
+}
+
+.host-next-clue-btn:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.host-next-clue-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.host-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+}
+
+.host-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.host-list-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 6px;
+}
+
+.host-list-item .player-name {
+  font-weight: 600;
+  min-width: 80px;
+}
+
 /* Responsive adjustments */
 @media (max-width: 480px) {
   h1 {

@@ -5,8 +5,119 @@ import { loadSession } from '../services/storage';
 import { ClueDisplay } from '../components/ClueDisplay';
 import { BrakeButton } from '../components/BrakeButton';
 import { AnswerForm } from '../components/AnswerForm';
-import type { CluePresentPayload, BrakeRejectedPayload, FollowupResultsPayload } from '../types/game';
+import type { CluePresentPayload, BrakeRejectedPayload, FollowupResultsPayload, ClueLevelPoints } from '../types/game';
 
+// ---------------------------------------------------------------------------
+// HostGameView — pro-view rendered when session.role === 'host'
+// ---------------------------------------------------------------------------
+const HostGameView: React.FC<{
+  gameState: NonNullable<ReturnType<typeof useWebSocket>['gameState']>;
+  currentClue: { points: ClueLevelPoints; text: string } | null;
+  isConnected: boolean;
+  error: string | null;
+  sendMessage: (type: string, payload: any) => void;
+  sessionId: string;
+}> = ({ gameState, currentClue, isConnected, error, sendMessage, sessionId }) => {
+  const nextClueEnabled =
+    gameState.phase === 'CLUE_LEVEL' || gameState.phase === 'PAUSED_FOR_BRAKE';
+
+  const brakeOwnerName = gameState.brakeOwnerPlayerId
+    ? gameState.players.find(p => p.playerId === gameState.brakeOwnerPlayerId)?.name ?? 'Okänd'
+    : null;
+
+  const handleNextClue = () => {
+    sendMessage('HOST_NEXT_CLUE', { sessionId });
+  };
+
+  return (
+    <div className="page game-page">
+      <div className="container">
+        {error && <div className="error-message">{error}</div>}
+
+        {/* Connection badge */}
+        <div className="connection-status">
+          {isConnected ? (
+            <span className="status-connected">Connected</span>
+          ) : (
+            <span className="status-disconnected">Reconnecting...</span>
+          )}
+        </div>
+
+        {/* Current clue */}
+        {currentClue ? (
+          <ClueDisplay points={currentClue.points} clueText={currentClue.text} />
+        ) : (
+          <div className="waiting-message">Waiting for next clue...</div>
+        )}
+
+        {/* Nästa ledtråd button — prominent, green, centered */}
+        <div style={{ display: 'flex', justifyContent: 'center' }}>
+          <button
+            className="host-next-clue-btn"
+            disabled={!nextClueEnabled}
+            onClick={handleNextClue}
+          >
+            Nästa ledtråd
+          </button>
+        </div>
+
+        {/* Brake status */}
+        <div className="host-section">
+          <h3 style={{ margin: '0 0 0.5rem' }}>Broms</h3>
+          {brakeOwnerName ? (
+            <div className="brake-message" style={{ margin: 0 }}>
+              Bromsat av: <strong>{brakeOwnerName}</strong>
+            </div>
+          ) : (
+            <div style={{ opacity: 0.6, fontSize: '0.95rem' }}>Ingen broms</div>
+          )}
+        </div>
+
+        {/* Locked answers */}
+        <div className="host-section">
+          <h3 style={{ margin: '0 0 0.5rem' }}>Låsta svar</h3>
+          {gameState.lockedAnswers.length === 0 ? (
+            <div style={{ opacity: 0.6, fontSize: '0.95rem' }}>Inga svar låsta</div>
+          ) : (
+            <ul className="host-list">
+              {gameState.lockedAnswers.map(a => {
+                const name = gameState.players.find(p => p.playerId === a.playerId)?.name ?? 'Okänd';
+                return (
+                  <li key={a.playerId} className="host-list-item">
+                    <span className="player-name">{name}</span>
+                    <span style={{ opacity: 0.85 }}>{a.answerText}</span>
+                    <span style={{ opacity: 0.5, fontSize: '0.85rem' }}>{a.lockedAtLevelPoints}p</span>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
+
+        {/* Scoreboard */}
+        <div className="host-section scoreboard">
+          <h3 style={{ margin: '0 0 0.5rem' }}>Poäng</h3>
+          {gameState.scoreboard.length === 0 ? (
+            <div style={{ opacity: 0.6, fontSize: '0.95rem' }}>Ingen poängtablell</div>
+          ) : (
+            <ol>
+              {gameState.scoreboard.map(entry => (
+                <li key={entry.playerId}>
+                  <span className="player-name">{entry.name}</span>
+                  <span className="player-score">{entry.score}p</span>
+                </li>
+              ))}
+            </ol>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ---------------------------------------------------------------------------
+// GamePage — root component; branches on session.role
+// ---------------------------------------------------------------------------
 export const GamePage: React.FC = () => {
   const navigate = useNavigate();
   const session = loadSession();
@@ -41,7 +152,11 @@ export const GamePage: React.FC = () => {
   useEffect(() => {
     if (gameState?.phase === 'LOBBY') {
       navigate('/lobby');
-    } else if (gameState?.phase === 'REVEAL_DESTINATION' || gameState?.phase === 'SCOREBOARD') {
+    } else if (
+      gameState?.phase === 'REVEAL_DESTINATION' ||
+      gameState?.phase === 'SCOREBOARD' ||
+      gameState?.phase === 'FINAL_RESULTS'
+    ) {
       navigate('/reveal');
     }
   }, [gameState?.phase, navigate]);
@@ -169,6 +284,25 @@ export const GamePage: React.FC = () => {
     return null;
   }
 
+  // ---------------------------------------------------------------------------
+  // Branch: host → HostGameView
+  // ---------------------------------------------------------------------------
+  if (session.role === 'host' && gameState) {
+    return (
+      <HostGameView
+        gameState={gameState}
+        currentClue={currentClue}
+        isConnected={isConnected}
+        error={error}
+        sendMessage={sendMessage}
+        sessionId={session.sessionId}
+      />
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Branch: player (or host before first snapshot arrives) → existing UI
+  // ---------------------------------------------------------------------------
   return (
     <div className="page game-page">
       <div className="container">
