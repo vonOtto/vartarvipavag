@@ -287,9 +287,10 @@ class SessionStore {
   }
 
   /**
-   * Returns true when at least one currently-connected WebSocket in the
-   * session carries the 'host' role.  Used by the join endpoint to decide
-   * whether the host slot is available for claiming.
+   * Returns true when the host slot is taken — either a host-role WebSocket
+   * is connected OR a player record with role 'host' already exists (token
+   * issued but WS not yet open).  Used by the join endpoint to guard the
+   * host-claim path.
    */
   hasActiveHost(sessionId: string): boolean {
     const session = this.sessions.get(sessionId);
@@ -297,6 +298,9 @@ class SessionStore {
 
     for (const connection of session.connections.values()) {
       if (connection.role === 'host') return true;
+    }
+    for (const player of session.players) {
+      if (player.role === 'host' && player.playerId !== session.hostId) return true;
     }
     return false;
   }
