@@ -1,0 +1,67 @@
+name: Web Player CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/web-player/**'
+      - 'contracts/**'
+      - '.github/workflows/web-player-ci.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'apps/web-player/**'
+      - 'contracts/**'
+      - '.github/workflows/web-player-ci.yml'
+
+defaults:
+  run:
+    working-directory: apps/web-player
+
+jobs:
+  build:
+    name: Build & Type Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: apps/web-player/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        run: npm run typecheck
+        if: hashFiles('apps/web-player/package.json') != ''
+
+      - name: Build
+        run: npm run build
+        env:
+          VITE_API_BASE_URL: https://staging.example.com
+
+      - name: Upload build artifacts
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-player-build
+          path: apps/web-player/dist/
+          retention-days: 7
+
+  deploy:
+    name: Deploy to Vercel
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Trigger Vercel Deployment
+        run: |
+          echo "✅ Build succeeded. Vercel will auto-deploy from main branch."
+          echo "🚀 Monitor deployment: https://vercel.com/dashboard"

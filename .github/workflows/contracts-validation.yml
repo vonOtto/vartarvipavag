@@ -1,0 +1,48 @@
+name: Contracts Validation
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'contracts/**'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'contracts/**'
+
+jobs:
+  validate:
+    name: Validate Contracts
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check contracts directory structure
+        run: |
+          echo "📋 Validating contracts directory..."
+          ls -la contracts/
+
+          # Verify essential files exist
+          test -f contracts/events.schema.json || { echo "❌ events.schema.json missing"; exit 1; }
+          test -f contracts/state.schema.json || { echo "❌ state.schema.json missing"; exit 1; }
+          test -f contracts/scoring.md || { echo "❌ scoring.md missing"; exit 1; }
+
+          echo "✅ All essential contract files present"
+
+      - name: Validate JSON schemas
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Check JSON syntax
+        run: |
+          echo "🔍 Validating JSON syntax..."
+          node -e "JSON.parse(require('fs').readFileSync('contracts/events.schema.json', 'utf8'))" && echo "✅ events.schema.json valid" || exit 1
+          node -e "JSON.parse(require('fs').readFileSync('contracts/state.schema.json', 'utf8'))" && echo "✅ state.schema.json valid" || exit 1
+
+      - name: Check for breaking changes
+        run: |
+          echo "⚠️ Manual review required for breaking changes"
+          echo "Review contracts diff carefully before merging"
