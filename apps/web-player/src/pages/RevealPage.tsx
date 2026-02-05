@@ -36,7 +36,7 @@ export const RevealPage: React.FC = () => {
   useEffect(() => {
     if (gameState?.phase === 'LOBBY') {
       navigate('/lobby');
-    } else if (gameState?.phase === 'CLUE_LEVEL') {
+    } else if (gameState?.phase === 'CLUE_LEVEL' || gameState?.phase === 'FOLLOWUP_QUESTION') {
       navigate('/game');
     }
   }, [gameState?.phase, navigate]);

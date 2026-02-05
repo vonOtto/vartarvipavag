@@ -22,6 +22,28 @@ const HostGameView: React.FC<{
     ? gameState.players.find(p => p.playerId === gameState.brakeOwnerPlayerId)?.name ?? 'Okänd'
     : null;
 
+  // ── Followup timer (mirrors the player-branch pattern) ──────────────────
+  const [hostFqTimeLeft, setHostFqTimeLeft] = useState<number | null>(null);
+  const hostTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    const timer = gameState?.followupQuestion?.timer;
+    if (!timer) {
+      if (hostTimerRef.current) { clearInterval(hostTimerRef.current); hostTimerRef.current = null; }
+      setHostFqTimeLeft(null);
+      return;
+    }
+    const tick = () => {
+      const remaining = Math.max(0, Math.ceil((timer.startAtServerMs + timer.durationMs - Date.now()) / 1000));
+      setHostFqTimeLeft(remaining);
+    };
+    tick();
+    hostTimerRef.current = setInterval(tick, 500);
+    return () => { if (hostTimerRef.current) clearInterval(hostTimerRef.current); };
+  }, [gameState?.followupQuestion?.timer?.timerId, gameState?.followupQuestion?.timer?.startAtServerMs]);
+
+  const isFollowup = gameState.phase === 'FOLLOWUP_QUESTION' && gameState.followupQuestion != null;
+
   return (
     <div className="page game-page">
       <div className="container">
@@ -36,47 +58,107 @@ const HostGameView: React.FC<{
           )}
         </div>
 
-        {/* Current clue */}
-        {currentClue ? (
-          <ClueDisplay points={currentClue.points} clueText={currentClue.text} />
-        ) : (
-          <div className="waiting-message">Waiting for next clue...</div>
+        {/* ── Followup question (host pro-view) ─────────────────────────── */}
+        {isFollowup && (() => {
+          const fq = gameState.followupQuestion!;
+          const timerPct = fq.timer
+            ? Math.max(0, (hostFqTimeLeft ?? 0) / (fq.timer.durationMs / 1000)) * 100
+            : 0;
+
+          return (
+            <div className="followup-question">
+              <div className="followup-header">
+                <span className="followup-progress">
+                  Fråga {fq.currentQuestionIndex + 1} / {fq.totalQuestions}
+                </span>
+                {hostFqTimeLeft !== null && (
+                  <span className={`followup-timer ${hostFqTimeLeft <= 3 ? 'followup-timer-urgent' : ''}`}>
+                    {hostFqTimeLeft}s
+                  </span>
+                )}
+              </div>
+
+              {/* Timer bar */}
+              {fq.timer && (
+                <div className="followup-timer-bar-bg">
+                  <div className="followup-timer-bar" style={{ width: `${timerPct}%` }} />
+                </div>
+              )}
+
+              <div className="followup-question-text">{fq.questionText}</div>
+
+              {/* Correct answer — host-only field */}
+              {fq.correctAnswer && (
+                <div className="host-section" style={{ marginTop: '0.75rem' }}>
+                  <h3 style={{ margin: '0 0 0.25rem', fontSize: '0.9rem', opacity: 0.7 }}>Rätt svar</h3>
+                  <div style={{ fontWeight: 600 }}>{fq.correctAnswer}</div>
+                </div>
+              )}
+
+              {/* Locked answers from players — host-only field */}
+              {fq.answersByPlayer && fq.answersByPlayer.length > 0 && (
+                <div className="host-section" style={{ marginTop: '0.75rem' }}>
+                  <h3 style={{ margin: '0 0 0.5rem' }}>Låsta svar</h3>
+                  <ul className="host-list">
+                    {fq.answersByPlayer.map(a => (
+                      <li key={a.playerId} className="host-list-item">
+                        <span className="player-name">{a.playerName}</span>
+                        <span style={{ opacity: 0.85 }}>{a.answerText}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
+        {/* ── Clue-phase UI (hidden during followup) ──────────────────── */}
+        {!isFollowup && (
+          <>
+            {/* Current clue */}
+            {currentClue ? (
+              <ClueDisplay points={currentClue.points} clueText={currentClue.text} />
+            ) : (
+              <div className="waiting-message">Waiting for next clue...</div>
+            )}
+
+            {/* Brake status */}
+            <div className="host-section">
+              <h3 style={{ margin: '0 0 0.5rem' }}>Broms</h3>
+              {brakeOwnerName ? (
+                <div className="brake-message" style={{ margin: 0 }}>
+                  Bromsat av: <strong>{brakeOwnerName}</strong>
+                </div>
+              ) : (
+                <div style={{ opacity: 0.6, fontSize: '0.95rem' }}>Ingen broms</div>
+              )}
+            </div>
+
+            {/* Locked answers */}
+            <div className="host-section">
+              <h3 style={{ margin: '0 0 0.5rem' }}>Låsta svar</h3>
+              {gameState.lockedAnswers.length === 0 ? (
+                <div style={{ opacity: 0.6, fontSize: '0.95rem' }}>Inga svar låsta</div>
+              ) : (
+                <ul className="host-list">
+                  {gameState.lockedAnswers.map(a => {
+                    const name = gameState.players.find(p => p.playerId === a.playerId)?.name ?? 'Okänd';
+                    return (
+                      <li key={a.playerId} className="host-list-item">
+                        <span className="player-name">{name}</span>
+                        <span style={{ opacity: 0.85 }}>{a.answerText}</span>
+                        <span style={{ opacity: 0.5, fontSize: '0.85rem' }}>{a.lockedAtLevelPoints}p</span>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </div>
+          </>
         )}
 
-        {/* Brake status */}
-        <div className="host-section">
-          <h3 style={{ margin: '0 0 0.5rem' }}>Broms</h3>
-          {brakeOwnerName ? (
-            <div className="brake-message" style={{ margin: 0 }}>
-              Bromsat av: <strong>{brakeOwnerName}</strong>
-            </div>
-          ) : (
-            <div style={{ opacity: 0.6, fontSize: '0.95rem' }}>Ingen broms</div>
-          )}
-        </div>
-
-        {/* Locked answers */}
-        <div className="host-section">
-          <h3 style={{ margin: '0 0 0.5rem' }}>Låsta svar</h3>
-          {gameState.lockedAnswers.length === 0 ? (
-            <div style={{ opacity: 0.6, fontSize: '0.95rem' }}>Inga svar låsta</div>
-          ) : (
-            <ul className="host-list">
-              {gameState.lockedAnswers.map(a => {
-                const name = gameState.players.find(p => p.playerId === a.playerId)?.name ?? 'Okänd';
-                return (
-                  <li key={a.playerId} className="host-list-item">
-                    <span className="player-name">{name}</span>
-                    <span style={{ opacity: 0.85 }}>{a.answerText}</span>
-                    <span style={{ opacity: 0.5, fontSize: '0.85rem' }}>{a.lockedAtLevelPoints}p</span>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </div>
-
-        {/* Scoreboard */}
+        {/* Scoreboard — always visible */}
         <div className="host-section scoreboard">
           <h3 style={{ margin: '0 0 0.5rem' }}>Poäng</h3>
           {gameState.scoreboard.length === 0 ? (
