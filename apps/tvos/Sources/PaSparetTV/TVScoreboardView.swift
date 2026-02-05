@@ -14,6 +14,16 @@ struct TVScoreboardView: View {
             .padding(60)
 
             if !appState.isConnected { reconnectBanner }
+
+            // "Ny spel" — bottom-right, visible after game ends (FINAL_RESULTS)
+            VStack {
+                Spacer()
+                HStack {
+                    Spacer()
+                    NewGameButton()
+                }
+            }
+            .padding(40)
         }
     }
 

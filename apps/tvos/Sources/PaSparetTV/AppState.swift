@@ -24,9 +24,15 @@ class AppState: ObservableObject {
     @Published var voiceOverlayText  : String? = nil
 
     // MARK: – connection status
+    /// True once the server has sent WELCOME on the current socket.
+    /// Set back to false by scheduleReconnect.  Never set optimistically in connect().
     @Published var isConnected : Bool   = false
     @Published var error       : String?
     @Published var sessionReady: Bool   = false   // true after first STATE_SNAPSHOT
+
+    /// Latched to true after the first successful WELCOME.  Used by ConnectingView
+    /// to distinguish "Connecting…" (never connected yet) from "Reconnecting…".
+    @Published var hasEverConnected: Bool = false
 
     // MARK: – session credentials (populated after REST join)
     var token     : String?
@@ -56,8 +62,11 @@ class AppState: ObservableObject {
         wsTask   = task
         task.resume()
 
-        isConnected = true
-        error       = nil
+        // Do NOT set isConnected here — wait for WELCOME from the server.
+        // Setting it optimistically caused a flicker: connect() toggled it true,
+        // then the receive loop would throw before WELCOME arrived and
+        // scheduleReconnect() would flip it back to false within the same frame.
+        error = nil
 
         // Fire-and-forget receive loop; hops back to @MainActor per message.
         Task.detached { [weak self] in
@@ -101,7 +110,9 @@ class AppState: ObservableObject {
 
         // ── auth handshake ──────────────────────────────────────────────
         case "WELCOME":
-            reconnectAttempt = 0          // connection is healthy
+            reconnectAttempt    = 0       // connection is healthy
+            isConnected         = true    // authoritative: server acknowledged us
+            hasEverConnected    = true
             await sendResume()
 
         // ── full-state restore (initial join or reconnect) ─────────────
@@ -371,5 +382,50 @@ class AppState: ObservableObject {
         let delay = min(pow(2.0, Double(reconnectAttempt - 1)), Self.maxDelay)
         try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
         connect()
+    }
+
+    // MARK: – reset ───────────────────────────────────────────────────────────
+
+    /// Tear down the current session completely.  RootView will show LaunchView
+    /// (because sessionId becomes nil), which auto-creates a fresh session.
+    func resetSession() {
+        // 1. Kill the WebSocket (receive loop will exit; ignore its scheduleReconnect
+        //    because we are about to nil out token/wsUrl so the guard in connect() will
+        //    short-return).
+        wsTask?.cancel(with: .normalClosure, reason: nil)
+        wsTask = nil
+
+        // 2. Wipe connection bookkeeping
+        reconnectAttempt  = 0
+        isConnected       = false
+        hasEverConnected  = false
+        sessionReady      = false
+        error             = nil
+
+        // 3. Wipe session credentials (makes LaunchView appear via RootView)
+        token             = nil
+        wsUrl             = nil
+        sessionId         = nil
+
+        // 4. Wipe all game state
+        phase             = "LOBBY"
+        players           = []
+        joinCode          = nil
+        clueText          = nil
+        levelPoints       = nil
+        scoreboard        = []
+        lockedAnswersCount = 0
+        brakeOwnerName    = nil
+        destinationName   = nil
+        destinationCountry = nil
+        results           = []
+        followupQuestion  = nil
+        followupResults   = nil
+        showConfetti      = false
+        voiceOverlayText  = nil
+
+        // 5. Stop any audio that is still playing
+        audio.stopMusic(fadeOutMs: 0)
+        audio.stopVoice()
     }
 }

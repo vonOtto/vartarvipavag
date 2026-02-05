@@ -143,7 +143,7 @@ struct ConnectingView: View {
 
     var body: some View {
         VStack(spacing: 32) {
-            Text(appState.isConnected ? "Connecting…" : "Reconnecting…")
+            Text(appState.hasEverConnected ? "Reconnecting…" : "Connecting…")
                 .font(.system(size: 64, weight: .light))
                 .foregroundColor(.secondary)
             if let err = appState.error {
@@ -172,6 +172,16 @@ struct LobbyView: View {
             .padding(60)
 
             if !appState.isConnected { reconnectBanner }
+
+            // "Ny spel" button — bottom-right corner, subtle secondary style
+            VStack {
+                Spacer()
+                HStack {
+                    Spacer()
+                    NewGameButton()
+                }
+            }
+            .padding(40)
         }
     }
 
@@ -220,6 +230,25 @@ struct LobbyView: View {
             .background(Color.black.opacity(0.6))
             .cornerRadius(8)
             .padding(.top, 16)
+    }
+}
+
+/// Shared "Ny spel" button — calls resetSession() on AppState.
+/// Styled as a small, secondary-weight pill so it never competes with
+/// the primary game content.
+struct NewGameButton: View {
+    @EnvironmentObject var appState: AppState
+
+    var body: some View {
+        Button("Ny spel") {
+            appState.resetSession()
+        }
+        .font(.system(size: 20, weight: .medium))
+        .foregroundColor(.secondary)
+        .padding(.horizontal, 20)
+        .padding(.vertical, 10)
+        .background(Color.white.opacity(0.08))
+        .cornerRadius(20)
     }
 }
 
