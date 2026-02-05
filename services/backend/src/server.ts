@@ -42,7 +42,7 @@ import {
   onFollowupQuestionPresent,
   onFollowupSequenceEnd,
 } from './game/audio-director';
-import { prefetchRoundTts } from './game/tts-prefetch';
+import { prefetchRoundTts, generateClueVoice, generateQuestionVoice } from './game/tts-prefetch';
 
 export function createServer() {
   const app = express();
@@ -457,6 +457,10 @@ async function handleHostStartGame(
     // Pre-generate TTS clips so audio-director has manifest for this round
     await prefetchRoundTts(session);
 
+    // On-demand: generate the first clue voice line and add it to manifest
+    // BEFORE onGameStart so audio-director finds it and emits AUDIO_PLAY.
+    await generateClueVoice(session, gameData.clueLevelPoints, gameData.clueText);
+
     // Audio: mutate audioState first so STATE_SNAPSHOT includes it
     const audioEvents = onGameStart(session, gameData.clueText);
 
@@ -500,12 +504,12 @@ async function handleHostStartGame(
 /**
  * Handles HOST_NEXT_CLUE event
  */
-function handleHostNextClue(
+async function handleHostNextClue(
   ws: WebSocket,
   sessionId: string,
   playerId: string,
   role: string
-): void {
+): Promise<void> {
   // Only host can advance clues
   if (role !== 'host') {
     logger.warn('HOST_NEXT_CLUE: Non-host attempted to advance clue', {
@@ -626,6 +630,9 @@ function handleHostNextClue(
       // Try to start follow-up questions; fall back to scoreboard if none
       const followupStart = startFollowupSequence(session);
       if (followupStart) {
+        // On-demand: generate question voice BEFORE audio-director searches manifest
+        await generateQuestionVoice(session, followupStart.currentQuestionIndex, followupStart.question.questionText);
+
         // Audio: mutate audioState before snapshot so reconnect sees followup music
         const fqAudioEvents = onFollowupStart(session, followupStart.question.questionText);
 
@@ -656,6 +663,9 @@ function handleHostNextClue(
         clueLevelPoints: result.clueLevelPoints,
       });
 
+      // On-demand: generate clue voice BEFORE audio-director searches manifest
+      await generateClueVoice(session, result.clueLevelPoints!, result.clueText!);
+
       // Broadcast STATE_SNAPSHOT to all clients
       broadcastStateSnapshot(sessionId);
 
@@ -673,6 +683,9 @@ function handleHostNextClue(
       onClueAdvance(session, result.clueText!).forEach((e) =>
         sessionStore.broadcastEventToSession(sessionId, e)
       );
+
+      // Start auto-advance timer for this clue (uses manifest durationMs)
+      scheduleClueTimer(sessionId);
 
       logger.info('Broadcasted CLUE_PRESENT event', {
         sessionId,
@@ -1119,7 +1132,7 @@ function scheduleClueTimer(sessionId: string): void {
  *   - scheduleClueTimer callback (timer expiry)
  *   - handleBrakeAnswerSubmit (after answer is locked)
  */
-function autoAdvanceClue(sessionId: string): void {
+async function autoAdvanceClue(sessionId: string): Promise<void> {
   const session = sessionStore.getSession(sessionId);
   if (!session) {
     logger.warn('autoAdvanceClue: Session not found', { sessionId });
@@ -1204,6 +1217,9 @@ function autoAdvanceClue(sessionId: string): void {
       // Try to start follow-up questions; fall back to scoreboard if none
       const followupStart = startFollowupSequence(session);
       if (followupStart) {
+        // On-demand: generate question voice BEFORE audio-director searches manifest
+        await generateQuestionVoice(session, followupStart.currentQuestionIndex, followupStart.question.questionText);
+
         // Audio: mutate audioState before snapshot so reconnect sees followup music
         const fqAudioEvents = onFollowupStart(session, followupStart.question.questionText);
 
@@ -1233,6 +1249,9 @@ function autoAdvanceClue(sessionId: string): void {
         sessionId,
         clueLevelPoints: result.clueLevelPoints,
       });
+
+      // On-demand: generate clue voice BEFORE audio-director searches manifest
+      await generateClueVoice(session, result.clueLevelPoints!, result.clueText!);
 
       // Broadcast STATE_SNAPSHOT to all clients
       broadcastStateSnapshot(sessionId);
@@ -1275,7 +1294,7 @@ function scheduleFollowupTimer(sessionId: string, durationMs: number): void {
   const session = sessionStore.getSession(sessionId);
   if (!session) return;
 
-  const timeoutId = setTimeout(() => {
+  const timeoutId = setTimeout(async () => {
     const sess = sessionStore.getSession(sessionId);
     if (!sess || !sess.state.followupQuestion) return;
 
@@ -1296,8 +1315,10 @@ function scheduleFollowupTimer(sessionId: string, durationMs: number): void {
     broadcastStateSnapshot(sessionId);
 
     if (nextQuestionIndex !== null && sess.state.followupQuestion) {
-      // Next question — broadcast it and start new timer
+      // Next question — generate voice BEFORE audio-director searches manifest
       const nextFq = sess.state.followupQuestion;
+      await generateQuestionVoice(sess, nextFq.currentQuestionIndex, nextFq.questionText);
+
       broadcastFollowupQuestionPresent(sessionId, {
         question: {
           questionText: nextFq.questionText,
