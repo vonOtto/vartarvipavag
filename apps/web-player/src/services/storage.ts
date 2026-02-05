@@ -9,6 +9,7 @@ export interface StoredSession {
   sessionId: string;
   joinCode: string;
   playerName: string;
+  role: 'player' | 'host';
 }
 
 export function saveSession(session: StoredSession): void {

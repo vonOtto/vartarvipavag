@@ -77,6 +77,7 @@ export const JoinPage: React.FC = () => {
         sessionId,
         joinCode: code.trim().toUpperCase(),
         playerName,
+        role,
       });
 
       navigate('/lobby');

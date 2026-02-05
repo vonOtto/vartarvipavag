@@ -129,6 +129,7 @@ export interface LobbyUpdatedPayload {
     isConnected: boolean;
   }>;
   joinCode: string;
+  host?: { name: string };
 }
 
 export interface CluePresentPayload {
