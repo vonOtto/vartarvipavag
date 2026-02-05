@@ -1,11 +1,11 @@
-# Banter & Voice Lines v1.0.0
+# Banter & Voice Lines v1.1.0
 
 ## Overview
 
 This document contains natural Swedish TV-host phrases for different game moments. These phrases add personality and energy to the game show, inspired by "På Spåret" style.
 
-**Version**: 1.0.0 (Sprint 1.1 - text display, Sprint 2+ audio)
-**Status**: Content complete, ready for implementation
+**Version**: 1.1.0 (Sprint 1.3 — clue-read + question-read TTS added)
+**Status**: Content complete; clue-read and question-read phrases active for TTS pre-generation
 
 ---
 
@@ -120,15 +120,87 @@ Slutstationen är här. Nu ska vi se vem som vunnit!
 
 ---
 
+## 7. Ledtråd-läsning (Clue Read)
+
+These phrases are read aloud by TTS when each clue is presented. `audio-director.ts`
+looks up clips by prefix `voice_clue_` in the TTS manifest; the backend (A-3)
+interpolates `{clueText}` with the actual clue before sending to TTS.
+
+### voice_clue_read_10
+
+| Variant | phraseId                  | template                                     |
+|---------|---------------------------|----------------------------------------------|
+| A       | `voice_clue_read_10`      | Första ledtråd: {clueText}                   |
+| B       | `voice_clue_read_10`      | Ledtråd på nivå tio: {clueText}              |
+
+### voice_clue_read_8
+
+| Variant | phraseId                  | template                                     |
+|---------|---------------------------|----------------------------------------------|
+| A       | `voice_clue_read_8`       | Andra ledtråd: {clueText}                    |
+| B       | `voice_clue_read_8`       | Ledtråd på nivå åtta: {clueText}             |
+
+### voice_clue_read_6
+
+| Variant | phraseId                  | template                                     |
+|---------|---------------------------|----------------------------------------------|
+| A       | `voice_clue_read_6`       | Tredje ledtråd: {clueText}                   |
+| B       | `voice_clue_read_6`       | Ledtråd på nivå sex: {clueText}              |
+
+### voice_clue_read_4
+
+| Variant | phraseId                  | template                                     |
+|---------|---------------------------|----------------------------------------------|
+| A       | `voice_clue_read_4`       | Fjärde ledtråd: {clueText}                   |
+| B       | `voice_clue_read_4`       | Ledtråd på nivå fyra: {clueText}             |
+
+### voice_clue_read_2
+
+| Variant | phraseId                  | template                                     |
+|---------|---------------------------|----------------------------------------------|
+| A       | `voice_clue_read_2`       | Femte och sista ledtråd: {clueText}          |
+| B       | `voice_clue_read_2`       | Ledtråd på nivå två: {clueText}              |
+
+**Selection rule**: Backend picks variant A or B at random for each clue
+presentation within a round.  The chosen variant is interpolated and sent
+to TTS before the round starts (see Pre-Generation Strategy in
+`audio_timeline.md`).
+
+---
+
+## 8. Frågestalls-läsning (Followup Question Read)
+
+These phrases are read aloud when a followup question is presented.
+`audio-director.ts` looks up clips by prefix `voice_question_` in the TTS
+manifest; backend interpolates `{questionText}` with the actual question
+text.
+
+| Variant | phraseId                    | template                                   |
+|---------|-----------------------------|--------------------------------------------|
+| A       | `voice_question_read_0`     | Frågan är: {questionText}                  |
+| B       | `voice_question_read_1`     | Nästa fråga: {questionText}                |
+| C       | `voice_question_read_0`     | Lyssna på frågan: {questionText}           |
+| D       | `voice_question_read_1`     | Alright, frågan blir: {questionText}       |
+
+**Selection rule**: Backend picks one variant at random per followup
+question.  `phraseId` uses `_0` / `_1` to distribute across two manifest
+slots -- this prevents the TTS pre-generation step from needing to
+generate more clips than necessary while still allowing two distinct
+phrasings per slot.
+
+---
+
 ## Selection Strategy
 
 Server should randomly select from available phrases for each moment to create variety across games:
 
 - **Intro**: Play once at game start (PREPARING_ROUND)
 - **Before clue**: Optionally before each clue reveal (skip some to avoid repetition)
+- **Clue read** (`voice_clue_read_<nivå>`): Always play when each clue is presented (CLUE_LEVEL). Template interpolated with actual clue text before TTS.
 - **After brake**: Always play when BRAKE_ACCEPTED fires
 - **Before reveal**: Play right before DESTINATION_REVEAL
 - **After reveal**: Play immediately after reveal, choosing correct/incorrect variant based on result
+- **Question read** (`voice_question_read_<index>`): Always play when a followup question is presented (FOLLOWUP_QUESTION). Template interpolated with actual question text before TTS.
 - **Before final**: Play at FINAL_RESULTS start (t=0.0s)
 
 ---

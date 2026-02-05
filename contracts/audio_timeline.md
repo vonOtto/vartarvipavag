@@ -1,11 +1,11 @@
-# Audio & TV Effects v1.1.0
+# Audio & TV Effects v1.2.0
 
 ## Overview
 
 This document defines the complete audio system for På Spåret Party Edition, including music layers, sound effects, ducking behavior, and the FINAL_RESULTS timeline.
 
 **Version**: 1.2.0 (Sprint 1.3)
-**Status**: TTS voice layer and followup music activated; base infrastructure from Sprint 1.1
+**Status**: TTS voice layer activated; clue-read (`voice_clue_read_*`) and question-read (`voice_question_read_*`) TTS enabled; followup music active; base infrastructure from Sprint 1.1
 
 ---
 
@@ -182,9 +182,11 @@ When voice lines play as audio (Sprint 2+), they occupy the **Voice/TTS layer** 
 |------------|-----------------|--------|-------|
 | PREPARING_ROUND | Intro | Once at start | Welcome players |
 | CLUE_LEVEL | Before clue | Optional per clue | Skip some to avoid repetition |
+| CLUE_LEVEL | Clue read (`voice_clue_read_<nivå>`) | Every clue | Template interpolated; TTS pre-generated |
 | PAUSED_FOR_BRAKE | After brake | Every brake | React to brake press |
 | REVEAL_DESTINATION | Before reveal | Just before reveal | Build tension |
 | REVEAL_DESTINATION | After reveal | After reveal shown | Correct/incorrect variant |
+| FOLLOWUP_QUESTION | Question read (`voice_question_read_<index>`) | Every followup question | Template interpolated; TTS pre-generated |
 | FINAL_RESULTS | Before final | t=0.0s | Transition to finale |
 
 ### Pre-Generation Strategy (Sprint 2+)
@@ -583,7 +585,8 @@ Deferred to future sprints:
 
 - **v1.0.0**: Initial audio specification (Sprint 1 - deferred)
 - **v1.1.0**: Complete audio implementation including FINAL_RESULTS timeline (Sprint 1.1)
-- **v1.2.0**: TTS voice layer activated — AUDIO_PLAY, AUDIO_STOP, TTS_PREFETCH; followup music; ducking integration (Sprint 1.3)
+- **v1.2.0**: TTS voice layer activated — AUDIO_PLAY, AUDIO_STOP, TTS_PREFETCH; followup music; ducking integration (Sprint 1.3).
+  Clue-read (`voice_clue_read_<nivå>`) and question-read (`voice_question_read_<index>`) TTS phrases added to Banter Moment Mapping; see `banter.md` sections 7 and 8.
 
 ---
 

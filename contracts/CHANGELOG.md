@@ -244,6 +244,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.3.1] - 2026-02-05
+
+### Added - Clue-read and Question-read TTS phrases
+
+**banter.md**:
+- Section 7 "Ledtråd-läsning (Clue Read)" — 2 template variants per clue
+  level (10, 8, 6, 4, 2).  `phraseId` format: `voice_clue_read_<nivå>`.
+  Template placeholder: `{clueText}`.  Backend (A-3) interpolates and
+  sends to TTS before round start.
+- Section 8 "Frågestalls-läsning (Followup Question Read)" — 2 manifest
+  slots (`voice_question_read_0`, `voice_question_read_1`) with 2
+  template variants each.  Placeholder: `{questionText}`.
+- Selection Strategy updated to cover both new moment types.
+- Document version bumped to 1.1.0.
+
+**audio_timeline.md**:
+- Title and Status line updated to reflect clue-read + question-read TTS
+  activation.
+- Banter Moment Mapping table: two new rows added —
+  `CLUE_LEVEL / Clue read` and `FOLLOWUP_QUESTION / Question read`.
+- Version History note appended to v1.2.0 entry.
+
+**Breaking Changes**: None.
+- All new `phraseId` values are additive.  `audio-director.ts`
+  `findClip` calls (`voice_clue_` and `voice_question_` prefixes)
+  will resolve once backend (A-3) populates the manifest.
+- `events.schema.json` and `state.schema.json` are unchanged.
+
+---
+
 ## Future Versions (Planned)
 
 ### [2.0.0] - Sprint 3+ (Breaking Changes)
@@ -267,4 +297,4 @@ Deprecated features will be marked in this changelog with:
 ---
 
 **Maintained by**: Architect Agent (contracts/ owner)
-**Last Updated**: 2026-02-04
+**Last Updated**: 2026-02-05
