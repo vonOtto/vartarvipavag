@@ -18,7 +18,7 @@ const BANTER_POOL: Record<string, string[]> = {
     'Var tror ni vi ska? Beredda på resan?',
     'En ny resa väntar. Vart är vi på väg?',
     'Dags att ge er en ledtråd. Vart är vi på väg?',
-    'Härbhärbär… Vilken resa blir det här?',
+    'Härbärbär… Vilken resa blir det här?',
   ],
   banter_after_brake: [
     'Där bromsar vi! Låt se vad ni kommit fram till.',
@@ -102,7 +102,7 @@ export async function generateClueVoice(
     return null;
   }
 
-  const text = `${prefix} ledtråd: ${clueText}`;
+  const text = useVariantA ? `${prefix} ledtråd: ${clueText}` : `${prefix}: ${clueText}`;
 
   try {
     const res = await fetch(`${AI_CONTENT_URL}/tts`, {
@@ -154,7 +154,7 @@ const QUESTION_VARIANTS: { template: (q: string) => string; slotSuffix: number }
   { template: (q) => `Frågan är: ${q}`,            slotSuffix: 0 }, // A
   { template: (q) => `Nästa fråga: ${q}`,          slotSuffix: 1 }, // B
   { template: (q) => `Lyssna på frågan: ${q}`,     slotSuffix: 0 }, // C
-  { template: (q) => `Alright, frågan blir: ${q}`, slotSuffix: 1 }, // D
+  { template: (q) => `Okej, frågan blir: ${q}`,    slotSuffix: 1 }, // D
 ];
 
 /**
