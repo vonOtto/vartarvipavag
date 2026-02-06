@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit",
     "test:ci": "tsx scripts/run-ci-tests.ts",
     "test:integration": "tsx test/integration/run-all.ts",
+    "test:integration:ci": "tsx test/integration/run-ci.ts",
     "test:integration:websocket": "tsx test/integration/specs/websocket.test.ts",
     "test:integration:game-flow": "tsx test/integration/specs/game-flow.test.ts",
     "test:integration:state-machine": "tsx test/integration/specs/state-machine.test.ts",

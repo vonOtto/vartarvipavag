@@ -68,7 +68,7 @@ jobs:
           exit 1
 
       - name: Run integration tests
-        run: npm run test:integration
+        run: npm run test:integration:ci
         env:
           NODE_ENV: test
           JWT_SECRET: test-secret-for-ci-only-32-chars-min
