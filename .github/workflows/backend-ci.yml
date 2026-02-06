@@ -14,14 +14,14 @@ on:
       - 'contracts/**'
       - '.github/workflows/backend-ci.yml'
 
-defaults:
-  run:
-    working-directory: services/backend
-
 jobs:
   test:
     name: Test & Build
     runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: services/backend
 
     steps:
       - name: Checkout code
