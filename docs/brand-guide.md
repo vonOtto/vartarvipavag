@@ -97,10 +97,27 @@ Turn your Apple TV into a party game powerhouse.
 
 ### App Icon
 
+- **Location:** `/img/icon.png` (1024x1024 master)
 - **Platforms:** iOS, iPadOS, tvOS
 - **Sizes:** All standard sizes (1024x1024 master)
-- **Format:** PNG with transparency (if applicable)
+- **Format:** PNG with transparency
 - **Style:** Round, friendly, no text, recognizable at small sizes
+
+**Design Elements:**
+- Central icon: Playful location pin with personality (smiling face)
+- Pin body: Warm orange-to-yellow gradient (creates depth and warmth)
+- Pin base: Mint/turquoise (brand accent color)
+- Background: Dark blue (#1E3A5F - TV-friendly, high contrast)
+- Accents: Orange and mint sparkles/stars (adds playfulness)
+- Expression: Friendly smile with closed eyes (welcoming, approachable)
+
+**Why This Works:**
+- Clearly a game, not a utility/travel tool
+- "Pin" = travel/destinations (game theme)
+- Personality (smile) = party game (social, fun)
+- High contrast works on TV screens from distance
+- Recognizable at all sizes (60pt - 1024pt)
+- No text needed (icon tells the story)
 
 ### Logo Variations
 
@@ -110,19 +127,29 @@ Turn your Apple TV into a party game powerhouse.
 
 ### Color Codes
 
-**Dark Blue / Charcoal:**
-- HEX: `#1A1D29` (example, adjust as needed)
-- RGB: `26, 29, 41`
+**Background - Dark Blue:**
+- HEX: `#1E3A5F` (TV-friendly, high contrast)
+- RGB: `30, 58, 95`
+- Usage: App backgrounds, icon background
 
-**Warm Orange:**
-- HEX: `#FF6B35` (example, adjust as needed)
-- RGB: `255, 107, 53`
+**Primary Accent - Warm Orange:**
+- HEX: `#FF8C42` (from icon gradient)
+- RGB: `255, 140, 66`
+- Usage: Primary CTAs, interactive elements, icon main body
 
-**Mint / Turquoise:**
-- HEX: `#4ECDC4` (example, adjust as needed)
-- RGB: `78, 205, 196`
+**Secondary Accent - Mint/Turquoise:**
+- HEX: `#5EF2CC` (from icon base)
+- RGB: `94, 242, 204`
+- Usage: Success states, highlights, icon base, secondary actions
 
-**Note:** Final color values should be defined by the design team and updated here.
+**Gradient - Orange to Yellow:**
+- Start: `#FF6B35` (warm orange)
+- End: `#FFD700` (golden yellow)
+- Usage: Icon pin body (creates depth and warmth)
+
+**Accent Sparkles:**
+- Orange: `#FF9F40` (lighter orange for stars)
+- Mint: `#50E3C2` (turquoise for balance)
 
 ---
 
