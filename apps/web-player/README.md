@@ -354,12 +354,50 @@ Set `VITE_API_BASE_URL` to production backend URL before building.
 
 ## PWA Support
 
-Basic PWA configuration in `public/manifest.json`.
+Full PWA configuration with Tripto branding.
 
 **Features:**
 - Installable on mobile devices
 - Standalone display mode
-- App icon and splash screen
+- Custom app icon and splash screen
+- Theme color: #0B1220 (dark blue)
+
+**Icon Assets:**
+
+Located in `public/icons/`:
+- `favicon-16x16.png` - Browser favicon (small)
+- `favicon-32x32.png` - Browser favicon (standard)
+- `apple-touch-icon.png` - iOS home screen icon (180x180)
+- `icon-192.png` - PWA icon (Android)
+- `icon-512.png` - PWA icon (high-res)
+
+**Generating Optimized Icons:**
+
+The current icons are copies of the master 1024x1024 icon. For optimal performance, generate properly sized versions:
+
+**Option 1: ImageMagick**
+```bash
+cd apps/web-player/public/icons
+convert /path/to/icon.png -resize 16x16 favicon-16x16.png
+convert /path/to/icon.png -resize 32x32 favicon-32x32.png
+convert /path/to/icon.png -resize 180x180 apple-touch-icon.png
+convert /path/to/icon.png -resize 192x192 icon-192.png
+convert /path/to/icon.png -resize 512x512 icon-512.png
+```
+
+**Option 2: pwa-asset-generator (npm)**
+```bash
+npm install -g pwa-asset-generator
+pwa-asset-generator /path/to/icon.png public/icons \
+  --favicon --type png --opaque false
+```
+
+**Option 3: Online Generators**
+- [favicon.io](https://favicon.io/)
+- [realfavicongenerator.net](https://realfavicongenerator.net/)
+
+**Master Icon:**
+Source: `/img/icon.png` (1024x1024)
 
 **To enable offline support:**
 - Add service worker in `vite.config.ts`
