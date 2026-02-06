@@ -1230,58 +1230,68 @@ enum HapticNotificationType { case success, error, warning }
 
 // MARK: – twinkling stars animation ──────────────────────────────────────────
 
-/// Subtle twinkling stars background for LaunchView.
+/// Subtle twinkling stars background with floating movement for LaunchView.
 struct TwinklingStarsView: View {
-    @State private var starStates: [StarState] = []
+    @State private var isAnimating = false
 
-    struct StarState: Identifiable {
+    struct MovingParticle: Identifiable {
         let id = UUID()
-        let x: CGFloat
-        let y: CGFloat
+        let startX: CGFloat
+        let startY: CGFloat
         let size: CGFloat
+        let color: Color
+        let moveX: CGFloat
+        let moveY: CGFloat
+        let duration: Double
         let delay: Double
-        var opacity: Double = 0.0
     }
 
     var body: some View {
         GeometryReader { geo in
+            let width = geo.size.width
+            let height = geo.size.height
+            let particles = generateParticles(width: width, height: height)
+
             ZStack {
-                ForEach(starStates) { star in
+                ForEach(particles) { particle in
                     Circle()
-                        .fill(Color.accMint)
-                        .frame(width: star.size, height: star.size)
-                        .opacity(star.opacity)
-                        .position(x: star.x, y: star.y)
-                        .blur(radius: 1.0)
+                        .fill(particle.color)
+                        .frame(width: particle.size, height: particle.size)
+                        .blur(radius: 1)
+                        .offset(
+                            x: particle.startX + (isAnimating ? particle.moveX : 0),
+                            y: particle.startY + (isAnimating ? particle.moveY : 0)
+                        )
+                        .opacity(isAnimating ? 0.7 : 0.3)
+                        .animation(
+                            .easeInOut(duration: particle.duration)
+                            .repeatForever(autoreverses: true)
+                            .delay(particle.delay),
+                            value: isAnimating
+                        )
                 }
             }
+            .frame(width: width, height: height)
             .onAppear {
-                generateStars(in: geo.size)
-                animateStars()
+                isAnimating = true
             }
         }
     }
 
-    private func generateStars(in size: CGSize) {
-        starStates = (0..<8).map { i in
-            StarState(
-                x: CGFloat.random(in: 0...size.width),
-                y: CGFloat.random(in: 0...size.height),
-                size: CGFloat.random(in: 2...4),
-                delay: Double(i) * 0.3
+    private func generateParticles(width: CGFloat, height: CGFloat) -> [MovingParticle] {
+        let colors: [Color] = [.accMint, .accMint, .accMint, .accMint, .accOrange, .accBlue]
+
+        return (0..<20).map { i in
+            MovingParticle(
+                startX: CGFloat.random(in: -width/2...width/2),
+                startY: CGFloat.random(in: -height/2...height/2),
+                size: CGFloat.random(in: 2...5),
+                color: colors.randomElement()!,
+                moveX: CGFloat.random(in: -30...30),
+                moveY: CGFloat.random(in: -30...30),
+                duration: Double.random(in: 3...5),
+                delay: Double(i) * 0.2
             )
-        }
-    }
-
-    private func animateStars() {
-        for i in starStates.indices {
-            withAnimation(
-                .easeInOut(duration: 1.5)
-                .delay(starStates[i].delay)
-                .repeatForever(autoreverses: true)
-            ) {
-                starStates[i].opacity = Double.random(in: 0.3...0.7)
-            }
         }
     }
 }
