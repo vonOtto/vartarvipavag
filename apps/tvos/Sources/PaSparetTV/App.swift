@@ -313,19 +313,8 @@ struct ConnectingView: View {
             }
 
             // Back button
-            Button(action: {
-                appState.resetSession()
-            }) {
-                HStack(spacing: 12) {
-                    Image(systemName: "chevron.left")
-                    Text("Tillbaka till start")
-                }
-                .font(.system(size: 24, weight: .medium))
-                .foregroundColor(.white.opacity(0.6))
-                .padding(.horizontal, 32)
-                .padding(.vertical, 20)
-            }
-            .padding(40)
+            BackButton()
+                .padding(40)
         }
     }
 }
@@ -368,18 +357,7 @@ struct LobbyView: View {
             // "Tillbaka till start" button — top-left corner
             VStack {
                 HStack {
-                    Button(action: {
-                        appState.resetSession()
-                    }) {
-                        HStack(spacing: 12) {
-                            Image(systemName: "chevron.left")
-                            Text("Tillbaka till start")
-                        }
-                        .font(.system(size: 24, weight: .medium))
-                        .foregroundColor(.white.opacity(0.5))
-                        .padding(.horizontal, 32)
-                        .padding(.vertical, 20)
-                    }
+                    BackButton()
                     Spacer()
                 }
                 Spacer()
@@ -761,22 +739,87 @@ struct SparklePiece: View {
     }
 }
 
-/// Shared "Nytt spel" button — calls resetSession() on AppState.
-/// Styled as a small, secondary-weight pill so it never competes with
-/// the primary game content.
-struct NewGameButton: View {
+// MARK: – Shared Navigation Buttons ─────────────────────────────────────────
+
+/// Polished "Tillbaka till start" button with tvOS-optimized styling.
+/// Features subtle card background, proper focus states, and visual hierarchy.
+struct BackButton: View {
     @EnvironmentObject var appState: AppState
+    @Environment(\.isFocused) private var isFocused
 
     var body: some View {
-        Button("Nytt spel") {
+        Button(action: {
             appState.resetSession()
+        }) {
+            HStack(spacing: 12) {
+                Image(systemName: "chevron.left")
+                    .font(.system(size: 22, weight: .semibold))
+                Text("Tillbaka till start")
+                    .font(.system(size: 26, weight: .medium))
+            }
+            .foregroundColor(isFocused ? .white : .white.opacity(0.7))
+            .padding(.horizontal, 28)
+            .padding(.vertical, 16)
+            .background(
+                RoundedRectangle(cornerRadius: Layout.cornerRadiusMedium, style: .continuous)
+                    .fill(isFocused ? Color.white.opacity(0.15) : Color.white.opacity(0.08))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: Layout.cornerRadiusMedium, style: .continuous)
+                            .stroke(
+                                isFocused ? Color.white.opacity(0.3) : Color.clear,
+                                lineWidth: 2
+                            )
+                    )
+            )
+            .shadow(
+                color: isFocused ? Color.black.opacity(0.3) : Color.clear,
+                radius: 12,
+                y: 4
+            )
         }
-        .font(.label)
-        .foregroundColor(.white.opacity(0.7))
-        .padding(.horizontal, 20)
-        .padding(.vertical, 10)
-        .background(Color.white.opacity(0.08))
-        .cornerRadius(Layout.cornerRadiusLarge)
+        .buttonStyle(.plain)
+    }
+}
+
+/// Enhanced "Nytt spel" button with professional secondary button styling.
+/// Positioned in bottom-right corner, styled to be visible but non-intrusive.
+struct NewGameButton: View {
+    @EnvironmentObject var appState: AppState
+    @Environment(\.isFocused) private var isFocused
+
+    var body: some View {
+        Button(action: {
+            appState.resetSession()
+        }) {
+            HStack(spacing: 10) {
+                Image(systemName: "arrow.counterclockwise")
+                    .font(.system(size: 20, weight: .semibold))
+                Text("Nytt spel")
+                    .font(.system(size: 26, weight: .medium))
+            }
+            .foregroundColor(isFocused ? .accentBlueBright : .white.opacity(0.7))
+            .padding(.horizontal, 28)
+            .padding(.vertical, 16)
+            .background(
+                RoundedRectangle(cornerRadius: Layout.cornerRadiusMedium, style: .continuous)
+                    .fill(isFocused ? Color.accentBlue.opacity(0.25) : Color.white.opacity(0.1))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: Layout.cornerRadiusMedium, style: .continuous)
+                            .stroke(
+                                isFocused ? Color.accentBlueBright.opacity(0.5) : Color.white.opacity(0.15),
+                                lineWidth: isFocused ? 3 : 2
+                            )
+                    )
+            )
+            .shadow(
+                color: isFocused ? Color.accentBlue.opacity(0.4) : Color.black.opacity(0.2),
+                radius: isFocused ? 16 : 8,
+                y: 4
+            )
+            .scaleEffect(isFocused ? 1.05 : 1.0)
+        }
+        .buttonStyle(.plain)
+        .animation(.easeInOut(duration: 0.2), value: isFocused)
     }
 }
 
