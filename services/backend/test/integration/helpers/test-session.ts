@@ -9,7 +9,7 @@ export interface SessionInfo {
   sessionId: string;
   joinCode: string;
   hostAuthToken: string;
-  tvAuthToken: string;
+  tvAuthToken: string; // Mapped from tvJoinToken
   wsUrl: string;
 }
 
@@ -39,7 +39,7 @@ export async function createSession(): Promise<SessionInfo> {
     sessionId: data.sessionId,
     joinCode: data.joinCode,
     hostAuthToken: data.hostAuthToken,
-    tvAuthToken: data.tvAuthToken,
+    tvAuthToken: data.tvJoinToken, // Backend returns tvJoinToken
     wsUrl: data.wsUrl || WS_URL,
   };
 }

@@ -72,6 +72,7 @@ export async function runWebSocketTests(): Promise<void> {
     test('Should handle multiple clients connecting to same session', async () => {
       const session = await createSession();
       const host = await createClient(session.hostAuthToken);
+      await sleep(100); // Small delay to avoid race condition
       const tv = await createClient(session.tvAuthToken);
 
       await sleep(500);
