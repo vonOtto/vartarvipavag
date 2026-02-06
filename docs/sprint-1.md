@@ -627,6 +627,86 @@ This forward-compatible design means Sprint 1 teams can safely ignore audio even
 
 ---
 
+### P6: UX Improvements (Session Creation)
+
+#### TASK-UX-01: iOS Host — Add launch screen with create/join choice
+**Owner**: iOS Host Agent
+**Scope**: Replace auto-create with two-button launch screen
+**Acceptance Criteria**:
+- Launch screen shows "Skapa nytt spel" and "Gå med i spel"
+- "Skapa nytt spel" uses existing flow (POST /v1/sessions)
+- "Gå med i spel" shows input field for 6-char code
+- Join calls POST /v1/sessions/{id}/join with host role preference
+- If join fails (host exists), show error: "Session already has a host"
+- Connect to WebSocket and proceed to lobby on success
+
+**Files**:
+- /Users/oskar/pa-sparet-party/apps/ios-host/Sources/PaSparetHost/App.swift
+- /Users/oskar/pa-sparet-party/apps/ios-host/Sources/PaSparetHost/HostAPI.swift
+
+**Dependencies**: TASK-402 (existing create flow)
+**Estimate**: 1 day
+**Test/Check**: iOS can create OR join sessions, handles host-taken error
+
+---
+
+#### TASK-UX-02: tvOS — Restore create option on launch screen
+**Owner**: tvOS Agent
+**Scope**: Add "Skapa nytt spel" button to existing LaunchView
+**Acceptance Criteria**:
+- Launch screen shows "Skapa nytt spel" and "Gå med i spel" (existing join flow)
+- "Skapa nytt spel" calls POST /v1/sessions, receives tvJoinToken
+- Connect to WebSocket as TV role
+- Proceed to lobby, display QR code for players to join
+- "Nytt spel" button in lobby works (returns to launch screen)
+
+**Files**:
+- /Users/oskar/pa-sparet-party/apps/tvos/Sources/PaSparetTV/App.swift
+- /Users/oskar/pa-sparet-party/apps/tvos/Sources/PaSparetTV/SessionAPI.swift
+
+**Dependencies**: TASK-502 (existing join flow)
+**Estimate**: 1 day
+**Test/Check**: tvOS can create OR join sessions, QR code works in both cases
+
+---
+
+#### TASK-UX-03: Backend — Handle multiple join attempts gracefully
+**Owner**: Backend Agent
+**Scope**: Validate role assignments, reject duplicate HOST/TV joins
+**Acceptance Criteria**:
+- POST /v1/sessions/{id}/join with role="HOST" rejected if session already has host (409 Conflict)
+- POST /v1/sessions/{id}/tv rejected if session already has TV (409 Conflict)
+- Error responses include helpful message: `{ error: "HOST_ROLE_TAKEN", message: "..." }`
+- Update contracts/README.md with role assignment rules
+
+**Files**:
+- /Users/oskar/pa-sparet-party/services/backend/src/api/sessions.ts
+- /Users/oskar/pa-sparet-party/services/backend/src/store/session-store.ts
+
+**Dependencies**: TASK-202 (existing join endpoints)
+**Estimate**: 0.5 day
+**Test/Check**: Duplicate role join attempts return 409 with clear error
+
+---
+
+#### TASK-UX-04: Update TASK-601 test plan with new scenarios
+**Owner**: PM (CEO)
+**Scope**: Add session creation test scenarios to E2E checklist
+**Acceptance Criteria**:
+- Document 7 new test scenarios (tvOS creates + iOS joins, etc.)
+- Each scenario has expected outcome and pass/fail criteria
+- Update sprint-1-test-checklist.md
+
+**Files**:
+- /Users/oskar/pa-sparet-party/docs/sprint-1-test-checklist.md
+- /Users/oskar/pa-sparet-party/docs/session-creation-ux.md (reference)
+
+**Dependencies**: TASK-UX-01, TASK-UX-02, TASK-UX-03
+**Estimate**: 0.5 day
+**Test/Check**: All 7 scenarios documented with clear pass/fail criteria
+
+---
+
 ## Dependencies Graph
 
 ```
@@ -786,13 +866,13 @@ Sprint 1 is complete when:
 | Agent | Primary Tasks | Task Count |
 |-------|---------------|------------|
 | Architect | TASK-101, TASK-102 | 2 |
-| Backend | TASK-201 through TASK-209 | 9 |
+| Backend | TASK-201 through TASK-209, TASK-UX-03 | 10 |
 | Web | TASK-301 through TASK-306 | 6 |
-| iOS Host | TASK-401 through TASK-404 | 4 |
-| tvOS | TASK-501 through TASK-504 | 4 |
-| All/PM | TASK-601 through TASK-603 | 3 |
+| iOS Host | TASK-401 through TASK-404, TASK-UX-01 | 5 |
+| tvOS | TASK-501 through TASK-504, TASK-UX-02 | 5 |
+| All/PM | TASK-601 through TASK-603, TASK-UX-04 | 4 |
 
-**Total: 28 tasks**
+**Total: 32 tasks**
 
 ---
 
