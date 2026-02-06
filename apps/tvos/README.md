@@ -1,7 +1,8 @@
 # PaSparetTV — tvOS client
 
-Read-only TV view for the På Spåret party game.  Joins a session by code,
-then displays live game state received over WebSocket.
+Read-only TV view for the På Spåret party game. Enter a join code from the
+iOS Host app to connect to an existing session, then displays live game state
+received over WebSocket.
 
 ## Requirements
 
@@ -46,6 +47,15 @@ The app reads `BASE_URL` at startup to locate the backend.
 No values are needed when the backend is running on localhost and you are
 testing on the same machine.
 
+## Usage flow
+
+1. **iOS Host** creates a session and gets a 6-character join code
+2. **tvOS app** launches and shows a join code input screen
+3. User enters the join code from the iOS Host
+4. tvOS looks up the session (`GET /v1/sessions/by-code/:code`)
+5. tvOS joins as TV client (`POST /v1/sessions/:id/tv`)
+6. WebSocket connects and receives live game state
+
 ## WebSocket flow
 
 ```
@@ -60,3 +70,9 @@ Client                          Server
 
 Reconnection uses exponential back-off: **1 s → 2 s → 4 s → 8 s → 10 s** (capped),
 up to **10 attempts** before showing an error.
+
+## Session management
+
+The tvOS app **never creates sessions**. It only joins existing sessions created
+by the iOS Host app. This ensures that both clients share the same session and
+see the same lobby, players, and game state.

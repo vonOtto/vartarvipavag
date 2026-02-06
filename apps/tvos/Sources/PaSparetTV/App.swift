@@ -87,54 +87,134 @@ private struct VoiceOverlay: View {
 
 // MARK: – launch screen ──────────────────────────────────────────────────────
 
-/// First screen after app launch.  Creates a session automatically via REST
-/// and connects as TV — no keyboard input required on the Apple TV.
+/// First screen after app launch.  Prompts the user to enter a join code
+/// to connect to an existing session created by the iOS Host.
 struct LaunchView: View {
     @EnvironmentObject var appState: AppState
-    @State private var busy = true
+    @State private var joinCode: String = ""
+    @State private var busy = false
+    @State private var errorMessage: String?
 
     var body: some View {
-        VStack(spacing: 32) {
-            Text("På Spåret")
-                .font(.gameShowHeading)
-                .foregroundColor(.accentBlueBright)
-                .shadow(color: .accentBlue.opacity(0.4), radius: Layout.shadowRadius / 2)
+        VStack(spacing: 48) {
+            // Title
+            VStack(spacing: 8) {
+                Text("PÅ SPÅRET")
+                    .font(.system(size: 96, weight: .black, design: .rounded))
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: [.accentBlueBright, .accentBlue],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .shadow(color: .accentBlue.opacity(0.6), radius: 40)
+                    .shadow(color: .accentBlue.opacity(0.4), radius: 20)
 
-            if busy {
-                Text("Startar…")
-                    .font(.bodyLarge)
+                Text("PARTY EDITION")
+                    .font(.system(size: 28, weight: .semibold, design: .rounded))
+                    .tracking(4)
                     .foregroundColor(.white.opacity(0.7))
             }
 
-            if let err = appState.error {
-                Text(err)
-                    .foregroundColor(.errorRedBright)
-                    .font(.bodyRegular)
+            // Join code input
+            VStack(spacing: 24) {
+                Text("Ange join-kod från värden")
+                    .font(.system(size: 32, weight: .medium))
+                    .foregroundColor(.white.opacity(0.9))
 
-                Button("Försök igen") {
-                    Task { await createAndConnect() }
+                TextField("", text: $joinCode)
+                    .font(.system(size: 64, weight: .bold, design: .monospaced))
+                    .multilineTextAlignment(.center)
+                    .textCase(.uppercase)
+                    .frame(width: 500)
+                    .padding(.vertical, 24)
+                    .background(Color.bgCard)
+                    .cornerRadius(16)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16)
+                            .stroke(Color.accentBlue.opacity(0.5), lineWidth: 2)
+                    )
+                    .disabled(busy)
+                    .onChange(of: joinCode) { newValue in
+                        // Limit to 6 alphanumeric characters, uppercase
+                        let filtered = newValue
+                            .uppercased()
+                            .filter { $0.isLetter || $0.isNumber }
+                            .prefix(6)
+                        if filtered != newValue {
+                            joinCode = String(filtered)
+                        }
+                    }
+
+                if joinCode.isEmpty {
+                    Text("Koden är 6 tecken")
+                        .font(.system(size: 24, weight: .regular))
+                        .foregroundColor(.white.opacity(0.5))
+                } else {
+                    Text("\(joinCode.count) / 6")
+                        .font(.system(size: 24, weight: .regular))
+                        .foregroundColor(joinCode.count == 6 ? .successGreen : .white.opacity(0.5))
                 }
-                .font(.bodyRegular)
-                .padding(.top, Layout.tightSpacing)
             }
+
+            // Error message
+            if let error = errorMessage {
+                Text(error)
+                    .font(.system(size: 24, weight: .medium))
+                    .foregroundColor(.errorRedBright)
+                    .padding(.horizontal, 60)
+                    .multilineTextAlignment(.center)
+            }
+
+            // Join button
+            Button(action: {
+                Task { await joinSession() }
+            }) {
+                HStack(spacing: 16) {
+                    if busy {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                    }
+                    Text(busy ? "Ansluter..." : "Hoppa in!")
+                        .font(.system(size: 36, weight: .semibold))
+                }
+                .frame(minWidth: 300)
+                .padding(.horizontal, 48)
+                .padding(.vertical, 24)
+                .background(
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(joinCode.count == 6 && !busy ? Color.accentBlueBright : Color.white.opacity(0.2))
+                )
+                .foregroundColor(.white)
+            }
+            .disabled(joinCode.count != 6 || busy)
         }
-        .onAppear {
-            Task { await createAndConnect() }
-        }
+        .padding(60)
     }
 
-    private func createAndConnect() async {
+    private func joinSession() async {
+        guard joinCode.count == 6 else { return }
+
         busy = true
-        appState.error = nil
+        errorMessage = nil
+
         do {
-            let session = try await SessionAPI.createSession()
-            appState.sessionId = session.sessionId
-            appState.joinCode  = session.joinCode
-            appState.token     = session.tvJoinToken
-            appState.wsUrl     = session.wsUrl
+            // Step 1: Lookup session by code
+            let lookup = try await SessionAPI.lookupByCode(joinCode)
+
+            // Step 2: Join as TV
+            let joinResponse = try await SessionAPI.joinAsTV(sessionId: lookup.sessionId)
+
+            // Step 3: Set credentials and connect
+            appState.sessionId = lookup.sessionId
+            appState.joinCode  = lookup.joinCode
+            appState.token     = joinResponse.tvAuthToken
+            appState.wsUrl     = joinResponse.wsUrl
             appState.connect()
+
         } catch {
-            appState.error = error.localizedDescription
+            errorMessage = "Kunde inte ansluta: \(error.localizedDescription)"
             busy = false
         }
     }
