@@ -43,12 +43,47 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Start backend server
+        run: |
+          npm start &
+          echo $! > server.pid
+          echo "Backend server started with PID $(cat server.pid)"
+        env:
+          NODE_ENV: test
+          JWT_SECRET: test-secret-for-ci-only-32-chars-min
+          PORT: 3000
+
+      - name: Wait for server to be ready
+        run: |
+          echo "Waiting for server to start..."
+          for i in {1..30}; do
+            if curl -f http://localhost:3000/health > /dev/null 2>&1; then
+              echo "✅ Server is ready!"
+              exit 0
+            fi
+            echo "Waiting... ($i/30)"
+            sleep 1
+          done
+          echo "❌ Server failed to start within 30 seconds"
+          exit 1
+
       - name: Run integration tests
         run: npm run test:integration
         env:
           NODE_ENV: test
           JWT_SECRET: test-secret-for-ci-only-32-chars-min
           PORT: 3000
+          TEST_BASE_URL: http://localhost:3000
+          TEST_WS_URL: ws://localhost:3000/ws
+
+      - name: Stop backend server
+        if: always()
+        run: |
+          if [ -f server.pid ]; then
+            kill $(cat server.pid) || true
+            rm server.pid
+            echo "Backend server stopped"
+          fi
 
       - name: Upload build artifacts
         if: success()
