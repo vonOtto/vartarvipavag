@@ -68,15 +68,14 @@ private struct VoiceOverlay: View {
         VStack {
             Spacer()
             Text(text)
-                .font(.bodyLarge)
-                .foregroundColor(.white)
+                .font(.tvBody)  // 34pt
+                .foregroundColor(.txt1)
                 .multilineTextAlignment(.center)
-                .shadow(color: .black.opacity(Layout.textShadowOpacity), radius: Layout.textShadowRadius)
-                .padding(.horizontal, 48)
-                .padding(.vertical, 24)
+                .padding(.horizontal, Layout.space48)
+                .padding(.vertical, Layout.space24)
                 .background(
-                    RoundedRectangle(cornerRadius: Layout.cornerRadiusLarge, style: .continuous)
-                        .fill(Color.black.opacity(0.55))
+                    RoundedRectangle(cornerRadius: Layout.radiusL, style: .continuous)
+                        .fill(Color.bg1)
                 )
             Spacer()
         }
@@ -97,149 +96,92 @@ struct LaunchView: View {
     @State private var errorMessage: String?
 
     var body: some View {
-        VStack(spacing: 48) {
-            // Title
-            VStack(spacing: 16) {
-                Text("tripto")
-                    .font(.system(size: 110, weight: .black, design: .rounded))
-                    .foregroundStyle(
-                        LinearGradient(
-                            colors: [.accentBlueBright, .accentBlue],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .shadow(color: .accentBlue.opacity(0.6), radius: 40)
-                    .shadow(color: .accentBlue.opacity(0.4), radius: 20)
+        ZStack {
+            Color.bg0.ignoresSafeArea()
 
-                Text("Big world. Small couch.")
-                    .font(.system(size: 32, weight: .light, design: .rounded))
-                    .tracking(6)
-                    .foregroundColor(.white.opacity(0.75))
-            }
-
-            // Create button (primary action)
-            Button(action: {
-                Task { await createSession() }
-            }) {
-                HStack(spacing: 16) {
-                    if busy {
-                        ProgressView()
-                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                    }
-                    Text(busy ? "Skapar spel..." : "Skapa nytt spel")
-                        .font(.system(size: 40, weight: .bold))
-                }
-                .frame(minWidth: 400)
-                .padding(.horizontal, 60)
-                .padding(.vertical, 28)
-                .background(
-                    RoundedRectangle(cornerRadius: 20)
-                        .fill(
+            VStack(spacing: Layout.space48) {
+                // Title
+                VStack(spacing: Layout.space16) {
+                    Text("tripto")
+                        .font(.tvH1)  // 72pt Semibold
+                        .foregroundStyle(
                             LinearGradient(
-                                colors: busy
-                                    ? [.accentBlue.opacity(0.6), .accentBlue.opacity(0.6)]
-                                    : [.accentBlueBright, .accentBlue],
+                                colors: [.accOrange, .accMint],
                                 startPoint: .leading,
                                 endPoint: .trailing
                             )
                         )
-                        .shadow(color: .accentBlue.opacity(busy ? 0.2 : 0.5), radius: 20)
-                )
-                .foregroundColor(.white)
-            }
-            .disabled(busy)
+                        .textCase(.lowercase)
 
-            // Divider with "eller" (or)
-            HStack(spacing: 24) {
-                Rectangle()
-                    .fill(Color.white.opacity(0.2))
-                    .frame(height: 2)
-                    .frame(maxWidth: 200)
-                Text("eller")
-                    .font(.system(size: 28, weight: .medium))
-                    .foregroundColor(.white.opacity(0.5))
-                Rectangle()
-                    .fill(Color.white.opacity(0.2))
-                    .frame(height: 2)
-                    .frame(maxWidth: 200)
-            }
-            .padding(.vertical, 12)
-
-            // Join code input (secondary action)
-            VStack(spacing: 24) {
-                Text("Ange join-kod från värden")
-                    .font(.system(size: 32, weight: .medium))
-                    .foregroundColor(.white.opacity(0.9))
-
-                TextField("", text: $joinCode)
-                    .font(.system(size: 64, weight: .bold, design: .monospaced))
-                    .multilineTextAlignment(.center)
-                    .textCase(.uppercase)
-                    .frame(width: 500)
-                    .padding(.vertical, 24)
-                    .background(Color.bgCard)
-                    .cornerRadius(16)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 16)
-                            .stroke(Color.accentBlue.opacity(0.5), lineWidth: 2)
-                    )
-                    .disabled(busy)
-                    .onChange(of: joinCode) { newValue in
-                        // Limit to 6 alphanumeric characters, uppercase
-                        let filtered = newValue
-                            .uppercased()
-                            .filter { $0.isLetter || $0.isNumber }
-                            .prefix(6)
-                        if filtered != newValue {
-                            joinCode = String(filtered)
-                        }
-                    }
-
-                if joinCode.isEmpty {
-                    Text("Koden är 6 tecken")
-                        .font(.system(size: 24, weight: .regular))
-                        .foregroundColor(.white.opacity(0.5))
-                } else {
-                    Text("\(joinCode.count) / 6")
-                        .font(.system(size: 24, weight: .regular))
-                        .foregroundColor(joinCode.count == 6 ? .successGreen : .white.opacity(0.5))
+                    Text("Big world. Small couch.")
+                        .font(.tvMeta)  // 28pt
+                        .tracking(6)
+                        .foregroundColor(.txt2)
                 }
-            }
 
-            // Error message
-            if let error = errorMessage {
-                Text(error)
-                    .font(.system(size: 24, weight: .medium))
-                    .foregroundColor(.errorRedBright)
-                    .padding(.horizontal, 60)
-                    .multilineTextAlignment(.center)
-            }
-
-            // Join button
-            Button(action: {
-                Task { await joinSession() }
-            }) {
-                HStack(spacing: 16) {
-                    if busy {
-                        ProgressView()
-                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                    }
-                    Text(busy ? "Ansluter..." : "Hoppa in!")
-                        .font(.system(size: 36, weight: .semibold))
-                }
-                .frame(minWidth: 300)
-                .padding(.horizontal, 48)
-                .padding(.vertical, 24)
-                .background(
-                    RoundedRectangle(cornerRadius: 16)
-                        .fill(joinCode.count == 6 && !busy ? Color.accentBlueBright : Color.white.opacity(0.2))
+                // Create button (primary action)
+                PrimaryButton(
+                    title: busy ? "Skapar spel..." : "Skapa nytt spel",
+                    action: { Task { await createSession() } },
+                    isLoading: busy
                 )
-                .foregroundColor(.white)
+                .disabled(busy)
+
+                // Divider with "eller" (or)
+                HStack(spacing: Layout.space24) {
+                    Rectangle()
+                        .fill(Color.txt3.opacity(0.3))
+                        .frame(height: 2)
+                        .frame(maxWidth: 200)
+                    Text("eller")
+                        .font(.tvMeta)  // 28pt
+                        .foregroundColor(.txt3)
+                    Rectangle()
+                        .fill(Color.txt3.opacity(0.3))
+                        .frame(height: 2)
+                        .frame(maxWidth: 200)
+                }
+                .padding(.vertical, Layout.space16)
+
+                // Join code input (secondary action)
+                VStack(spacing: Layout.space24) {
+                    Text("Ange join-kod från värden")
+                        .font(.tvBody)  // 34pt
+                        .foregroundColor(.txt1)
+
+                    FocusableTextField(text: $joinCode, busy: busy)
+
+                    if joinCode.isEmpty {
+                        Text("Koden är 6 tecken")
+                            .font(.tvMeta)  // 28pt
+                            .foregroundColor(.txt3)
+                    } else {
+                        Text("\(joinCode.count) / 6")
+                            .font(.tvMeta)  // 28pt
+                            .foregroundColor(joinCode.count == 6 ? .accMint : .txt3)
+                    }
+                }
+
+                // Error message
+                if let error = errorMessage {
+                    Text(error)
+                        .font(.tvMeta)  // 28pt
+                        .foregroundColor(.statusBad)
+                        .padding(.horizontal, 60)
+                        .multilineTextAlignment(.center)
+                }
+
+                // Join button
+                PrimaryButton(
+                    title: busy ? "Ansluter..." : "Hoppa in!",
+                    action: { Task { await joinSession() } },
+                    isLoading: busy
+                )
+                .disabled(joinCode.count != 6 || busy)
+                .opacity(joinCode.count == 6 ? 1.0 : 0.5)
             }
-            .disabled(joinCode.count != 6 || busy)
+            .padding(60)
         }
-        .padding(60)
     }
 
     // MARK: – Create Session
@@ -294,6 +236,51 @@ struct LaunchView: View {
     }
 }
 
+// MARK: – focusable text field ───────────────────────────────────────────────
+
+/// Custom text field with subtle focus state for tvOS.
+private struct FocusableTextField: View {
+    @Binding var text: String
+    let busy: Bool
+    @Environment(\.isFocused) private var isFocused
+
+    var body: some View {
+        TextField("", text: $text)
+            .font(.system(size: 64, weight: .bold, design: .monospaced))
+            .multilineTextAlignment(.center)
+            .textCase(.uppercase)
+            .frame(width: 500)
+            .padding(.vertical, Layout.space24)
+            .background(
+                RoundedRectangle(cornerRadius: Layout.radiusM, style: .continuous)
+                    .fill(isFocused ? Color.bg1.opacity(0.9) : Color.bg1)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: Layout.radiusM, style: .continuous)
+                    .stroke(
+                        isFocused ? Color.accMint.opacity(0.3) : Color.accMint.opacity(0.5),
+                        lineWidth: 2
+                    )
+                    .shadow(
+                        color: isFocused ? Color.accMint.opacity(0.3) : .clear,
+                        radius: 8
+                    )
+            )
+            .scaleEffect(isFocused ? 1.05 : 1.0)
+            .disabled(busy)
+            .onChange(of: text) { newValue in
+                let filtered = newValue
+                    .uppercased()
+                    .filter { $0.isLetter || $0.isNumber }
+                    .prefix(6)
+                if filtered != newValue {
+                    text = String(filtered)
+                }
+            }
+            .animation(.easeInOut(duration: 0.2), value: isFocused)
+    }
+}
+
 // MARK: – connecting screen ─────────────────────────────────────────────────
 
 struct ConnectingView: View {
@@ -301,14 +288,16 @@ struct ConnectingView: View {
 
     var body: some View {
         ZStack(alignment: .topLeading) {
-            VStack(spacing: 32) {
+            Color.bg0.ignoresSafeArea()
+
+            VStack(spacing: Layout.space32) {
                 Text(appState.hasEverConnected ? "Återansluter…" : "Ansluter…")
-                    .font(.gameShowSubheading)
-                    .foregroundColor(.white.opacity(0.7))
+                    .font(.tvBody)  // 34pt
+                    .foregroundColor(.txt2)
                 if let err = appState.error {
                     Text(err)
-                        .foregroundColor(.errorRedBright)
-                        .font(.bodyRegular)
+                        .foregroundColor(.statusBad)
+                        .font(.tvMeta)  // 28pt
                 }
             }
 
@@ -337,8 +326,10 @@ struct LobbyView: View {
 
     var body: some View {
         ZStack(alignment: .top) {
+            Color.bg0.ignoresSafeArea()
+
             // Content
-            VStack(spacing: 48) {
+            VStack(spacing: Layout.space48) {
                 gameShowTitle
 
                 HStack(spacing: 80) {
@@ -396,25 +387,24 @@ struct LobbyView: View {
     // ── Game show title ──
     @ViewBuilder
     private var gameShowTitle: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: Layout.space16) {
             Text("tripto")
-                .font(.system(size: 110, weight: .black, design: .rounded))
+                .font(.tvH1)  // 72pt Semibold
                 .foregroundStyle(
                     LinearGradient(
-                        colors: [.accentBlueBright, .accentBlue],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
+                        colors: [.accOrange, .accMint],
+                        startPoint: .leading,
+                        endPoint: .trailing
                     )
                 )
-                .shadow(color: .accentBlue.opacity(0.6), radius: 40)
-                .shadow(color: .accentBlue.opacity(0.4), radius: 20)
+                .textCase(.lowercase)
                 .scaleEffect(titleScale)
                 .opacity(titleOpacity)
 
             Text("Big world. Small couch.")
-                .font(.system(size: 32, weight: .light, design: .rounded))
+                .font(.tvMeta)  // 28pt
                 .tracking(6)
-                .foregroundColor(.white.opacity(0.75))
+                .foregroundColor(.txt2)
         }
     }
 
@@ -431,30 +421,28 @@ struct LobbyView: View {
     // ── QR + join code (enhanced) ──
     @ViewBuilder
     private var qrColumn: some View {
-        VStack(spacing: 24) {
-            // Enhanced card with glow
-            VStack(spacing: 20) {
+        VStack(spacing: Layout.space24) {
+            // Enhanced card with proper styling
+            VStack(spacing: Layout.space24) {
                 QRCodeView(url: joinURL)
-                    .padding(24)
+                    .padding(Layout.space24)
                     .background(Color.white)
-                    .cornerRadius(16)
+                    .cornerRadius(Layout.radiusM)
 
                 Text("Skanna för att ansluta")
-                    .font(.system(size: 24, weight: .medium))
-                    .foregroundColor(.white.opacity(0.8))
+                    .font(.tvMeta)  // 28pt
+                    .foregroundColor(.txt2)
             }
-            .padding(32)
-            .background(Color.bgCard)
-            .cornerRadius(20)
-            .shadow(color: .accentBlue.opacity(0.4), radius: 30)
-            .shadow(color: .accentBlue.opacity(0.2), radius: 60)
+            .padding(Layout.cardPadding)  // 32pt for TV
+            .background(Color.bg1)
+            .cornerRadius(Layout.radiusL)  // 24pt
 
             // Join code
             if let code = appState.joinCode {
                 Text(code.uppercased().map { String($0) }.joined(separator: "  "))
                     .font(.system(size: 52, weight: .bold, design: .monospaced))
                     .tracking(8)
-                    .foregroundColor(.accentBlueBright)
+                    .foregroundColor(.accMint)
             }
         }
     }
@@ -462,16 +450,16 @@ struct LobbyView: View {
     // ── player list (enhanced) ──
     @ViewBuilder
     private var playerColumn: some View {
-        VStack(alignment: .leading, spacing: 20) {
+        VStack(alignment: .leading, spacing: Layout.space24) {
             // Section header with pulse
-            HStack(spacing: 12) {
+            HStack(spacing: Layout.space16) {
                 if !appState.players.isEmpty {
                     Circle()
-                        .fill(Color.successGreen)
+                        .fill(Color.statusOk)
                         .frame(width: 12, height: 12)
                         .overlay(
                             Circle()
-                                .stroke(Color.successGreen, lineWidth: 2)
+                                .stroke(Color.statusOk, lineWidth: 2)
                                 .scaleEffect(1.4)
                                 .opacity(0)
                                 .animation(
@@ -483,42 +471,42 @@ struct LobbyView: View {
                 }
 
                 Text("SPELARE")
-                    .font(.system(size: 24, weight: .bold, design: .rounded))
+                    .font(.tvMeta)  // 28pt
                     .tracking(2)
-                    .foregroundColor(.white.opacity(0.6))
+                    .foregroundColor(.txt3)
 
                 Text("(\(appState.players.count))")
-                    .font(.system(size: 24, weight: .semibold))
-                    .foregroundColor(.accentBlueBright)
+                    .font(.tvMeta)  // 28pt
+                    .foregroundColor(.accMint)
             }
 
             // Host row (enhanced)
             if let host = appState.hostName {
-                HStack(spacing: 12) {
+                HStack(spacing: Layout.space16) {
                     Image(systemName: "star.fill")
-                        .font(.system(size: 22, weight: .bold))
-                        .foregroundColor(.goldYellow)
+                        .font(.system(size: 28, weight: .bold))
+                        .foregroundColor(.accOrange)
 
                     Text(host)
-                        .font(.system(size: 34, weight: .semibold))
-                        .foregroundColor(.goldYellow)
+                        .font(.tvBody)  // 34pt
+                        .foregroundColor(.accOrange)
 
                     Text("VÄRD")
-                        .font(.system(size: 18, weight: .bold, design: .rounded))
+                        .font(.tvMeta)  // 28pt
                         .tracking(1)
-                        .foregroundColor(.goldYellow.opacity(0.8))
-                        .padding(.horizontal, 12)
+                        .foregroundColor(.accOrange)
+                        .padding(.horizontal, Layout.space16)
                         .padding(.vertical, 4)
                         .background(
                             Capsule()
-                                .fill(Color.goldYellow.opacity(0.15))
+                                .fill(Color.accOrange.opacity(0.15))
                         )
                 }
-                .padding(.horizontal, 20)
-                .padding(.vertical, 12)
-                .background(Color.goldYellow.opacity(0.08))
-                .cornerRadius(12)
-                .padding(.bottom, 8)
+                .padding(.horizontal, Layout.space24)
+                .padding(.vertical, Layout.space16)
+                .background(Color.bg2)
+                .cornerRadius(Layout.radiusM)
+                .padding(.bottom, Layout.space16)
             }
 
             // Player cards
@@ -529,15 +517,15 @@ struct LobbyView: View {
 
             // Empty state
             if appState.players.isEmpty {
-                VStack(spacing: 16) {
+                VStack(spacing: Layout.space16) {
                     Image(systemName: "person.2.badge.gearshape")
                         .font(.system(size: 64, weight: .light))
-                        .foregroundColor(.white.opacity(0.2))
+                        .foregroundColor(.txt3.opacity(0.3))
 
                     Text("Väntar på spelare...")
-                        .font(.system(size: 28, weight: .medium))
+                        .font(.tvMeta)  // 28pt
                         .italic()
-                        .foregroundColor(.white.opacity(0.4))
+                        .foregroundColor(.txt3)
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.top, 40)
@@ -551,32 +539,31 @@ struct LobbyView: View {
     private var statusIndicator: some View {
         let hasPlayers = !appState.players.isEmpty
 
-        HStack(spacing: 16) {
+        HStack(spacing: Layout.space16) {
             if hasPlayers {
                 Image(systemName: "checkmark.circle.fill")
                     .font(.system(size: 32, weight: .bold))
-                    .foregroundColor(.successGreen)
+                    .foregroundColor(.statusOk)
             } else {
                 ProgressView()
-                    .progressViewStyle(CircularProgressViewStyle(tint: .white.opacity(0.5)))
+                    .progressViewStyle(CircularProgressViewStyle(tint: .txt3))
                     .scaleEffect(1.2)
             }
 
             Text(hasPlayers ? "Redo att starta! Värden startar spelet." : "Väntar på spelare att ansluta...")
-                .font(.system(size: 30, weight: hasPlayers ? .semibold : .medium))
-                .foregroundColor(.white.opacity(hasPlayers ? 0.9 : 0.7))
+                .font(.tvMeta)  // 28pt
+                .foregroundColor(hasPlayers ? .txt1 : .txt2)
         }
         .padding(.horizontal, 40)
-        .padding(.vertical, 20)
+        .padding(.vertical, Layout.space24)
         .background(
             Capsule()
-                .fill(hasPlayers ? Color.successGreen.opacity(0.15) : Color.white.opacity(0.05))
+                .fill(hasPlayers ? Color.statusOk.opacity(0.15) : Color.bg1)
                 .overlay(
                     Capsule()
-                        .stroke(hasPlayers ? Color.successGreen.opacity(0.3) : Color.clear, lineWidth: 2)
+                        .stroke(hasPlayers ? Color.statusOk.opacity(0.3) : Color.clear, lineWidth: 2)
                 )
         )
-        .shadow(color: hasPlayers ? Color.successGreen.opacity(0.3) : Color.clear, radius: 20)
     }
 
     private var joinURL: String {
@@ -584,23 +571,22 @@ struct LobbyView: View {
     }
 
     private var reconnectBanner: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: Layout.space16) {
             ProgressView()
-                .progressViewStyle(CircularProgressViewStyle(tint: .errorRed))
+                .progressViewStyle(CircularProgressViewStyle(tint: .txt1))
                 .scaleEffect(0.6)
 
             Text("Återansluter...")
-                .font(.system(size: 24, weight: .semibold))
-                .foregroundColor(.white)
+                .font(.tvMeta)  // 28pt
+                .foregroundColor(.txt1)
         }
-        .padding(.horizontal, 28)
-        .padding(.vertical, 16)
+        .padding(.horizontal, Layout.cardPadding)
+        .padding(.vertical, Layout.space16)
         .background(
             Capsule()
-                .fill(Color.errorRed.opacity(0.9))
+                .fill(Color.statusBad.opacity(0.9))
         )
-        .shadow(color: .errorRed.opacity(0.5), radius: 20)
-        .padding(.top, 24)
+        .padding(.top, Layout.space24)
     }
 }
 
@@ -613,16 +599,16 @@ struct EnhancedPlayerRow: View {
     @State private var pulseScale: CGFloat = 1.0
 
     var body: some View {
-        HStack(spacing: 16) {
+        HStack(spacing: Layout.space16) {
             // Player number badge
             Text("#\(number)")
-                .font(.system(size: 20, weight: .bold, design: .rounded))
-                .foregroundColor(.accentBlue.opacity(0.8))
+                .font(.tvMeta)  // 28pt
+                .foregroundColor(.accMint)
                 .frame(minWidth: 48)
                 .padding(.vertical, 6)
                 .background(
                     Capsule()
-                        .fill(Color.accentBlue.opacity(0.15))
+                        .fill(Color.accMint.opacity(0.15))
                 )
 
             // Connection indicator with pulse
@@ -630,7 +616,7 @@ struct EnhancedPlayerRow: View {
                 // Pulse ring
                 if player.isConnected {
                     Circle()
-                        .stroke(Color.successGreenBright.opacity(0.6), lineWidth: 2)
+                        .stroke(Color.statusOk.opacity(0.6), lineWidth: 2)
                         .frame(width: 24, height: 24)
                         .scaleEffect(pulseScale)
                         .opacity(2 - pulseScale)
@@ -638,7 +624,7 @@ struct EnhancedPlayerRow: View {
 
                 // Connection dot
                 Circle()
-                    .fill(player.isConnected ? Color.successGreenBright : Color.gray)
+                    .fill(player.isConnected ? Color.statusOk : Color.txt3)
                     .frame(width: 16, height: 16)
             }
             .onAppear {
@@ -654,20 +640,20 @@ struct EnhancedPlayerRow: View {
 
             // Player name
             Text(player.name)
-                .font(.system(size: 32, weight: .medium))
-                .foregroundColor(.white)
+                .font(.tvBody)  // 34pt
+                .foregroundColor(.txt1)
 
             Spacer()
         }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 16)
+        .padding(.horizontal, Layout.space24)
+        .padding(.vertical, Layout.space16)
         .background(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(Color.bgCard.opacity(0.6))
+            RoundedRectangle(cornerRadius: Layout.radiusM, style: .continuous)
+                .fill(Color.bg2)
                 .overlay(
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    RoundedRectangle(cornerRadius: Layout.radiusM, style: .continuous)
                         .stroke(
-                            player.isConnected ? Color.successGreen.opacity(0.3) : Color.clear,
+                            player.isConnected ? Color.statusOk.opacity(0.3) : Color.clear,
                             lineWidth: 2
                         )
                 )
@@ -741,8 +727,7 @@ struct SparklePiece: View {
 
 // MARK: – Shared Navigation Buttons ─────────────────────────────────────────
 
-/// Polished "Tillbaka till start" button with tvOS-optimized styling.
-/// Features subtle card background, proper focus states, and visual hierarchy.
+/// "Tillbaka till start" button — Secondary style with proper tvOS focus states.
 struct BackButton: View {
     @EnvironmentObject var appState: AppState
     @Environment(\.isFocused) private var isFocused
@@ -751,38 +736,35 @@ struct BackButton: View {
         Button(action: {
             appState.resetSession()
         }) {
-            HStack(spacing: 12) {
+            HStack(spacing: Layout.space16) {
                 Image(systemName: "chevron.left")
-                    .font(.system(size: 22, weight: .semibold))
+                    .font(.system(size: 28, weight: .semibold))
                 Text("Tillbaka till start")
-                    .font(.system(size: 26, weight: .medium))
+                    .font(.tvMeta)  // 28pt
             }
-            .foregroundColor(isFocused ? .white : .white.opacity(0.7))
-            .padding(.horizontal, 28)
-            .padding(.vertical, 16)
+            .foregroundColor(.txt1)
+            .padding(.horizontal, Layout.cardPadding)
+            .padding(.vertical, Layout.space16)
+            .frame(height: Layout.buttonHeight)  // 72pt
             .background(
-                RoundedRectangle(cornerRadius: Layout.cornerRadiusMedium, style: .continuous)
-                    .fill(isFocused ? Color.white.opacity(0.15) : Color.white.opacity(0.08))
+                RoundedRectangle(cornerRadius: Layout.radiusM, style: .continuous)
+                    .fill(isFocused ? Color.bg2.opacity(0.8) : Color.bg2)
                     .overlay(
-                        RoundedRectangle(cornerRadius: Layout.cornerRadiusMedium, style: .continuous)
+                        RoundedRectangle(cornerRadius: Layout.radiusM, style: .continuous)
                             .stroke(
-                                isFocused ? Color.white.opacity(0.3) : Color.clear,
+                                isFocused ? Color.accMint.opacity(0.3) : Color.clear,
                                 lineWidth: 2
                             )
                     )
             )
-            .shadow(
-                color: isFocused ? Color.black.opacity(0.3) : Color.clear,
-                radius: 12,
-                y: 4
-            )
+            .scaleEffect(isFocused ? 1.05 : 1.0)
         }
         .buttonStyle(.plain)
+        .animation(.easeInOut(duration: 0.2), value: isFocused)
     }
 }
 
-/// Enhanced "Nytt spel" button with professional secondary button styling.
-/// Positioned in bottom-right corner, styled to be visible but non-intrusive.
+/// "Nytt spel" button — Secondary style.
 struct NewGameButton: View {
     @EnvironmentObject var appState: AppState
     @Environment(\.isFocused) private var isFocused
@@ -791,30 +773,26 @@ struct NewGameButton: View {
         Button(action: {
             appState.resetSession()
         }) {
-            HStack(spacing: 10) {
+            HStack(spacing: Layout.space16) {
                 Image(systemName: "arrow.counterclockwise")
-                    .font(.system(size: 20, weight: .semibold))
+                    .font(.system(size: 28, weight: .semibold))
                 Text("Nytt spel")
-                    .font(.system(size: 26, weight: .medium))
+                    .font(.tvMeta)  // 28pt
             }
-            .foregroundColor(isFocused ? .accentBlueBright : .white.opacity(0.7))
-            .padding(.horizontal, 28)
-            .padding(.vertical, 16)
+            .foregroundColor(.txt1)
+            .padding(.horizontal, Layout.cardPadding)
+            .padding(.vertical, Layout.space16)
+            .frame(height: Layout.buttonHeight)  // 72pt
             .background(
-                RoundedRectangle(cornerRadius: Layout.cornerRadiusMedium, style: .continuous)
-                    .fill(isFocused ? Color.accentBlue.opacity(0.25) : Color.white.opacity(0.1))
+                RoundedRectangle(cornerRadius: Layout.radiusM, style: .continuous)
+                    .fill(isFocused ? Color.bg2.opacity(0.8) : Color.bg2)
                     .overlay(
-                        RoundedRectangle(cornerRadius: Layout.cornerRadiusMedium, style: .continuous)
+                        RoundedRectangle(cornerRadius: Layout.radiusM, style: .continuous)
                             .stroke(
-                                isFocused ? Color.accentBlueBright.opacity(0.5) : Color.white.opacity(0.15),
-                                lineWidth: isFocused ? 3 : 2
+                                isFocused ? Color.accMint.opacity(0.3) : Color.clear,
+                                lineWidth: 2
                             )
                     )
-            )
-            .shadow(
-                color: isFocused ? Color.accentBlue.opacity(0.4) : Color.black.opacity(0.2),
-                radius: isFocused ? 16 : 8,
-                y: 4
             )
             .scaleEffect(isFocused ? 1.05 : 1.0)
         }
@@ -830,44 +808,90 @@ struct LiveView: View {
     @EnvironmentObject var appState: AppState
 
     var body: some View {
-        VStack(spacing: 24) {
-            HStack {
-                Text("Phase:")
-                Text(appState.phase).fontWeight(.bold)
-            }
-            .font(.gameShowHeading)
-            .foregroundColor(.accentBlueBright)
+        ZStack {
+            Color.bg0.ignoresSafeArea()
 
-            statusBadge
+            VStack(spacing: Layout.space24) {
+                HStack {
+                    Text("Phase:")
+                    Text(appState.phase).fontWeight(.bold)
+                }
+                .font(.tvH2)  // 48pt
+                .foregroundColor(.accMint)
 
-            if let clue = appState.clueText {
-                Text(clue)
-                    .font(.clueText)
-                    .foregroundColor(.white)
+                statusBadge
+
+                if let clue = appState.clueText {
+                    Text(clue)
+                        .font(.tvBody)  // 34pt
+                        .foregroundColor(.txt1)
+                }
+                if let pts = appState.levelPoints {
+                    Text("\(pts) pts")
+                        .font(.tvH2)  // 48pt
+                        .foregroundColor(.accOrange)
+                }
+                if !appState.players.isEmpty {
+                    Text("Players: \(appState.players.map { $0.name }.joined(separator: ", "))")
+                        .font(.tvBody)  // 34pt
+                        .foregroundColor(.txt1)
+                }
+                if let err = appState.error {
+                    Text(err)
+                        .foregroundColor(.statusBad)
+                        .font(.tvMeta)  // 28pt
+                }
             }
-            if let pts = appState.levelPoints {
-                Text("\(pts) pts")
-                    .font(.bodyLarge)
-                    .foregroundColor(.goldYellow)
-            }
-            if !appState.players.isEmpty {
-                Text("Players: \(appState.players.map { $0.name }.joined(separator: ", "))")
-                    .font(.bodyRegular)
-                    .foregroundColor(.white)
-            }
-            if let err = appState.error {
-                Text(err)
-                    .foregroundColor(.errorRedBright)
-                    .font(.bodyRegular)
-            }
+            .padding(Layout.verticalPadding)
         }
-        .padding(Layout.verticalPadding)
     }
 
     @ViewBuilder
     private var statusBadge: some View {
         Text(appState.isConnected ? "● Connected" : "○ Reconnecting…")
-            .foregroundColor(appState.isConnected ? .successGreenBright : .errorRed)
-            .font(.bodyRegular)
+            .foregroundColor(appState.isConnected ? .statusOk : .statusBad)
+            .font(.tvBody)  // 34pt
+    }
+}
+
+// MARK: – Primary Button (Orange) ────────────────────────────────────────────
+
+/// Primary button — Orange accent, 72pt height, 16pt radius, proper focus states.
+struct PrimaryButton: View {
+    let title: String
+    let action: () -> Void
+    var isLoading: Bool = false
+
+    @Environment(\.isFocused) private var isFocused
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: Layout.space16) {
+                if isLoading {
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle(tint: .txt1))
+                }
+                Text(title)
+                    .font(.tvBody)  // 34pt
+            }
+            .foregroundColor(.txt1)
+            .frame(minWidth: 400)
+            .frame(height: Layout.buttonHeight)  // 72pt
+            .padding(.horizontal, Layout.cardPadding)
+            .background(
+                RoundedRectangle(cornerRadius: Layout.radiusM, style: .continuous)  // 16pt
+                    .fill(isFocused ? Color.accOrange.opacity(0.9) : Color.accOrange)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: Layout.radiusM, style: .continuous)
+                            .stroke(
+                                isFocused ? Color.accOrange.opacity(0.3) : Color.clear,
+                                lineWidth: 2
+                            )
+                    )
+            )
+            .scaleEffect(isFocused ? 1.05 : 1.0)
+        }
+        .buttonStyle(.plain)
+        .animation(.easeInOut(duration: 0.2), value: isFocused)
     }
 }
