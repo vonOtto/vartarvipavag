@@ -87,8 +87,9 @@ private struct VoiceOverlay: View {
 
 // MARK: – launch screen ──────────────────────────────────────────────────────
 
-/// First screen after app launch.  Prompts the user to enter a join code
-/// to connect to an existing session created by the iOS Host.
+/// First screen after app launch.  Offers two options:
+/// 1) Create a new session (becomes TV, shows QR for players)
+/// 2) Join an existing session by entering a join code
 struct LaunchView: View {
     @EnvironmentObject var appState: AppState
     @State private var joinCode: String = ""
@@ -117,7 +118,55 @@ struct LaunchView: View {
                     .foregroundColor(.white.opacity(0.7))
             }
 
-            // Join code input
+            // Create button (primary action)
+            Button(action: {
+                Task { await createSession() }
+            }) {
+                HStack(spacing: 16) {
+                    if busy {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                    }
+                    Text(busy ? "Skapar spel..." : "Skapa nytt spel")
+                        .font(.system(size: 40, weight: .bold))
+                }
+                .frame(minWidth: 400)
+                .padding(.horizontal, 60)
+                .padding(.vertical, 28)
+                .background(
+                    RoundedRectangle(cornerRadius: 20)
+                        .fill(
+                            LinearGradient(
+                                colors: busy
+                                    ? [.accentBlue.opacity(0.6), .accentBlue.opacity(0.6)]
+                                    : [.accentBlueBright, .accentBlue],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                        .shadow(color: .accentBlue.opacity(busy ? 0.2 : 0.5), radius: 20)
+                )
+                .foregroundColor(.white)
+            }
+            .disabled(busy)
+
+            // Divider with "eller" (or)
+            HStack(spacing: 24) {
+                Rectangle()
+                    .fill(Color.white.opacity(0.2))
+                    .frame(height: 2)
+                    .frame(maxWidth: 200)
+                Text("eller")
+                    .font(.system(size: 28, weight: .medium))
+                    .foregroundColor(.white.opacity(0.5))
+                Rectangle()
+                    .fill(Color.white.opacity(0.2))
+                    .frame(height: 2)
+                    .frame(maxWidth: 200)
+            }
+            .padding(.vertical, 12)
+
+            // Join code input (secondary action)
             VStack(spacing: 24) {
                 Text("Ange join-kod från värden")
                     .font(.system(size: 32, weight: .medium))
@@ -193,6 +242,31 @@ struct LaunchView: View {
         .padding(60)
     }
 
+    // MARK: – Create Session
+
+    private func createSession() async {
+        busy = true
+        errorMessage = nil
+
+        do {
+            // Create new session via REST API
+            let response = try await SessionAPI.createSession()
+
+            // Set credentials and connect as TV
+            appState.sessionId = response.sessionId
+            appState.joinCode  = response.joinCode
+            appState.token     = response.tvJoinToken
+            appState.wsUrl     = response.wsUrl
+            appState.connect()
+
+        } catch {
+            errorMessage = "Kunde inte skapa session: \(error.localizedDescription)"
+            busy = false
+        }
+    }
+
+    // MARK: – Join Session
+
     private func joinSession() async {
         guard joinCode.count == 6 else { return }
 
@@ -226,15 +300,32 @@ struct ConnectingView: View {
     @EnvironmentObject var appState: AppState
 
     var body: some View {
-        VStack(spacing: 32) {
-            Text(appState.hasEverConnected ? "Återansluter…" : "Ansluter…")
-                .font(.gameShowSubheading)
-                .foregroundColor(.white.opacity(0.7))
-            if let err = appState.error {
-                Text(err)
-                    .foregroundColor(.errorRedBright)
-                    .font(.bodyRegular)
+        ZStack(alignment: .topLeading) {
+            VStack(spacing: 32) {
+                Text(appState.hasEverConnected ? "Återansluter…" : "Ansluter…")
+                    .font(.gameShowSubheading)
+                    .foregroundColor(.white.opacity(0.7))
+                if let err = appState.error {
+                    Text(err)
+                        .foregroundColor(.errorRedBright)
+                        .font(.bodyRegular)
+                }
             }
+
+            // Back button
+            Button(action: {
+                appState.resetSession()
+            }) {
+                HStack(spacing: 12) {
+                    Image(systemName: "chevron.left")
+                    Text("Tillbaka till start")
+                }
+                .font(.system(size: 24, weight: .medium))
+                .foregroundColor(.white.opacity(0.6))
+                .padding(.horizontal, 32)
+                .padding(.vertical, 20)
+            }
+            .padding(40)
         }
     }
 }
@@ -273,6 +364,27 @@ struct LobbyView: View {
             .padding(60)
 
             if !appState.isConnected { reconnectBanner }
+
+            // "Tillbaka till start" button — top-left corner
+            VStack {
+                HStack {
+                    Button(action: {
+                        appState.resetSession()
+                    }) {
+                        HStack(spacing: 12) {
+                            Image(systemName: "chevron.left")
+                            Text("Tillbaka till start")
+                        }
+                        .font(.system(size: 24, weight: .medium))
+                        .foregroundColor(.white.opacity(0.5))
+                        .padding(.horizontal, 32)
+                        .padding(.vertical, 20)
+                    }
+                    Spacer()
+                }
+                Spacer()
+            }
+            .padding(40)
 
             // "Nytt spel" button — bottom-right corner, subtle secondary style
             VStack {

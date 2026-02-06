@@ -15,7 +15,9 @@ struct QRCodeView: View {
     var body: some View {
         if let image = Self.generate(url) {
             image
+                .resizable()
                 .interpolation(.none)
+                .aspectRatio(1, contentMode: .fit)
                 .frame(width: size, height: size)
         } else {
             RoundedRectangle(cornerRadius: 12)

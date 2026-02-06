@@ -317,6 +317,42 @@ class HostState: ObservableObject {
         connect()
     }
 
+    /// Tear down the current session completely. RootView will show LaunchView
+    /// (because sessionId becomes nil).
+    func resetSession() {
+        // 1. Close WebSocket
+        wsTask?.cancel(with: .normalClosure, reason: nil)
+        wsTask = nil
+
+        // 2. Reset reconnect state
+        reconnectAttempt = 0
+        isConnected = false
+        hasEverConnected = false
+        sessionReady = false
+        error = nil
+
+        // 3. Clear session credentials
+        sessionId = nil
+        hostAuthToken = nil
+        wsUrl = nil
+        joinCode = nil
+        joinURL = nil
+
+        // 4. Clear game state
+        phase = "LOBBY"
+        players = []
+        clueText = nil
+        levelPoints = nil
+        scoreboard = []
+        lockedAnswers = []
+        destinationName = nil
+        destinationCountry = nil
+        brakeOwnerPlayerId = nil
+        results = []
+        followupQuestion = nil
+        followupResults = nil
+    }
+
     /// Fire-and-forget JSON send.
     private func send(_ dict: [String: Any]) {
         guard let data = try? JSONSerialization.data(withJSONObject: dict),

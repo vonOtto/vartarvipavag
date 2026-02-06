@@ -1,0 +1,186 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 46;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		AA000001 /* App.swift in Sources */         = {isa = PBXBuildFile; fileRef = BB000001 /* App.swift */; };
+		AA000002 /* HostAPI.swift in Sources */     = {isa = PBXBuildFile; fileRef = BB000002 /* HostAPI.swift */; };
+		AA000003 /* HostModels.swift in Sources */  = {isa = PBXBuildFile; fileRef = BB000003 /* HostModels.swift */; };
+		AA000004 /* HostState.swift in Sources */   = {isa = PBXBuildFile; fileRef = BB000004 /* HostState.swift */; };
+		AA000005 /* QRCodeView.swift in Sources */  = {isa = PBXBuildFile; fileRef = BB000005 /* QRCodeView.swift */; };
+		AA000006 /* DesignSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000006 /* DesignSystem.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		BB000001 /* App.swift */        = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App.swift;        sourceTree = "<group>"; };
+		BB000002 /* HostAPI.swift */    = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HostAPI.swift;    sourceTree = "<group>"; };
+		BB000003 /* HostModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HostModels.swift; sourceTree = "<group>"; };
+		BB000004 /* HostState.swift */  = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HostState.swift;  sourceTree = "<group>"; };
+		BB000005 /* QRCodeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRCodeView.swift; sourceTree = "<group>"; };
+		BB000006 /* DesignSystem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignSystem.swift; sourceTree = "<group>"; };
+		BB000099 /* Info.plist */       = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		BB0000F0 /* PaSparetHost.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PaSparetHost.app; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		BB0000AA /* PaSparetHost (root) */ = {
+			isa = PBXGroup;
+			children = (
+				BB0000AB /* Sources */,
+				BB0000AC /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		BB0000AB /* Sources */ = {
+			isa = PBXGroup;
+			children = (
+				BB000001 /* App.swift */,
+				BB000006 /* DesignSystem.swift */,
+				BB000002 /* HostAPI.swift */,
+				BB000003 /* HostModels.swift */,
+				BB000004 /* HostState.swift */,
+				BB000005 /* QRCodeView.swift */,
+				BB000099 /* Info.plist */,
+			);
+			path = Sources/PaSparetHost;
+			sourceTree = "<group>";
+		};
+		BB0000AC /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				BB0000F0 /* PaSparetHost.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		BB000050 /* PaSparetHost */ = {
+			isa = PBXNativeTarget;
+			buildPhases = (
+				BB000051 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = PaSparetHost;
+			productName = PaSparetHost;
+			productReference = BB0000F0 /* PaSparetHost.app */;
+			productType = "com.apple.product-type.application";
+			buildConfigurationList = BB000070 /* Build Configurations for PBXNativeTarget "PaSparetHost" */;
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		BB000040 /* Project object */ = {
+			isa = PBXProject;
+			buildConfigurationList = BB000071 /* Build Configurations for PBXProject "PaSparetHost" */;
+			compatibilityVersion = "Xcode 3.2";
+			developmentRegion = en;
+			mainGroup = BB0000AA /* PaSparetHost (root) */;
+			productRefGroup = BB0000AC /* Products */;
+			targets = (
+				BB000050 /* PaSparetHost */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		BB000051 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			files = (
+				AA000001 /* App.swift in Sources */,
+				AA000006 /* DesignSystem.swift in Sources */,
+				AA000002 /* HostAPI.swift in Sources */,
+				AA000003 /* HostModels.swift in Sources */,
+				AA000004 /* HostState.swift in Sources */,
+				AA000005 /* QRCodeView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		BB000060 /* Debug (project) */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CODE_SIGN_IDENTITY = "";
+				CODE_SIGNING_REQUIRED = NO;
+				ENABLE_TESTABILITY = YES;
+				SDKROOT = iphonesimulator;
+				SWIFT_VERSION = "5.9";
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+			};
+			name = Debug;
+		};
+		BB000061 /* Release (project) */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CODE_SIGN_IDENTITY = "";
+				CODE_SIGNING_REQUIRED = NO;
+				SDKROOT = iphonesimulator;
+				SWIFT_VERSION = "5.9";
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+			};
+			name = Release;
+		};
+		BB000062 /* Debug (target) */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				INFOPLIST_FILE = Sources/PaSparetHost/Info.plist;
+				PRODUCT_NAME = PaSparetHost;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.pasparet.host";
+				PRODUCT_TYPE = "com.apple.product-type.application";
+				SWIFT_VERSION = "5.9";
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		BB000063 /* Release (target) */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				INFOPLIST_FILE = Sources/PaSparetHost/Info.plist;
+				PRODUCT_NAME = PaSparetHost;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.pasparet.host";
+				PRODUCT_TYPE = "com.apple.product-type.application";
+				SWIFT_VERSION = "5.9";
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		BB000070 /* Build Configurations for PBXNativeTarget "PaSparetHost" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				BB000062 /* Debug */,
+				BB000063 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		BB000071 /* Build Configurations for PBXProject "PaSparetHost" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				BB000060 /* Debug */,
+				BB000061 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+	};
+	rootObject = BB000040 /* Project object */;
+}

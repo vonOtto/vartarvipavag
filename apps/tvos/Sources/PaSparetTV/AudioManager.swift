@@ -160,15 +160,24 @@ class AudioManager {
 
     /// Lazily create and wire the AVAudioEngine graph:
     ///   playerNode → mixerNode (gain) → defaultOutput
+    ///
+    /// Uses an explicit stereo format to prevent channel-count mismatch crashes.
     private func ensureEngine() {
         guard engine == nil else { return }
         let e = AVAudioEngine()
         let player = AVAudioPlayerNode()
         let mixer  = AVAudioMixerNode()
+
+        // Establish explicit stereo format to avoid channel mismatch
+        let format = AVAudioFormat(commonFormat: .pcmFormatFloat32,
+                                   sampleRate: 44100,
+                                   channels: 2,
+                                   interleaved: false)!
+
         e.attach(player)
         e.attach(mixer)
-        e.connect(player, to: mixer, format: nil)
-        e.connect(mixer, to: e.mainMixerNode, format: nil)
+        e.connect(player, to: mixer, format: format)
+        e.connect(mixer, to: e.mainMixerNode, format: format)
         try? e.start()
         engine       = e
         enginePlayer = player
@@ -176,25 +185,56 @@ class AudioManager {
     }
 
     /// Schedule a buffer on the engine player and set the mixer gain.
+    /// Converts audio to stereo if necessary to match the engine format.
     private func playVoiceViaEngine(data: Data, url: URL, volume: Float) throws {
         ensureEngine()
         guard let player = enginePlayer, let mixer = engineMixer else {
             throw NSError(domain: "AudioManager", code: 1, userInfo: [NSLocalizedDescriptionKey: "engine init failed"])
         }
-        // Derive AVAudioFormat from the raw data via AVAudioFile in memory.
+
+        // Read audio file into a buffer with its native format
         let tmpURL = URL(fileURLWithPath: NSTemporaryDirectory())
                         .appendingPathComponent("voice_\(ProcessInfo.processInfo.globallyUniqueString).\(url.pathExtension)")
         try data.write(to: tmpURL)
         let file = try AVAudioFile(forReading: tmpURL)
-        let buf  = AVAudioPCMBuffer(pcmFormat: file.processingFormat,
-                                    frameCapacity: AVAudioFrameCount(file.length))!
-        try file.read(into: buf)
-        // Clean up temp file
+        let srcBuf = AVAudioPCMBuffer(pcmFormat: file.processingFormat,
+                                      frameCapacity: AVAudioFrameCount(file.length))!
+        try file.read(into: srcBuf)
         try? FileManager.default.removeItem(at: tmpURL)
+
+        // Engine uses stereo format; convert if source is mono
+        let engineFormat = AVAudioFormat(commonFormat: .pcmFormatFloat32,
+                                         sampleRate: 44100,
+                                         channels: 2,
+                                         interleaved: false)!
+
+        let finalBuf: AVAudioPCMBuffer
+        if file.processingFormat.channelCount == engineFormat.channelCount {
+            // Already matches — use as-is
+            finalBuf = srcBuf
+        } else {
+            // Convert (typically mono → stereo)
+            guard let converter = AVAudioConverter(from: file.processingFormat, to: engineFormat) else {
+                throw NSError(domain: "AudioManager", code: 2, userInfo: [NSLocalizedDescriptionKey: "format conversion failed"])
+            }
+            let capacity = AVAudioFrameCount(Double(srcBuf.frameLength) * engineFormat.sampleRate / file.processingFormat.sampleRate)
+            guard let dstBuf = AVAudioPCMBuffer(pcmFormat: engineFormat, frameCapacity: capacity) else {
+                throw NSError(domain: "AudioManager", code: 3, userInfo: [NSLocalizedDescriptionKey: "buffer allocation failed"])
+            }
+            var error: NSError?
+            converter.convert(to: dstBuf, error: &error) { inNumPackets, outStatus in
+                outStatus.pointee = .haveData
+                return srcBuf
+            }
+            if let error = error {
+                throw error
+            }
+            finalBuf = dstBuf
+        }
 
         mixer.outputVolume = volume   // > 1.0 is valid here
         player.play()
-        player.scheduleBuffer(buf)
+        player.scheduleBuffer(finalBuf)
     }
 
     /// Tear down the engine player (called on stopVoice).
