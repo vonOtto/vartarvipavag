@@ -65,10 +65,11 @@ Audio playback happens exclusively on tvOS (Apple TV). All other clients (web pl
 - **Volume**: 0.9
 
 ### sfx_reveal
-- **Trigger**: DESTINATION_REVEAL event
+- **Trigger**: DESTINATION_REVEAL event (full volume) and DESTINATION_RESULTS event (reduced volume)
 - **Duration**: ~800ms
 - **Description**: Dramatic reveal sting
-- **Volume**: 1.0
+- **Volume**: 1.0 (at reveal), 0.8 (at results presentation)
+- **Notes**: Plays twice in the reveal sequence - first when destination is revealed, then again (softer) when showing who was right/wrong to add drama to the results
 
 ### sfx_sting_build
 - **Trigger**: FINAL_RESULTS start (t=0s)
@@ -538,7 +539,7 @@ Host can adjust background music volume in real-time via iOS app.
 | ROUND_INTRO | Startar efter intro-clip (MUSIC_SET music_travel fadeIn 2000 ms) | banter_round_intro clip | — | Intro-banter + 1.5 s breathing-window innan CLUE_LEVEL(10) |
 | CLUE_LEVEL | music_travel_loop | voice_clue_read clip | None | Main gameplay music; clue-read TTS on each level |
 | PAUSED_FOR_BRAKE | Stops | banter_after_brake clip | sfx_brake | Music stops when brake pulled |
-| REVEAL_DESTINATION | None | banter_before_reveal / banter_reveal_* clip | sfx_reveal | Dramatic reveal |
+| REVEAL_DESTINATION | None | banter_before_reveal / banter_reveal_* clip | sfx_reveal (reveal + results) | Dramatic reveal, then sfx_reveal plays again (0.8 vol) when DESTINATION_RESULTS shows who was right/wrong |
 | SCOREBOARD | None | None | None | Silent standings display |
 | FINAL_RESULTS | Finale sequence | banter_before_final clip | Sting, drumroll, fanfare | Full 10-12s timeline |
 | FOLLOWUP_QUESTION (Sprint 2+) | music_followup_loop | voice_question_read clip | None | Quiz tempo music; question-read TTS |

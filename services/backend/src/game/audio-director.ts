@@ -19,6 +19,7 @@ import {
   buildMusicStopEvent,
   buildSfxPlayEvent,
   buildAudioPlayEvent,
+  buildAudioStopEvent,
   buildTtsPrefetchEvent,
   buildUiEffectTriggerEvent,
 } from '../utils/event-builder';
@@ -58,6 +59,12 @@ function emitVoiceClip(
   const clip = findClip(manifest, phraseId);
   if (!clip) return;
 
+  // Stop any active voice clip before starting new one to prevent interruption/overlap
+  const previousClip = session.state.audioState?.activeVoiceClip;
+  if (previousClip) {
+    events.push(buildAudioStopEvent(session.sessionId, previousClip.clipId, 50));
+  }
+
   const now = getServerTimeMs();
   session.state.audioState!.activeVoiceClip = {
     clipId: clip.clipId,
@@ -79,6 +86,12 @@ function emitRandomBanterClip(
 ): void {
   const clip = pickRandomClip(manifest, prefix);
   if (!clip) return;
+
+  // Stop any active voice clip before starting new one to prevent interruption/overlap
+  const previousClip = session.state.audioState?.activeVoiceClip;
+  if (previousClip) {
+    events.push(buildAudioStopEvent(session.sessionId, previousClip.clipId, 50));
+  }
 
   const now = getServerTimeMs();
   session.state.audioState!.activeVoiceClip = {
@@ -283,6 +296,21 @@ export function onRevealStart(session: Session): EventEnvelope[] {
  */
 export function onDestinationReveal(session: Session): EventEnvelope[] {
   return [buildSfxPlayEvent(session.sessionId, 'sfx_reveal', getServerTimeMs())];
+}
+
+/**
+ * After DESTINATION_RESULTS event — plays a build-up/anticipation SFX
+ * to make the results presentation more dramatic.
+ */
+export function onDestinationResultsPresent(session: Session): EventEnvelope[] {
+  const now = getServerTimeMs();
+  const sessionId = session.sessionId;
+  const events: EventEnvelope[] = [];
+
+  // Play a short anticipation/build-up SFX when results are shown
+  events.push(buildSfxPlayEvent(sessionId, 'sfx_reveal', now, 0.8));
+
+  return events;
 }
 
 /**

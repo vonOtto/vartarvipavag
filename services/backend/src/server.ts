@@ -41,6 +41,7 @@ import {
   onBeforeClue,
   onRevealStart,
   onDestinationReveal,
+  onDestinationResultsPresent,
   onDestinationResults,
   onFollowupStart,
   onFollowupQuestionPresent,
@@ -138,6 +139,16 @@ export function createWebSocketServer(server: HTTPServer) {
         ip,
       });
       ws.close(4001, 'Invalid token');
+      return;
+    }
+
+    // Reject duplicate TV connections
+    if (role === 'tv' && sessionStore.hasActiveTV(sessionId)) {
+      logger.warn('WebSocket connection rejected: TV already connected', {
+        sessionId,
+        ip,
+      });
+      ws.close(4009, 'TV already connected');
       return;
     }
 
@@ -798,6 +809,11 @@ async function handleHostNextClue(
 
       const resultsEvent = buildDestinationResultsEvent(sessionId, results);
       sessionStore.broadcastEventToSession(sessionId, resultsEvent);
+
+      // Audio: build-up SFX when results appear
+      onDestinationResultsPresent(session).forEach((e) =>
+        sessionStore.broadcastEventToSession(sessionId, e)
+      );
 
       // Wait 400 ms before result banter
       await new Promise((resolve) => setTimeout(resolve, 400));
@@ -1466,6 +1482,11 @@ async function autoAdvanceClue(sessionId: string): Promise<void> {
 
       const resultsEvent = buildDestinationResultsEvent(sessionId, results);
       sessionStore.broadcastEventToSession(sessionId, resultsEvent);
+
+      // Audio: build-up SFX when results appear
+      onDestinationResultsPresent(session).forEach((e) =>
+        sessionStore.broadcastEventToSession(sessionId, e)
+      );
 
       // Wait 400 ms before result banter
       await new Promise((resolve) => setTimeout(resolve, 400));
