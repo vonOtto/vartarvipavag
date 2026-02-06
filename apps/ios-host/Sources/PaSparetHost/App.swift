@@ -26,8 +26,8 @@ struct RootView: View {
 
     var body: some View {
         ZStack {
-            // Background gradient
-            Color.bgBase.ignoresSafeArea()
+            // Background: BG-0
+            Color.bg0.ignoresSafeArea()
 
             if state.sessionId == nil {
                 LaunchView()
@@ -59,30 +59,30 @@ struct LaunchView: View {
     @State private var errorMessage: String?
 
     var body: some View {
-        VStack(spacing: 48) {
+        VStack(spacing: Layout.space6) {
             Spacer()
 
-            // Title with gradient
-            VStack(spacing: 8) {
+            // Title section
+            VStack(spacing: Layout.space1) {
                 Text("tripto")
-                    .font(.gameShowHeading)
+                    .font(.h1)
                     .foregroundStyle(
                         LinearGradient(
-                            colors: [.accentOrange, .accentMint],
+                            colors: [.accOrange, .accMint],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         )
                     )
-                    .shadow(color: .accentOrange.opacity(0.5), radius: 16)
+                    .shadow(color: .accOrange.opacity(0.5), radius: 16)
 
                 Text("Big world. Small couch.")
-                    .font(.system(size: 16, weight: .regular, design: .rounded))
-                    .foregroundColor(.white.opacity(0.7))
+                    .font(.body)
+                    .foregroundColor(.txt2)
             }
-            .padding(.bottom, 24)
+            .padding(.bottom, Layout.space3)
 
             // Buttons
-            VStack(spacing: 16) {
+            VStack(spacing: Layout.space2) {
                 // Primary: Create game
                 Button {
                     #if os(iOS)
@@ -90,22 +90,15 @@ struct LaunchView: View {
                     #endif
                     Task { await createSession() }
                 } label: {
-                    HStack(spacing: 12) {
+                    HStack(spacing: Layout.space2) {
                         Image(systemName: "plus.circle.fill")
-                            .font(.system(size: 22, weight: .semibold))
+                            .font(.system(size: 20, weight: .semibold))
                         Text("Skapa nytt spel")
-                            .font(.buttonPrimary)
                     }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 16)
-                    .background(
-                        RoundedRectangle(cornerRadius: Layout.cornerRadiusLarge)
-                            .fill(Color.accentBlueBright)
-                    )
-                    .foregroundColor(.white)
                 }
+                .buttonStyle(.primary)
                 .disabled(busy)
-                .shadow(color: .accentBlue.opacity(0.4), radius: Layout.shadowRadius)
+                .shadow(color: .accOrange.opacity(0.4), radius: Layout.shadowRadius)
 
                 // Secondary: Join game
                 Button {
@@ -114,41 +107,30 @@ struct LaunchView: View {
                     #endif
                     showJoinSheet = true
                 } label: {
-                    HStack(spacing: 12) {
+                    HStack(spacing: Layout.space2) {
                         Image(systemName: "arrow.right.circle")
-                            .font(.system(size: 22, weight: .medium))
+                            .font(.system(size: 20, weight: .medium))
                         Text("Gå med i spel")
-                            .font(.buttonSecondary)
                     }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 16)
-                    .background(
-                        RoundedRectangle(cornerRadius: Layout.cornerRadiusLarge)
-                            .fill(Color.bgCard)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: Layout.cornerRadiusLarge)
-                                    .stroke(Color.white.opacity(0.2), lineWidth: 1.5)
-                            )
-                    )
-                    .foregroundColor(.white)
                 }
+                .buttonStyle(.secondary)
                 .disabled(busy)
             }
-            .padding(.horizontal, Layout.horizontalPadding)
+            .padding(.horizontal, Layout.space2)
 
             // Error message
             if let err = errorMessage {
                 Text(err)
-                    .font(.bodyRegular)
-                    .foregroundColor(.errorRedBright)
+                    .font(.body)
+                    .foregroundColor(.stateBad)
                     .multilineTextAlignment(.center)
-                    .padding(.horizontal, Layout.horizontalPadding)
+                    .padding(.horizontal, Layout.space2)
                     .transition(.opacity.combined(with: .scale))
             }
 
             Spacer()
         }
-        .padding(.vertical, Layout.verticalPadding)
+        .padding(.vertical, Layout.space3)
         .sheet(isPresented: $showJoinSheet) {
             JoinGameSheet(onJoin: { code in
                 showJoinSheet = false
@@ -234,23 +216,23 @@ struct JoinGameSheet: View {
 
     var body: some View {
         NavigationView {
-            VStack(spacing: 32) {
+            VStack(spacing: Layout.space4) {
                 // Header
-                VStack(spacing: 12) {
+                VStack(spacing: Layout.space2) {
                     Image(systemName: "qrcode.viewfinder")
                         .font(.system(size: 56, weight: .light))
-                        .foregroundColor(.accentBlueBright)
+                        .foregroundColor(.accMint)
 
                     Text("Ange join-kod")
-                        .font(.system(size: 28, weight: .bold))
-                        .foregroundColor(.primary)
+                        .font(.h2)
+                        .foregroundColor(.txt1)
 
                     Text("Koden visas på TV:n eller i värdens app")
-                        .font(.bodyRegular)
-                        .foregroundColor(.secondary)
+                        .font(.body)
+                        .foregroundColor(.txt2)
                         .multilineTextAlignment(.center)
                 }
-                .padding(.top, 32)
+                .padding(.top, Layout.space4)
 
                 // Code input
                 TextField("", text: $code)
@@ -262,16 +244,16 @@ struct JoinGameSheet: View {
                     .keyboardType(.asciiCapable)
                     #endif
                     .disableAutocorrection(true)
-                    .padding(.vertical, 20)
+                    .padding(.vertical, Layout.space3)
                     .background(
-                        RoundedRectangle(cornerRadius: Layout.cornerRadiusMedium)
-                            .fill(Color.gray.opacity(0.1))
+                        RoundedRectangle(cornerRadius: Layout.radiusM)
+                            .fill(Color.bg1)
                     )
                     .overlay(
-                        RoundedRectangle(cornerRadius: Layout.cornerRadiusMedium)
-                            .stroke(code.count == 6 ? Color.accentBlueBright : Color.clear, lineWidth: 2)
+                        RoundedRectangle(cornerRadius: Layout.radiusM)
+                            .stroke(code.count == 6 ? Color.accMint : Color.line, lineWidth: 2)
                     )
-                    .padding(.horizontal, Layout.horizontalPadding)
+                    .padding(.horizontal, Layout.space2)
                     .onChange(of: code) { newValue in
                         let filtered = newValue
                             .uppercased()
@@ -283,10 +265,10 @@ struct JoinGameSheet: View {
                     }
 
                 // Progress indicator
-                HStack(spacing: 8) {
+                HStack(spacing: Layout.space1) {
                     ForEach(0..<6, id: \.self) { index in
                         Circle()
-                            .fill(index < code.count ? Color.accentBlueBright : Color.gray.opacity(0.3))
+                            .fill(index < code.count ? Color.accMint : Color.line)
                             .frame(width: 10, height: 10)
                     }
                 }
@@ -301,20 +283,14 @@ struct JoinGameSheet: View {
                     onJoin(code)
                 } label: {
                     Text("Gå med")
-                        .font(.buttonPrimary)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 16)
-                        .background(
-                            RoundedRectangle(cornerRadius: Layout.cornerRadiusLarge)
-                                .fill(code.count == 6 ? Color.accentBlueBright : Color.gray.opacity(0.3))
-                        )
-                        .foregroundColor(.white)
                 }
+                .buttonStyle(.primary)
                 .disabled(code.count != 6)
-                .padding(.horizontal, Layout.horizontalPadding)
-                .padding(.bottom, 32)
+                .opacity(code.count == 6 ? 1.0 : 0.5)
+                .padding(.horizontal, Layout.space2)
+                .padding(.bottom, Layout.space4)
             }
-            .background(Color.white)
+            .background(Color.bg0)
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -323,6 +299,7 @@ struct JoinGameSheet: View {
                         hapticImpact(.light)
                         dismiss()
                     }
+                    .foregroundColor(.txt1)
                 }
             }
             #endif
@@ -337,21 +314,21 @@ struct ConnectingView: View {
 
     var body: some View {
         NavigationView {
-            VStack(spacing: 24) {
+            VStack(spacing: Layout.space3) {
                 ProgressView()
-                    .progressViewStyle(CircularProgressViewStyle(tint: .accentBlueBright))
+                    .progressViewStyle(CircularProgressViewStyle(tint: .accMint))
                     .scaleEffect(1.5)
 
                 Text(state.hasEverConnected ? "Återansluter…" : "Ansluter…")
-                    .font(.bodyLarge)
-                    .foregroundColor(.secondary)
+                    .font(.body)
+                    .foregroundColor(.txt2)
 
                 if let err = state.error {
                     Text(err)
-                        .foregroundColor(.errorRedBright)
-                        .font(.bodyRegular)
+                        .foregroundColor(.stateBad)
+                        .font(.body)
                         .multilineTextAlignment(.center)
-                        .padding(.horizontal, Layout.horizontalPadding)
+                        .padding(.horizontal, Layout.space2)
                 }
             }
             .navigationBarTitleDisplayMode(.inline)
@@ -367,7 +344,7 @@ struct ConnectingView: View {
                             Image(systemName: "chevron.left")
                             Text("Tillbaka")
                         }
-                        .foregroundColor(.accentBlueBright)
+                        .foregroundColor(.txt1)
                     }
                 }
             }
@@ -385,69 +362,69 @@ struct LobbyHostView: View {
         NavigationView {
             ScrollView {
                 VStack(spacing: 0) {
-                    // ── QR + join code ──
-                    VStack(spacing: 16) {
+                    // ── QR + join code card ──
+                    VStack(spacing: Layout.space2) {
                         if let url = state.joinURL {
                             QRCodeView(url: url, size: 200)
-                                .padding(16)
+                                .padding(Layout.space2)
                                 .background(Color.white)
-                                .cornerRadius(Layout.cornerRadiusMedium)
+                                .cornerRadius(Layout.radiusM)
                                 .shadow(color: .black.opacity(0.1), radius: 10)
                         }
                         if let code = state.joinCode {
                             Text(code)
                                 .font(.system(size: 42, weight: .bold, design: .monospaced))
                                 .tracking(4)
-                                .foregroundColor(.accentBlueBright)
+                                .foregroundColor(.accMint)
                         }
                         Text("Skanna för att ansluta")
-                            .font(.bodyRegular)
-                            .foregroundColor(.secondary)
+                            .font(.body)
+                            .foregroundColor(.txt2)
                     }
-                    .padding(.top, 32)
-                    .padding(.bottom, 24)
+                    .padding(.top, Layout.space4)
+                    .padding(.bottom, Layout.space3)
 
                 Divider()
-                    .background(Color.white.opacity(0.2))
-                    .padding(.vertical, 16)
+                    .background(Color.line)
+                    .padding(.vertical, Layout.space2)
 
                 // ── player list header ──
                 HStack {
                     Text("Spelare (\(state.players.count))")
-                        .font(.system(size: 20, weight: .semibold))
-                        .foregroundColor(.white.opacity(0.9))
+                        .font(.h2)
+                        .foregroundColor(.txt1)
                     Spacer()
                     if !state.players.isEmpty {
                         Image(systemName: "checkmark.circle.fill")
                             .font(.system(size: 18))
-                            .foregroundColor(.successGreen)
+                            .foregroundColor(.stateOk)
                     }
                 }
-                .padding(.horizontal, Layout.horizontalPadding)
+                .padding(.horizontal, Layout.space2)
 
                 // ── player cards ──
                 if state.players.isEmpty {
-                    VStack(spacing: 16) {
+                    VStack(spacing: Layout.space2) {
                         Image(systemName: "person.2.badge.gearshape")
                             .font(.system(size: 56, weight: .light))
-                            .foregroundColor(.white.opacity(0.2))
+                            .foregroundColor(.txt3)
                         Text("Väntar på spelare...")
-                            .font(.bodyLarge)
-                            .foregroundColor(.secondary)
+                            .font(.body)
+                            .foregroundColor(.txt2)
                     }
-                    .padding(.vertical, 48)
+                    .padding(.vertical, Layout.space6)
                 } else {
-                    VStack(spacing: 12) {
+                    VStack(spacing: Layout.space2) {
                         ForEach(state.players) { player in
                             PlayerCard(player: player)
                                 .transition(.scale.combined(with: .opacity))
                         }
                     }
-                    .padding(.horizontal, Layout.horizontalPadding)
-                    .padding(.top, 12)
+                    .padding(.horizontal, Layout.space2)
+                    .padding(.top, Layout.space2)
                 }
 
-                Spacer(minLength: 32)
+                Spacer(minLength: Layout.space4)
 
                 // ── start button ──
                 Button {
@@ -456,24 +433,18 @@ struct LobbyHostView: View {
                     #endif
                     state.sendStartGame()
                 } label: {
-                    HStack(spacing: 12) {
+                    HStack(spacing: Layout.space2) {
                         Image(systemName: "play.circle.fill")
                             .font(.system(size: 24, weight: .bold))
                         Text("Starta spelet")
-                            .font(.buttonPrimary)
                     }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 18)
-                    .background(
-                        RoundedRectangle(cornerRadius: Layout.cornerRadiusLarge)
-                            .fill(state.players.isEmpty ? Color.gray : Color.successGreen)
-                    )
-                    .foregroundColor(.white)
                 }
+                .buttonStyle(.primary)
                 .disabled(state.players.isEmpty)
-                .padding(.horizontal, Layout.horizontalPadding)
-                .padding(.bottom, 32)
-                .shadow(color: state.players.isEmpty ? .clear : .successGreen.opacity(0.4), radius: Layout.shadowRadius)
+                .opacity(state.players.isEmpty ? 0.5 : 1.0)
+                .padding(.horizontal, Layout.space2)
+                .padding(.bottom, Layout.space4)
+                .shadow(color: state.players.isEmpty ? .clear : .accOrange.opacity(0.4), radius: Layout.shadowRadius)
                 }
                 .animation(.spring(response: 0.4, dampingFraction: 0.75), value: state.players.count)
             }
@@ -493,32 +464,32 @@ struct LobbyHostView: View {
                             Image(systemName: "chevron.left")
                             Text("Tillbaka")
                         }
-                        .foregroundColor(.accentBlueBright)
+                        .foregroundColor(.txt1)
                     }
                 }
                 ToolbarItem(placement: .principal) {
                     Text("Lobby")
                         .font(.headline)
-                        .foregroundColor(.white)
+                        .foregroundColor(.txt1)
                 }
             }
         }
     }
 
     private var reconnectBanner: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: Layout.space1) {
             ProgressView()
                 .progressViewStyle(CircularProgressViewStyle(tint: .white))
                 .scaleEffect(0.7)
             Text("Återansluter…")
-                .font(.caption)
+                .font(.small)
                 .foregroundColor(.white)
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 8)
-        .background(Color.errorRed)
+        .padding(.horizontal, Layout.space2)
+        .padding(.vertical, Layout.space1)
+        .background(Color.stateBad)
         .cornerRadius(20)
-        .padding(.top, 12)
+        .padding(.top, Layout.space2)
     }
 }
 
@@ -528,20 +499,20 @@ struct PlayerCard: View {
     let player: Player
 
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: Layout.space2) {
             Circle()
-                .fill(player.isConnected ? Color.successGreen : Color.gray)
+                .fill(player.isConnected ? Color.stateOk : Color.txt3)
                 .frame(width: 10, height: 10)
             Text(player.name)
-                .font(.bodyLarge)
-                .foregroundColor(.white)
+                .font(.body)
+                .foregroundColor(.txt1)
             Spacer()
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 14)
+        .padding(.horizontal, Layout.space2)
+        .padding(.vertical, Layout.space2)
         .background(
-            RoundedRectangle(cornerRadius: Layout.cornerRadiusMedium)
-                .fill(Color.bgCard)
+            RoundedRectangle(cornerRadius: Layout.radiusM)
+                .fill(Color.bg1)
         )
         .opacity(player.isConnected ? 1.0 : 0.6)
     }
@@ -563,15 +534,15 @@ struct GameHostView: View {
                 Spacer()
                 statusBadge
             }
-            .padding(.horizontal, Layout.horizontalPadding)
-            .padding(.top, 16)
+            .padding(.horizontal, Layout.space2)
+            .padding(.top, Layout.space2)
 
             Divider()
-                .background(Color.white.opacity(0.2))
-                .padding(.top, 12)
+                .background(Color.line)
+                .padding(.top, Layout.space2)
 
             ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
+                VStack(alignment: .leading, spacing: Layout.space3) {
 
                     // ── destination (HOST-only secret) ──
                     if let name = state.destinationName {
@@ -594,7 +565,7 @@ struct GameHostView: View {
                         lockedAnswersSection
                     }
                 }
-                .padding(Layout.horizontalPadding)
+                .padding(Layout.space2)
             }
 
             Spacer()
@@ -606,21 +577,16 @@ struct GameHostView: View {
                 #endif
                 state.sendNextClue()
             } label: {
-                HStack(spacing: 12) {
+                HStack(spacing: Layout.space2) {
                     Text("Nästa ledtråd")
-                        .font(.buttonPrimary)
                     Image(systemName: "arrow.right.circle.fill")
                         .font(.system(size: 20, weight: .semibold))
                 }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 16)
-                .background(Color.accentBlueBright)
-                .foregroundColor(.white)
-                .cornerRadius(Layout.cornerRadiusLarge)
             }
-            .padding(.horizontal, Layout.horizontalPadding)
-            .padding(.bottom, 28)
-            .shadow(color: .accentBlue.opacity(0.4), radius: Layout.shadowRadius)
+            .buttonStyle(.primary)
+            .padding(.horizontal, Layout.space2)
+            .padding(.bottom, Layout.space4)
+            .shadow(color: .accOrange.opacity(0.4), radius: Layout.shadowRadius)
         }
         .overlay(alignment: .top) {
             if !state.isConnected { reconnectBanner }
@@ -632,119 +598,121 @@ struct GameHostView: View {
     private var levelBadge: some View {
         Text(state.levelPoints.map { "\($0) p" } ?? "–")
             .font(.system(size: 16, weight: .bold))
-            .padding(.horizontal, 14)
-            .padding(.vertical, 6)
-            .background(Color.goldYellow)
-            .foregroundColor(.black)
+            .padding(.horizontal, Layout.space2)
+            .padding(.vertical, Layout.space1)
+            .background(Color.stateWarn)
+            .foregroundColor(.bg0)
             .cornerRadius(20)
     }
 
     private var statusBadge: some View {
         HStack(spacing: 6) {
             Circle()
-                .fill(state.isConnected ? Color.successGreen : Color.errorRed)
+                .fill(state.isConnected ? Color.stateOk : Color.stateBad)
                 .frame(width: 8, height: 8)
             Text(state.isConnected ? "Ansluten" : "Återansluter…")
-                .font(.caption)
-                .foregroundColor(state.isConnected ? .successGreen : .errorRed)
+                .font(.small)
+                .foregroundColor(state.isConnected ? .stateOk : .stateBad)
         }
     }
 
     private func secretCard(_ name: String) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: Layout.space1) {
             Label("Destinationen (hemligt)", systemImage: "eye.slash.fill")
-                .font(.caption)
-                .foregroundColor(.secondary)
+                .font(.small)
+                .foregroundColor(.txt2)
                 .textCase(.uppercase)
             Text(name)
-                .font(.system(size: 24, weight: .bold))
-                .foregroundColor(.primary)
+                .font(.h2)
+                .foregroundColor(.txt1)
             if let country = state.destinationCountry {
                 Text(country)
-                    .font(.bodyRegular)
-                    .foregroundColor(.secondary)
+                    .font(.body)
+                    .foregroundColor(.txt2)
             }
         }
-        .padding(16)
+        .padding(Layout.space3)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.goldYellow.opacity(0.12))
-        .cornerRadius(Layout.cornerRadiusMedium)
+        .background(Color.stateWarn.opacity(0.15))
+        .cornerRadius(Layout.radiusL)
     }
 
     private func clueCard(_ clue: String) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: Layout.space1) {
             Label("Aktuell ledtråd", systemImage: "text.bubble")
-                .font(.caption)
-                .foregroundColor(.secondary)
+                .font(.small)
+                .foregroundColor(.txt2)
                 .textCase(.uppercase)
             Text(clue)
-                .font(.bodyLarge)
+                .font(.body)
+                .foregroundColor(.txt1)
         }
-        .padding(16)
+        .padding(Layout.space3)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.bgCard)
-        .cornerRadius(Layout.cornerRadiusMedium)
+        .background(Color.bg1)
+        .cornerRadius(Layout.radiusL)
     }
 
     private func brakeNotice(_ name: String) -> some View {
-        HStack(spacing: 8) {
+        HStack(spacing: Layout.space1) {
             Image(systemName: "exclamationmark.triangle.fill")
                 .font(.system(size: 16, weight: .semibold))
             Text("\(name) bromsade")
-                .font(.bodyRegular)
+                .font(.body)
                 .fontWeight(.semibold)
         }
         .foregroundColor(.white)
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .background(Color.errorRed)
-        .cornerRadius(Layout.cornerRadiusMedium)
+        .padding(.horizontal, Layout.space2)
+        .padding(.vertical, Layout.space2)
+        .background(Color.stateBad)
+        .cornerRadius(Layout.radiusM)
     }
 
     @ViewBuilder
     private var lockedAnswersSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: Layout.space2) {
             Label("Låsta svar (\(state.lockedAnswers.count))", systemImage: "lock.fill")
-                .font(.caption)
-                .foregroundColor(.secondary)
+                .font(.small)
+                .foregroundColor(.txt2)
                 .textCase(.uppercase)
 
             ForEach(state.lockedAnswers) { a in
                 let playerName = state.players.first(where: { $0.playerId == a.playerId })?.name ?? a.playerId
                 HStack {
                     Text(playerName)
-                        .font(.bodyRegular)
+                        .font(.body)
                         .fontWeight(.semibold)
+                        .foregroundColor(.txt1)
                     Spacer()
                     Text("\"\(a.answerText)\"")
-                        .font(.bodyRegular)
-                        .foregroundColor(.secondary)
+                        .font(.body)
+                        .foregroundColor(.txt2)
                     Text("@ \(a.lockedAtLevelPoints)")
-                        .font(.caption)
-                        .foregroundColor(.goldYellow)
+                        .font(.small)
+                        .foregroundColor(.stateWarn)
                 }
-                .padding(.vertical, 8)
-                .padding(.horizontal, 12)
-                .background(Color.bgCard)
-                .cornerRadius(Layout.cornerRadiusSmall)
+                .padding(.vertical, Layout.space1)
+                .padding(.horizontal, Layout.space2)
+                .background(Color.bg1)
+                .cornerRadius(Layout.radiusS)
             }
         }
     }
 
     private var reconnectBanner: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: Layout.space1) {
             ProgressView()
                 .progressViewStyle(CircularProgressViewStyle(tint: .white))
                 .scaleEffect(0.7)
             Text("Återansluter…")
-                .font(.caption)
+                .font(.small)
                 .foregroundColor(.white)
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 8)
-        .background(Color.errorRed)
+        .padding(.horizontal, Layout.space2)
+        .padding(.vertical, Layout.space1)
+        .background(Color.stateBad)
         .cornerRadius(20)
-        .padding(.top, 12)
+        .padding(.top, Layout.space2)
     }
 }
 
@@ -761,40 +729,42 @@ struct ScoreboardHostView: View {
             if let name = state.destinationName {
                 HStack {
                     Text("Svar: \(name)")
-                        .font(.system(size: 20, weight: .bold))
+                        .font(.h2)
+                        .foregroundColor(.txt1)
                     if let c = state.destinationCountry {
                         Text("(\(c))")
-                            .foregroundColor(.secondary)
+                            .font(.body)
+                            .foregroundColor(.txt2)
                     }
                 }
-                .padding(.top, 20)
+                .padding(.top, Layout.space3)
             }
 
             Divider()
-                .background(Color.white.opacity(0.2))
-                .padding(.vertical, 12)
+                .background(Color.line)
+                .padding(.vertical, Layout.space2)
 
             // ── results + scoreboard ──
             GeometryReader { geo in
                 if geo.size.width > 500 {
                     // iPad / landscape: side by side
-                    HStack(spacing: 24) {
+                    HStack(spacing: Layout.space3) {
                         resultsColumn
                         Divider()
-                            .background(Color.white.opacity(0.2))
+                            .background(Color.line)
                         standingsColumn
                     }
-                    .padding()
+                    .padding(Layout.space2)
                 } else {
                     // iPhone / portrait: stacked
                     ScrollView {
-                        VStack(alignment: .leading, spacing: 24) {
+                        VStack(alignment: .leading, spacing: Layout.space3) {
                             resultsColumn
                             Divider()
-                                .background(Color.white.opacity(0.2))
+                                .background(Color.line)
                             standingsColumn
                         }
-                        .padding()
+                        .padding(Layout.space2)
                     }
                 }
             }
@@ -810,33 +780,41 @@ struct ScoreboardHostView: View {
 
     @ViewBuilder
     private var resultsColumn: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: Layout.space2) {
             Text("Resultat")
-                .font(.system(size: 18, weight: .semibold))
+                .font(.h2)
+                .foregroundColor(.txt1)
 
             if state.results.isEmpty {
-                Text("Inga resultat än…").foregroundColor(.secondary)
+                Text("Inga resultat än…")
+                    .font(.body)
+                    .foregroundColor(.txt2)
             } else {
                 ForEach(state.results) { r in
-                    HStack(spacing: 10) {
+                    HStack(spacing: Layout.space2) {
                         Image(systemName: r.isCorrect ? "checkmark.circle.fill" : "xmark.circle.fill")
                             .font(.system(size: 18, weight: .bold))
-                            .foregroundColor(r.isCorrect ? .successGreen : .errorRed)
+                            .foregroundColor(r.isCorrect ? .stateOk : .stateBad)
                             .frame(width: 22)
-                        VStack(alignment: .leading, spacing: 1) {
-                            Text(r.playerName).font(.bodyRegular).fontWeight(.semibold)
-                            Text(r.answerText).font(.bodySmall).foregroundColor(.secondary)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(r.playerName)
+                                .font(.body)
+                                .fontWeight(.semibold)
+                                .foregroundColor(.txt1)
+                            Text(r.answerText)
+                                .font(.small)
+                                .foregroundColor(.txt2)
                         }
                         Spacer()
                         Text("+\(r.pointsAwarded)")
-                            .font(.bodyRegular)
+                            .font(.body)
                             .fontWeight(.bold)
-                            .foregroundColor(.goldYellow)
+                            .foregroundColor(.stateWarn)
                     }
-                    .padding(.vertical, 8)
-                    .padding(.horizontal, 12)
-                    .background(r.isCorrect ? Color.successGreen.opacity(0.1) : Color.bgCard)
-                    .cornerRadius(Layout.cornerRadiusSmall)
+                    .padding(.vertical, Layout.space1)
+                    .padding(.horizontal, Layout.space2)
+                    .background(r.isCorrect ? Color.stateOk.opacity(0.1) : Color.bg1)
+                    .cornerRadius(Layout.radiusS)
                 }
             }
         }
@@ -847,31 +825,36 @@ struct ScoreboardHostView: View {
 
     @ViewBuilder
     private var standingsColumn: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: Layout.space2) {
             Text("Poängtabell")
-                .font(.system(size: 18, weight: .semibold))
+                .font(.h2)
+                .foregroundColor(.txt1)
 
             if state.scoreboard.isEmpty {
-                Text("Inga poäng än…").foregroundColor(.secondary)
+                Text("Inga poäng än…")
+                    .font(.body)
+                    .foregroundColor(.txt2)
             } else {
                 ForEach(state.scoreboard.enumerated().map({ $0 }), id: \.offset) { idx, entry in
-                    HStack(spacing: 10) {
+                    HStack(spacing: Layout.space2) {
                         ZStack {
                             Circle()
                                 .fill(rankColor(idx + 1))
                                 .frame(width: 28, height: 28)
                             Text("\(idx + 1)")
                                 .font(.system(size: 13, weight: .bold))
-                                .foregroundColor(.black)
+                                .foregroundColor(.bg0)
                         }
                         Text(entry.name)
-                            .font(.bodyRegular)
+                            .font(.body)
+                            .foregroundColor(.txt1)
                         Spacer()
                         Text("\(entry.totalScore)")
-                            .font(.bodyRegular)
+                            .font(.body)
                             .fontWeight(.bold)
+                            .foregroundColor(.txt1)
                     }
-                    .padding(.vertical, 6)
+                    .padding(.vertical, Layout.space1)
                 }
             }
         }
@@ -883,24 +866,24 @@ struct ScoreboardHostView: View {
         case 1: return .goldYellow
         case 2: return .silverGray
         case 3: return .bronzeOrange
-        default: return .gray.opacity(0.4)
+        default: return .txt3
         }
     }
 
     private var reconnectBanner: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: Layout.space1) {
             ProgressView()
                 .progressViewStyle(CircularProgressViewStyle(tint: .white))
                 .scaleEffect(0.7)
             Text("Återansluter…")
-                .font(.caption)
+                .font(.small)
                 .foregroundColor(.white)
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 8)
-        .background(Color.errorRed)
+        .padding(.horizontal, Layout.space2)
+        .padding(.vertical, Layout.space1)
+        .background(Color.stateBad)
         .cornerRadius(20)
-        .padding(.top, 12)
+        .padding(.top, Layout.space2)
     }
 }
 
@@ -921,19 +904,20 @@ struct FollowupHostView: View {
                 if let fq = state.followupQuestion {
                     Text("Fråga \(fq.currentQuestionIndex + 1) / \(fq.totalQuestions)")
                         .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.txt1)
                 }
                 Spacer()
                 statusBadge
             }
-            .padding(.horizontal, Layout.horizontalPadding)
-            .padding(.top, 16)
+            .padding(.horizontal, Layout.space2)
+            .padding(.top, Layout.space2)
 
             Divider()
-                .background(Color.white.opacity(0.2))
-                .padding(.top, 12)
+                .background(Color.line)
+                .padding(.top, Layout.space2)
 
             ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
+                VStack(alignment: .leading, spacing: Layout.space3) {
 
                     // ── correct-answer card (HOST secret) ──
                     if let fq = state.followupQuestion {
@@ -963,7 +947,7 @@ struct FollowupHostView: View {
                         answersSection(fq.answersByPlayer)
                     }
                 }
-                .padding(Layout.horizontalPadding)
+                .padding(Layout.space2)
             }
 
             Spacer()
@@ -978,63 +962,65 @@ struct FollowupHostView: View {
     private var statusBadge: some View {
         HStack(spacing: 6) {
             Circle()
-                .fill(state.isConnected ? Color.successGreen : Color.errorRed)
+                .fill(state.isConnected ? Color.stateOk : Color.stateBad)
                 .frame(width: 8, height: 8)
             Text(state.isConnected ? "Ansluten" : "Återansluter…")
-                .font(.caption)
-                .foregroundColor(state.isConnected ? .successGreen : .errorRed)
+                .font(.small)
+                .foregroundColor(state.isConnected ? .stateOk : .stateBad)
         }
     }
 
     /// Green card: the correct answer — visible to HOST immediately.
     private func correctAnswerCard(_ answer: String) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: Layout.space1) {
             Label("RÄTT SVAR (hemligt)", systemImage: "checkmark.seal.fill")
-                .font(.caption)
-                .foregroundColor(.secondary)
+                .font(.small)
+                .foregroundColor(.txt2)
                 .textCase(.uppercase)
             Text(answer)
-                .font(.system(size: 20, weight: .bold))
-                .foregroundColor(.successGreen)
+                .font(.h2)
+                .foregroundColor(.stateOk)
         }
-        .padding(16)
+        .padding(Layout.space3)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.successGreen.opacity(0.1))
-        .cornerRadius(Layout.cornerRadiusMedium)
+        .background(Color.stateOk.opacity(0.15))
+        .cornerRadius(Layout.radiusL)
     }
 
     /// Gray card: the question text.
     private func questionCard(_ text: String) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: Layout.space1) {
             Label("Fråga", systemImage: "questionmark.circle")
-                .font(.caption)
-                .foregroundColor(.secondary)
+                .font(.small)
+                .foregroundColor(.txt2)
                 .textCase(.uppercase)
             Text(text)
-                .font(.bodyLarge)
+                .font(.body)
+                .foregroundColor(.txt1)
         }
-        .padding(16)
+        .padding(Layout.space3)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.bgCard)
-        .cornerRadius(Layout.cornerRadiusMedium)
+        .background(Color.bg1)
+        .cornerRadius(Layout.radiusL)
     }
 
     /// Horizontal row of option badges (read-only display).
     private func optionsBadges(_ options: [String]) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: Layout.space1) {
             Label("Alternativ", systemImage: "list.bullet")
-                .font(.caption)
-                .foregroundColor(.secondary)
+                .font(.small)
+                .foregroundColor(.txt2)
                 .textCase(.uppercase)
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 8) {
+                HStack(spacing: Layout.space1) {
                     ForEach(options, id: \.self) { opt in
                         Text(opt)
-                            .font(.bodySmall)
+                            .font(.small)
                             .fontWeight(.medium)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 6)
-                            .background(Color.bgCard)
+                            .foregroundColor(.txt1)
+                            .padding(.horizontal, Layout.space2)
+                            .padding(.vertical, Layout.space1)
+                            .background(Color.bg2)
                             .cornerRadius(20)
                     }
                 }
@@ -1044,10 +1030,10 @@ struct FollowupHostView: View {
 
     /// Live countdown derived from server timestamps.  Ticks via TimelineView.
     private func timerCard(_ fq: HostFollowupQuestion) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: Layout.space1) {
             Label("Timer", systemImage: "timer")
-                .font(.caption)
-                .foregroundColor(.secondary)
+                .font(.small)
+                .foregroundColor(.txt2)
                 .textCase(.uppercase)
             if let startMs = fq.timerStartMs, let durMs = fq.timerDurationMs {
                 let deadline  = Date(timeIntervalSince1970: Double(startMs + durMs) / 1000.0)
@@ -1059,117 +1045,119 @@ struct FollowupHostView: View {
                     let secs     = max(0, Int(deadline.timeIntervalSince(timeline.date)))
                     let urgent   = fraction < 0.2
 
-                    HStack(spacing: 12) {
+                    HStack(spacing: Layout.space2) {
                         GeometryReader { geo in
                             ZStack(alignment: .leading) {
-                                Capsule().fill(Color.secondary.opacity(0.15)).frame(height: 8)
+                                Capsule().fill(Color.line).frame(height: 8)
                                 Capsule()
-                                    .fill(urgent ? Color.errorRed : Color.accentBlueBright)
+                                    .fill(urgent ? Color.stateBad : Color.accMint)
                                     .frame(width: geo.size.width * fraction, height: 8)
                             }
                         }
                         .frame(height: 8)
 
                         Text("\(secs) s")
-                            .font(.bodyRegular)
+                            .font(.body)
                             .fontWeight(.bold)
-                            .foregroundColor(urgent ? .errorRed : .primary)
+                            .foregroundColor(urgent ? .stateBad : .txt1)
                             .frame(width: 38, alignment: .trailing)
                     }
                 }
             } else {
-                Text("—").foregroundColor(.secondary)
+                Text("—").foregroundColor(.txt2)
             }
         }
-        .padding(16)
+        .padding(Layout.space3)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.bgCard)
-        .cornerRadius(Layout.cornerRadiusMedium)
+        .background(Color.bg1)
+        .cornerRadius(Layout.radiusL)
     }
 
     /// Per-player answers as they trickle in (HOST-only, pre-results).
     private func answersSection(_ answers: [HostFollowupAnswerByPlayer]) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: Layout.space2) {
             Label("Svar (\(answers.count))", systemImage: "text.bubble")
-                .font(.caption)
-                .foregroundColor(.secondary)
+                .font(.small)
+                .foregroundColor(.txt2)
                 .textCase(.uppercase)
             ForEach(answers) { a in
                 HStack {
                     Text(a.playerName)
-                        .font(.bodyRegular)
+                        .font(.body)
                         .fontWeight(.semibold)
+                        .foregroundColor(.txt1)
                     Spacer()
                     Text("\"\(a.answerText)\"")
-                        .font(.bodyRegular)
-                        .foregroundColor(.secondary)
+                        .font(.body)
+                        .foregroundColor(.txt2)
                 }
-                .padding(.vertical, 8)
-                .padding(.horizontal, 12)
-                .background(Color.bgCard)
-                .cornerRadius(Layout.cornerRadiusSmall)
+                .padding(.vertical, Layout.space1)
+                .padding(.horizontal, Layout.space2)
+                .background(Color.bg1)
+                .cornerRadius(Layout.radiusS)
             }
         }
     }
 
     /// Results overlay: correct answer recap + per-player ✓/✗ + points.
     private func resultsSection(_ res: (correctAnswer: String, rows: [HostFollowupResultRow])) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 8) {
+        VStack(alignment: .leading, spacing: Layout.space2) {
+            HStack(spacing: Layout.space1) {
                 Text("Rätt svar:")
-                    .font(.bodyRegular)
-                    .foregroundColor(.secondary)
+                    .font(.body)
+                    .foregroundColor(.txt2)
                 Text(res.correctAnswer)
-                    .font(.bodyRegular)
+                    .font(.body)
                     .fontWeight(.bold)
-                    .foregroundColor(.successGreen)
+                    .foregroundColor(.stateOk)
             }
-            .padding(.vertical, 8)
-            .padding(.horizontal, 12)
-            .background(Color.successGreen.opacity(0.08))
-            .cornerRadius(Layout.cornerRadiusSmall)
+            .padding(.vertical, Layout.space1)
+            .padding(.horizontal, Layout.space2)
+            .background(Color.stateOk.opacity(0.1))
+            .cornerRadius(Layout.radiusS)
 
             Label("Resultat", systemImage: "list.star")
-                .font(.caption)
-                .foregroundColor(.secondary)
+                .font(.small)
+                .foregroundColor(.txt2)
                 .textCase(.uppercase)
             ForEach(res.rows) { row in
-                HStack(spacing: 10) {
+                HStack(spacing: Layout.space2) {
                     Image(systemName: row.isCorrect ? "checkmark.circle.fill" : "xmark.circle.fill")
                         .font(.system(size: 16, weight: .bold))
-                        .foregroundColor(row.isCorrect ? .successGreen : .errorRed)
+                        .foregroundColor(row.isCorrect ? .stateOk : .stateBad)
                         .frame(width: 20)
                     Text(row.playerName)
-                        .font(.bodyRegular)
+                        .font(.body)
                         .fontWeight(.semibold)
+                        .foregroundColor(.txt1)
                     Spacer()
                     Text("+\(row.pointsAwarded)")
-                        .font(.bodyRegular)
+                        .font(.body)
                         .fontWeight(.bold)
-                        .foregroundColor(.goldYellow)
+                        .foregroundColor(.stateWarn)
                 }
-                .padding(.vertical, 8)
-                .padding(.horizontal, 12)
-                .background(row.isCorrect ? Color.successGreen.opacity(0.1) : Color.bgCard)
-                .cornerRadius(Layout.cornerRadiusSmall)
+                .padding(.vertical, Layout.space1)
+                .padding(.horizontal, Layout.space2)
+                .background(row.isCorrect ? Color.stateOk.opacity(0.1) : Color.bg1)
+                .cornerRadius(Layout.radiusS)
             }
         }
     }
 
     private var reconnectBanner: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: Layout.space1) {
             ProgressView()
                 .progressViewStyle(CircularProgressViewStyle(tint: .white))
                 .scaleEffect(0.7)
             Text("Återansluter…")
-                .font(.caption)
+                .font(.small)
                 .foregroundColor(.white)
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 8)
-        .background(Color.errorRed)
+        .padding(.horizontal, Layout.space2)
+        .padding(.vertical, Layout.space1)
+        .background(Color.stateBad)
         .cornerRadius(20)
-        .padding(.top, 12)
+        .padding(.top, Layout.space2)
     }
 }
 
