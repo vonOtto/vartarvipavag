@@ -99,3 +99,39 @@ The tvOS app can **create or join** sessions:
 In both cases, only **one TV** is allowed per session. If a second tvOS device tries to join, the backend returns a 409 Conflict error.
 
 The **"Nytt spel"** button in the lobby calls `appState.resetSession()`, disconnects the WebSocket, and returns to the launch screen for a fresh start.
+
+## App Icon
+
+The tvOS app uses the Tripto icon located at `/Users/oskar/pa-sparet-party/img/icon.png` (1024x1024 PNG).
+
+### Icon Setup
+
+The icon is configured in the asset catalog:
+- **Location:** `Sources/PaSparetTV/Resources/Assets.xcassets/App Icon & Top Shelf Image.brandassets/`
+- **App Icon:** Single-layer icon using the Tripto icon (Front layer)
+- **Top Shelf Image:** Uses the same icon as placeholder
+
+### tvOS Icon Requirements
+
+tvOS supports layered icons (parallax effect) with Front, Middle, and Back layers. The current setup uses a single-layer icon for simplicity.
+
+To create a full layered icon:
+1. Open the project in Xcode
+2. Navigate to Assets.xcassets
+3. Select "App Icon & Top Shelf Image"
+4. Add Middle and Back layers in the App Icon imagestack
+5. Export layered assets from design tools (Sketch, Figma, etc.)
+
+For more details, see Apple's Human Interface Guidelines:
+- tvOS App Icons: https://developer.apple.com/design/human-interface-guidelines/tvos/icons-and-images/app-icon/
+- Layered Images: https://developer.apple.com/design/human-interface-guidelines/tvos/icons-and-images/layered-images/
+
+### Icon Sizes
+
+| Asset | Size | Notes |
+|-------|------|-------|
+| App Icon | 1280x768 | Main app icon (layered) |
+| Top Shelf Image | 2320x720 | Shown when app is on top shelf |
+| Small Icon | 400x240 | Used in various UI contexts |
+
+The current 1024x1024 icon is used as a placeholder and will be scaled by tvOS as needed.
