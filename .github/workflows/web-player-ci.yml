@@ -14,14 +14,14 @@ on:
       - 'contracts/**'
       - '.github/workflows/web-player-ci.yml'
 
-defaults:
-  run:
-    working-directory: apps/web-player
-
 jobs:
   build:
     name: Build & Type Check
     runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: apps/web-player
 
     steps:
       - name: Checkout code
