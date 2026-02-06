@@ -57,29 +57,53 @@ struct LaunchView: View {
     @State private var joinCode = ""
     @State private var busy = false
     @State private var errorMessage: String?
+    @State private var heroScale: CGFloat = 1.0
+    @State private var heroOffset: CGFloat = 0
 
     var body: some View {
-        VStack(spacing: Layout.space6) {
-            Spacer()
+        ZStack {
+            // Twinkling stars background
+            TwinklingStarsView()
 
-            // Title section
-            VStack(spacing: Layout.space1) {
-                Text("tripto")
-                    .font(.h1)
-                    .foregroundStyle(
-                        LinearGradient(
-                            colors: [.accOrange, .accMint],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
+            VStack(spacing: Layout.space6) {
+                Spacer()
+
+                // Hero image with floating animation
+                Image("hero")
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 240)
+                    .scaleEffect(heroScale)
+                    .offset(y: heroOffset)
+                    .onAppear {
+                        withAnimation(
+                            .easeInOut(duration: 2.5)
+                            .repeatForever(autoreverses: true)
+                        ) {
+                            heroScale = 1.05
+                            heroOffset = -8
+                        }
+                    }
+                    .padding(.bottom, Layout.space2)
+
+                // Title section
+                VStack(spacing: Layout.space1) {
+                    Text("tripto")
+                        .font(.h1)
+                        .foregroundStyle(
+                            LinearGradient(
+                                colors: [.accOrange, .accMint],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
                         )
-                    )
-                    .shadow(color: .accOrange.opacity(0.5), radius: 16)
+                        .shadow(color: .accOrange.opacity(0.5), radius: 16)
 
-                Text("Big world. Small couch.")
-                    .font(.body)
-                    .foregroundColor(.txt2)
-            }
-            .padding(.bottom, Layout.space3)
+                    Text("Big world. Small couch.")
+                        .font(.body)
+                        .foregroundColor(.txt2)
+                }
+                .padding(.bottom, Layout.space3)
 
             // Buttons
             VStack(spacing: Layout.space2) {
@@ -128,14 +152,15 @@ struct LaunchView: View {
                     .transition(.opacity.combined(with: .scale))
             }
 
-            Spacer()
-        }
-        .padding(.vertical, Layout.space3)
-        .sheet(isPresented: $showJoinSheet) {
-            JoinGameSheet(onJoin: { code in
-                showJoinSheet = false
-                Task { await joinSession(code: code) }
-            })
+                Spacer()
+            }
+            .padding(.vertical, Layout.space3)
+            .sheet(isPresented: $showJoinSheet) {
+                JoinGameSheet(onJoin: { code in
+                    showJoinSheet = false
+                    Task { await joinSession(code: code) }
+                })
+            }
         }
     }
 
@@ -1202,3 +1227,61 @@ func hapticNotification(_ type: Any) {}
 enum HapticStyle { case light, medium, heavy }
 enum HapticNotificationType { case success, error, warning }
 #endif
+
+// MARK: – twinkling stars animation ──────────────────────────────────────────
+
+/// Subtle twinkling stars background for LaunchView.
+struct TwinklingStarsView: View {
+    @State private var starStates: [StarState] = []
+
+    struct StarState: Identifiable {
+        let id = UUID()
+        let x: CGFloat
+        let y: CGFloat
+        let size: CGFloat
+        let delay: Double
+        var opacity: Double = 0.0
+    }
+
+    var body: some View {
+        GeometryReader { geo in
+            ZStack {
+                ForEach(starStates) { star in
+                    Circle()
+                        .fill(Color.accMint)
+                        .frame(width: star.size, height: star.size)
+                        .opacity(star.opacity)
+                        .position(x: star.x, y: star.y)
+                        .blur(radius: 1.0)
+                }
+            }
+            .onAppear {
+                generateStars(in: geo.size)
+                animateStars()
+            }
+        }
+    }
+
+    private func generateStars(in size: CGSize) {
+        starStates = (0..<8).map { i in
+            StarState(
+                x: CGFloat.random(in: 0...size.width),
+                y: CGFloat.random(in: 0...size.height),
+                size: CGFloat.random(in: 2...4),
+                delay: Double(i) * 0.3
+            )
+        }
+    }
+
+    private func animateStars() {
+        for i in starStates.indices {
+            withAnimation(
+                .easeInOut(duration: 1.5)
+                .delay(starStates[i].delay)
+                .repeatForever(autoreverses: true)
+            ) {
+                starStates[i].opacity = Double.random(in: 0.3...0.7)
+            }
+        }
+    }
+}
