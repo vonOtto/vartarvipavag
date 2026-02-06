@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document defines the complete audio system for På Spåret Party Edition, including music layers, sound effects, ducking behavior, and the FINAL_RESULTS timeline.
+This document defines the complete audio system for Tripto Party Edition, including music layers, sound effects, ducking behavior, and the FINAL_RESULTS timeline.
 
 **Version**: 1.3.3 (Sprint 1.3)
 **Status**: TTS voice layer activated; clue-read (`voice_clue_read_*`), question-read (`voice_question_read_*`) and round-intro (`banter_round_intro`) TTS enabled; followup music active; base infrastructure from Sprint 1.1
@@ -207,7 +207,7 @@ To avoid latency during gameplay:
   "voiceLines": [
     {
       "phraseId": "intro_001",
-      "text": "Välkomna till På Spåret! Låt oss sätta igång resan.",
+      "text": "Välkomna till Tripto! Låt oss sätta igång resan.",
       "voice": "swedish_host_01"
     },
     {

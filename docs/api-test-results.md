@@ -18,7 +18,7 @@ curl -s http://localhost:3000/
 **Result: PASS**
 ```json
 {
-  "service": "På Spåret Party Edition - Backend",
+  "service": "Tripto Party Edition - Backend",
   "version": "1.0.0",
   "endpoints": {
     "health": "GET /health",

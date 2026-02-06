@@ -1,4 +1,4 @@
-# På Spåret Party Edition — TTS Integration
+# Tripto Party Edition — TTS Integration
 
 **Service:** ai-content
 **Component:** ElevenLabs TTS Client
@@ -22,7 +22,7 @@
 
 ## 1. Overview
 
-The ai-content service provides Text-to-Speech (TTS) generation for På Spåret Party Edition using the **ElevenLabs API**. It features intelligent caching, graceful degradation, and batch generation support.
+The ai-content service provides Text-to-Speech (TTS) generation for Tripto Party Edition using the **ElevenLabs API**. It features intelligent caching, graceful degradation, and batch generation support.
 
 ### 1.1 Key Features
 
@@ -126,7 +126,7 @@ POST /tts
 Content-Type: application/json
 
 {
-  "text": "Välkommen till På Spåret!",
+  "text": "Välkommen till Tripto!",
   "voiceId": "21m00Tjjv0mMvdtTrqFLmxvi"  // optional, defaults to ELEVENLABS_DEFAULT_VOICE_ID
 }
 ```
@@ -158,7 +158,7 @@ Content-Type: application/json
   "voiceLines": [
     {
       "phraseId": "intro",
-      "text": "Välkommen till På Spåret!",
+      "text": "Välkommen till Tripto!",
       "voiceId": "21m00Tjjv0mMvdtTrqFLmxvi"
     },
     {
@@ -236,10 +236,10 @@ filename  = "tts_" + cache_key + ".mp3"
 
 **Example:**
 ```javascript
-text    = "Välkommen till På Spåret!"
+text    = "Välkommen till Tripto!"
 voiceId = "21m00Tjjv0mMvdtTrqFLmxvi"
 
-hash    = sha256("Välkommen till På Spåret!\021m00Tjjv0mMvdtTrqFLmxvi")
+hash    = sha256("Välkommen till Tripto!\021m00Tjjv0mMvdtTrqFLmxvi")
         = "a1b2c3d4e5f6g7h8..." (truncated to 16 hex chars)
 
 filename = "tts_a1b2c3d4e5f6g7h8.mp3"
@@ -268,7 +268,7 @@ filename = "tts_a1b2c3d4e5f6g7h8.mp3"
 
 **Example Savings:**
 ```
-"Välkommen till På Spåret!" = 27 characters
+"Välkommen till Tripto!" = 27 characters
 Used in 100 games = 2,700 characters charged
 With cache: 27 characters charged (99% savings)
 ```
@@ -321,7 +321,7 @@ npm run dev
 # In another terminal:
 curl -X POST http://localhost:3001/tts \
   -H "Content-Type: application/json" \
-  -d '{"text":"Välkommen till På Spåret!","voiceId":"21m00Tjjv0mMvdtTrqFLmxvi"}'
+  -d '{"text":"Välkommen till Tripto!","voiceId":"21m00Tjjv0mMvdtTrqFLmxvi"}'
 
 # Play the audio:
 open /tmp/pa-sparet-tts-cache/tts_*.mp3
@@ -400,7 +400,7 @@ npm run dev
 ```bash
 curl -X POST http://localhost:3001/tts \
   -H "Content-Type: application/json" \
-  -d '{"text":"Välkommen till På Spåret!"}' | jq
+  -d '{"text":"Välkommen till Tripto!"}' | jq
 ```
 
 **Expected output:**
@@ -430,7 +430,7 @@ curl -X POST http://localhost:3001/tts/batch \
   -d '{
     "roundId": "test_round",
     "voiceLines": [
-      {"phraseId":"intro","text":"Välkommen till På Spåret!","voiceId":"21m00Tjjv0mMvdtTrqFLmxvi"},
+      {"phraseId":"intro","text":"Välkommen till Tripto!","voiceId":"21m00Tjjv0mMvdtTrqFLmxvi"},
       {"phraseId":"clue_1","text":"Denna stad grundades år 1602.","voiceId":"21m00Tjjv0mMvdtTrqFLmxvi"}
     ]
   }' | jq

@@ -1,20 +1,50 @@
-# Banter & Voice Lines v1.1.1
+# Banter & Voice Lines v1.2.0
 
 ## Overview
 
-This document contains natural Swedish TV-host phrases for different game moments. These phrases add personality and energy to the game show, inspired by "På Spåret" style.
+This document contains natural Swedish TV-host phrases for different game moments. These phrases add personality and energy to the game show, inspired by "Tripto" style.
 
-**Version**: 1.1.1 (Sprint 1.3 — clue-read + question-read TTS added; banter_round_intro added)
-**Status**: Content complete; clue-read, question-read and round-intro phrases active for TTS pre-generation
+**Version**: 1.2.0 (Sprint 1.3 — SSML breaks added for natural timing)
+**Status**: Content complete with SSML markup; improved pacing and naturalness
 
 ---
 
 ## Implementation Notes
 
 - **Sprint 1.1**: Display text on TV screen only
-- **Sprint 2+**: Generate audio using ElevenLabs TTS, pre-generated and cached per round
+- **Sprint 1.3+**: Generate audio using ElevenLabs TTS with SSML breaks for natural pauses
+- All templates include `<break time="XXXms"/>` tags for timing control
 - Server selects appropriate phrase based on game moment and broadcasts via VOICE_LINE event
 - See `audio_timeline.md` for technical integration details
+- See `services/ai-content/src/script-templates.ts` for complete SSML templates
+
+---
+
+## SSML Timing Guidelines
+
+All voice lines now include SSML `<break>` tags for natural pauses. ElevenLabs TTS supports this markup.
+
+### Pause Types
+
+- **Short pauses (300-500ms)**: Between sentences in the same thought
+- **Medium pauses (700-1000ms)**: Between thought transitions
+- **Long pauses (1500-2000ms)**: Before dramatic moments (reveal, winner)
+
+### Example
+
+```xml
+Här kommer frågan<break time="700ms"/> Vilket år grundades Stockholm?
+```
+
+This creates a natural breathing space after "frågan" before delivering the question.
+
+### Benefits
+
+1. More natural TV-host rhythm
+2. Prevents phrases from running together
+3. Allows listeners to process information
+4. Builds tension before key moments
+5. Matches professional broadcasting style
 
 ---
 

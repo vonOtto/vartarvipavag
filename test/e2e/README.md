@@ -1,6 +1,6 @@
 # E2E Test Suite - Quick Start
 
-End-to-end test suite for På Spåret Party Edition.
+End-to-end test suite for Tripto Party Edition.
 
 ## Quick Start
 

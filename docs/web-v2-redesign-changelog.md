@@ -17,7 +17,7 @@ Complete visual overhaul of web-player to match tvOS lobby redesign aesthetic, a
 ### tvOS-Inspired, Web-Optimized
 
 **Matches tvOS:**
-- Bold "PÅ SPÅRET" title with gradient text
+- Bold "TRIPTO" title with gradient text
 - Card-based design with depth and shadows
 - Enhanced player cards with visual hierarchy
 - Professional game-show energy
@@ -69,12 +69,12 @@ Complete visual overhaul of web-player to match tvOS lobby redesign aesthetic, a
 ### 1. Typography & Branding
 
 **Before:**
-- Plain "På Spåret" text
+- Plain "Tripto" text
 - No visual hierarchy
 - Functional but bland
 
 **After:**
-- "PÅ SPÅRET" in bold gradient text
+- "TRIPTO" in bold gradient text
 - "PARTY EDITION" subtitle
 - Subtle breathing animation (3s cycle)
 - Text gradient: accent-blue-bright → accent-blue

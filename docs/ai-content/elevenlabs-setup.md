@@ -1,6 +1,6 @@
 # ElevenLabs API Setup Guide
 
-**Purpose:** Step-by-step guide to set up ElevenLabs API for På Spåret TTS integration.
+**Purpose:** Step-by-step guide to set up ElevenLabs API for Tripto TTS integration.
 **Last updated:** 2026-02-05
 **Estimated time:** 15 minutes
 
@@ -44,10 +44,10 @@
 - 100,000 characters/month
 - Recommended for production
 
-**Estimate for På Spåret:**
+**Estimate for Tripto:**
 ```
 Single round content:
-- Intro: "Välkommen till På Spåret!" (~27 chars)
+- Intro: "Välkommen till Tripto!" (~27 chars)
 - 5 clues: ~50 chars each = 250 chars
 - 2 followups: ~40 chars each = 80 chars
 - Total per round: ~357 chars
@@ -122,7 +122,7 @@ Add to `.gitignore` (already included in project):
 
 1. In Voice Library, select a voice
 2. Click "Try it"
-3. Enter Swedish text: `"Välkommen till På Spåret!"`
+3. Enter Swedish text: `"Välkommen till Tripto!"`
 4. Click "Generate"
 5. Listen to audio
 6. Repeat for different voices
@@ -214,7 +214,7 @@ Open new terminal:
 ```bash
 curl -X POST http://localhost:3001/tts \
   -H "Content-Type: application/json" \
-  -d '{"text":"Välkommen till På Spåret!"}' | jq
+  -d '{"text":"Välkommen till Tripto!"}' | jq
 ```
 
 **Expected response:**
@@ -251,7 +251,7 @@ Generate same text again:
 ```bash
 curl -X POST http://localhost:3001/tts \
   -H "Content-Type: application/json" \
-  -d '{"text":"Välkommen till På Spåret!"}'
+  -d '{"text":"Välkommen till Tripto!"}'
 ```
 
 **Expected:** Instant response (< 50ms) because clip is cached
@@ -261,11 +261,11 @@ curl -X POST http://localhost:3001/tts \
 In the terminal running `npm run dev`, you should see:
 
 ```
-[tts] Generating: "Välkommen till På Spåret!"
+[tts] Generating: "Välkommen till Tripto!"
 [tts] Cache MISS: tts_a1b2c3d4e5f6g7h8
 [tts] ElevenLabs API success (2.3s)
 
-[tts] Generating: "Välkommen till På Spåret!"
+[tts] Generating: "Välkommen till Tripto!"
 [tts] Cache HIT: tts_a1b2c3d4e5f6g7h8
 ```
 
@@ -286,7 +286,7 @@ ElevenLabs charges per **character** (not word or clip).
 
 **Example:**
 ```
-"Välkommen till På Spåret!" = 27 characters
+"Välkommen till Tripto!" = 27 characters
 (V-ä-l-k-o-m-m-e-n-[space]-t-i-l-l-[space]-P-å-[space]-S-p-å-r-e-t-!)
 ```
 

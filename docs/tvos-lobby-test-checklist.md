@@ -10,11 +10,11 @@
 
 ### Title & Branding
 
-- [ ] Game show title "PÅ SPÅRET" displays in large bold font (96 pt)
+- [ ] Game show title "TRIPTO" displays in large bold font (96 pt)
 - [ ] Title has gradient effect (blue-to-blue gradient visible)
 - [ ] Title has glow/shadow effects (subtle blue glow around text)
 - [ ] Title animates with breathing effect (subtle scale + opacity pulse, 2s cycle)
-- [ ] Subtitle "PARTY EDITION" displays below title (28 pt, letter-spaced)
+- [ ] Tagline "Big world. Small couch." displays below title (28 pt, letter-spaced)
 
 ### Background
 

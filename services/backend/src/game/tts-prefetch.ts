@@ -8,80 +8,49 @@ import { Session } from '../store/session-store';
 import { TtsManifestEntry } from '../types/state';
 import { logger } from '../utils/logger';
 
+// Import förbättrade script templates med SSML breaks
+import {
+  ROUND_INTRO_TEMPLATES,
+  BEFORE_CLUE_TEMPLATES,
+  AFTER_BRAKE_TEMPLATES,
+  BEFORE_REVEAL_TEMPLATES,
+  REVEAL_CORRECT_TEMPLATES,
+  REVEAL_INCORRECT_TEMPLATES,
+  BEFORE_FINAL_TEMPLATES,
+  pickRandom,
+  buildClueRead,
+  buildQuestionRead,
+  buildFollowupIntro,
+  estimateDuration,
+} from './script-templates';
+
 const AI_CONTENT_URL = process.env.AI_CONTENT_URL ?? 'http://localhost:3001';
 
-// ── banter phrase pool (contracts/banter.md) ───────────────────────────────
+// ── banter phrase pool — nu med förbättrade templates från script-templates.ts
 // Keys = phraseId prefixes that audio-director.ts searches via startsWith().
-// Values = Swedish texts from banter.md — one is picked randomly per round.
+// Values = Swedish texts with SSML breaks for natural timing.
 const BANTER_POOL: Record<string, string[]> = {
-  banter_round_intro: [
-    'Var tror ni vi ska? Beredda på resan?',
-    'En ny resa väntar. Vart är vi på väg?',
-    'Dags att ge er en ledtråd. Vart är vi på väg?',
-    'Härbärbär… Vilken resa blir det här?',
-  ],
-  // NEW: before_clue (contracts/banter.md section 2)
-  banter_before_clue: [
-    'Nästa ledtråd kommer här...',
-    'Kanske blir det tydligare nu?',
-    'Lyssna noga på den här!',
-    'Den här kan vara avgörande.',
-    'Här får ni nästa pusselbiten.',
-  ],
-  banter_after_brake: [
-    'Där bromsar vi! Låt se vad ni kommit fram till.',
-    'Och där fick vi broms! Vad säger ni?',
-    'Stopp där! Någon har en teori.',
-    'Tåget stannar! Har ni knäckt det?',
-  ],
-  banter_before_reveal: [
-    'Nu ska vi se om ni har rätt…',
-    'Spänning! Är det här svaret?',
-    'Dags för avslöjandet…',
-    'Låt oss kolla om ni är på rätt spår!',
-  ],
-  banter_reveal_correct: [
-    'Helt rätt! Bra jobbat!',
-    'Precis! Det var ju utmärkt.',
-    'Ja, självklart! Ni är på gång.',
-  ],
-  banter_reveal_incorrect: [
-    'Tyvärr inte det vi letade efter.',
-    'Aj då, det var inte rätt den här gången.',
-    'Nej, men det var ett tappert försök!',
-  ],
-  banter_before_final: [
-    'Nu närmar vi oss målstationen. Vem vinner kvällens resa?',
-    'Dags att räkna poängen! Vem tar hem segern ikväll?',
-    'Slutstationen är här. Nu ska vi se vem som vunnit!',
-  ],
+  banter_round_intro: ROUND_INTRO_TEMPLATES,
+  banter_before_clue: BEFORE_CLUE_TEMPLATES,
+  banter_after_brake: AFTER_BRAKE_TEMPLATES,
+  banter_before_reveal: BEFORE_REVEAL_TEMPLATES,
+  banter_reveal_correct: REVEAL_CORRECT_TEMPLATES,
+  banter_reveal_incorrect: REVEAL_INCORRECT_TEMPLATES,
+  banter_before_final: BEFORE_FINAL_TEMPLATES,
 };
-
-function pick<T>(arr: T[]): T {
-  return arr[Math.floor(Math.random() * arr.length)];
-}
 
 function buildBanterLines(): Array<{ phraseId: string; text: string }> {
   const lines: Array<{ phraseId: string; text: string }> = [];
   for (const [prefix, phrases] of Object.entries(BANTER_POOL)) {
-    lines.push({ phraseId: `${prefix}_001`, text: pick(phrases) });
-    lines.push({ phraseId: `${prefix}_002`, text: pick(phrases) });
+    lines.push({ phraseId: `${prefix}_001`, text: pickRandom(phrases) });
+    lines.push({ phraseId: `${prefix}_002`, text: pickRandom(phrases) });
   }
   return lines;
 }
 
-// ── variant B templates keyed by clue level ─────────────────────────────────
-const CLUE_VARIANT_B: Record<number, string> = {
-  10: 'Ledtråd på nivå tio',
-  8:  'Ledtråd på nivå åtta',
-  6:  'Ledtråd på nivå sex',
-  4:  'Ledtråd på nivå fyra',
-  2:  'Ledtråd på nivå två',
-};
-
 /**
  * Generates a single voice_clue_<level> TTS clip on-demand.
- * Interpolates the banter template with actual clueText,
+ * Uses script-templates.ts buildClueRead() for natural phrasing with SSML breaks.
  * POSTs to ai-content /tts, and adds the clip to session._ttsManifest.
  * Returns the clip entry (or null on failure).
  */
@@ -90,21 +59,8 @@ export async function generateClueVoice(
   clueLevel: number,
   clueText: string
 ): Promise<TtsManifestEntry | null> {
-  // Pick variant A or B at random (contracts/banter.md §7 selection rule)
-  const useVariantA = Math.random() < 0.5;
-
-  const text = useVariantA
-    ? `Ledtråden — ${clueLevel} poäng: ${clueText}`
-    : (() => {
-        const prefix = CLUE_VARIANT_B[clueLevel];
-        if (!prefix) {
-          logger.warn('generateClueVoice: unknown clueLevel for variant B', { sessionId: session.sessionId, clueLevel });
-          return null;
-        }
-        return `${prefix}: ${clueText}`;
-      })();
-
-  if (!text) return null;
+  // Use new script template with SSML breaks
+  const text = buildClueRead(clueLevel, clueText);
 
   try {
     const res = await fetch(`${AI_CONTENT_URL}/tts`, {
@@ -156,21 +112,10 @@ export async function generateClueVoice(
   }
 }
 
-// ── question-read templates (contracts/banter.md §8) ────────────────────────
-// Variants A/C use phraseId _0, variants B/D use phraseId _1.
-// Each variant is { template, slotSuffix }.
-const QUESTION_VARIANTS: { template: (q: string) => string; slotSuffix: number }[] = [
-  { template: (q) => `Frågan är: ${q}`,            slotSuffix: 0 }, // A
-  { template: (q) => `Nästa fråga: ${q}`,          slotSuffix: 1 }, // B
-  { template: (q) => `Lyssna på frågan: ${q}`,     slotSuffix: 0 }, // C
-  { template: (q) => `Okej, frågan blir: ${q}`,    slotSuffix: 1 }, // D
-];
-
 /**
  * Generates a voice_question_<index> TTS clip on-demand.
- * Picks a random variant from banter.md §8, interpolates with
- * actual questionText, POSTs to ai-content /tts, and adds the
- * clip to session._ttsManifest.
+ * Uses script-templates.ts buildQuestionRead() for natural phrasing with SSML breaks.
+ * POSTs to ai-content /tts, and adds the clip to session._ttsManifest.
  * Returns the clip entry (or null on failure).
  */
 export async function generateQuestionVoice(
@@ -178,9 +123,8 @@ export async function generateQuestionVoice(
   questionIndex: number,
   questionText: string
 ): Promise<TtsManifestEntry | null> {
-  // Pick one of the four variants at random
-  const variant = QUESTION_VARIANTS[Math.floor(Math.random() * QUESTION_VARIANTS.length)];
-  const text = variant.template(questionText);
+  // Use new script template with SSML breaks
+  const { text } = buildQuestionRead(questionText);
 
   try {
     const res = await fetch(`${AI_CONTENT_URL}/tts`, {
@@ -226,18 +170,17 @@ export async function generateQuestionVoice(
 
 /**
  * Generates a one-off TTS clip for the followup-intro bridge phrase
- * "Nu ska vi se vad ni kan om {destinationName}".
+ * Uses script-templates.ts buildFollowupIntro() for natural phrasing with SSML breaks.
  * Follows the same POST /tts pattern as generateClueVoice / generateQuestionVoice.
  * Returns the manifest entry (or null when ai-content is unreachable).
- * Duration fallback: ~150 ms per word, minimum 3000 ms.
  */
 export async function generateFollowupIntroVoice(
   session: Session,
   destinationName: string
 ): Promise<TtsManifestEntry | null> {
-  const text = `Nu ska vi se vad ni kan om ${destinationName}`;
-  const wordCount = text.split(/\s+/).length;
-  const estimatedDurationMs = Math.max(wordCount * 150, 3000);
+  // Use new script template with SSML breaks
+  const text = buildFollowupIntro(destinationName);
+  const estimatedDurationMs = estimateDuration(text);
 
   try {
     const res = await fetch(`${AI_CONTENT_URL}/tts`, {

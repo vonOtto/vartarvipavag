@@ -1,6 +1,6 @@
 # E2E Test Scenarios
 
-Complete catalog of E2E test scenarios for På Spåret Party Edition.
+Complete catalog of E2E test scenarios for Tripto Party Edition.
 
 ## Test Suite Overview
 

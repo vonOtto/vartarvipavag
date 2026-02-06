@@ -6,7 +6,7 @@
 
 ## Overview
 
-Created comprehensive end-to-end test suite for På Spåret Party Edition using Playwright framework.
+Created comprehensive end-to-end test suite for Tripto Party Edition using Playwright framework.
 
 ## Deliverables
 

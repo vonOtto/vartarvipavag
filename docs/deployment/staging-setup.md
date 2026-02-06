@@ -1,10 +1,10 @@
-# På Spåret Party Edition — Staging Deployment Guide
+# Tripto Party Edition — Staging Deployment Guide
 
 **Last updated:** 2026-02-05
 **Target Environment:** Staging
 **Estimated Setup Time:** 60-90 minutes
 
-This guide walks through deploying På Spåret Party Edition to a staging environment using **Railway** (backend) and **Vercel** (web player).
+This guide walks through deploying Tripto Party Edition to a staging environment using **Railway** (backend) and **Vercel** (web player).
 
 ---
 
@@ -158,7 +158,7 @@ curl https://<your-app>.up.railway.app/
 
 # Expected response:
 # {
-#   "service": "På Spåret Party Edition - Backend",
+#   "service": "Tripto Party Edition - Backend",
 #   "version": "1.0.0",
 #   "endpoints": { ... }
 # }
@@ -246,7 +246,7 @@ In Vercel dashboard, go to **Project Settings → Environment Variables**, and a
 ### 3.6 Verify Web Player Deployment
 
 1. **Open Vercel URL in browser:** `https://<your-app>.vercel.app`
-2. **You should see:** På Spåret join screen
+2. **You should see:** Tripto join screen
 3. **Test connection:**
    - Enter a random join code (e.g., `TEST`)
    - Click "Hitta spel"

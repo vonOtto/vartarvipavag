@@ -12,7 +12,7 @@
 **Before:**
 ```
 ┌─────────────────────────┐
-│   På Spåret             │
+│   Tripto             │
 │                         │
 │   [description text]    │
 │                         │
@@ -23,8 +23,8 @@
 **After:**
 ```
 ┌─────────────────────────┐
-│   PÅ SPÅRET            │  ← Gradient, breathing
-│   PARTY EDITION         │  ← Subtitle
+│   TRIPTO                │  ← Gradient, breathing
+│   Big world. Small couch.│  ← Tagline
 │                         │
 │   [description text]    │
 │                         │
@@ -53,7 +53,7 @@
 **After:**
 ```
 ┌─────────────────────────┐
-│     PÅ SPÅRET          │  ← Gradient title
+│     TRIPTO             │  ← Gradient title
 │   PARTY EDITION         │  ← Subtitle
 │                         │
 │  [Ansluten]            │  ← Card badge

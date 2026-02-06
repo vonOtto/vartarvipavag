@@ -192,6 +192,10 @@ router.post('/v1/sessions/:id/join', (req: Request, res: Response) => {
 /**
  * POST /v1/sessions/:id/tv
  * TV joins a session
+ *
+ * Note: This endpoint issues a TV auth token. Duplicate TV connections are
+ * validated at the WebSocket level (server.ts), not here, since TV has no
+ * player record.
  */
 router.post('/v1/sessions/:id/tv', (req: Request, res: Response) => {
   try {

@@ -1,6 +1,6 @@
 # Backend Integration Tests
 
-Comprehensive integration test suite for the På Spåret backend server.
+Comprehensive integration test suite for the Tripto backend server.
 
 ## Quick Start
 

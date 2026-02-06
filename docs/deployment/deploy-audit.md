@@ -1,4 +1,4 @@
-# På Spåret Party Edition — Deployment Infrastructure Audit
+# Tripto Party Edition — Deployment Infrastructure Audit
 
 **Last updated:** 2026-02-05
 **Status:** Ready for staging deployment
@@ -8,7 +8,7 @@
 
 ## Executive Summary
 
-På Spåret Party Edition consists of **4 deployable components** with varying infrastructure requirements:
+Tripto Party Edition consists of **4 deployable components** with varying infrastructure requirements:
 
 | Component | Type | Deployment Required | Platform Recommendation |
 |-----------|------|---------------------|-------------------------|

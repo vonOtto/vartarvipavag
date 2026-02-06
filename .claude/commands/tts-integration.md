@@ -24,7 +24,7 @@ Du arbetar nu i AI Content-rollen. Fokusera på TTS generation, caching och audi
 
 3. Batch Generation Pipeline:
    - Generate alla clips för en destination/round:
-     * Round intro ("Välkommen till På Spåret!")
+     * Round intro ("Välkommen till Tripto!")
      * 5 clues (ledtrådar)
      * 2-3 followup questions
      * Banter/transitions

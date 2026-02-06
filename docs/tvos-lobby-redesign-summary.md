@@ -32,7 +32,7 @@ The tvOS lobby has been completely redesigned to deliver a professional game-sho
 ### 2. Typography & Branding
 
 **Added:**
-- Large game-show title: "PÅ SPÅRET" (96 pt black rounded)
+- Large game-show title: "TRIPTO" (96 pt black rounded)
 - Gradient text effect (accentBlueBright -> accentBlue)
 - Subtitle: "PARTY EDITION" (28 pt, letter-tracked)
 - Breathing animation on title (scale + opacity pulse)
@@ -40,7 +40,7 @@ The tvOS lobby has been completely redesigned to deliver a professional game-sho
 
 **Implementation:**
 ```swift
-Text("PÅ SPÅRET")
+Text("TRIPTO")
     .font(.system(size: 96, weight: .black, design: .rounded))
     .foregroundStyle(
         LinearGradient(

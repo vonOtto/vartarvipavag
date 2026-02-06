@@ -1,10 +1,11 @@
-# På Spåret – Party Edition
+# Tripto
+**Big world. Small couch.**
 
-A multiplayer trivia game inspired by the Swedish TV show "På Spåret" (On the Track), built for Apple TV, iOS, and web platforms.
+A party game about travel and guessing, designed for the couch (iOS + Apple TV). A multiplayer trivia game built for Apple TV, iOS, and web platforms.
 
 ## Project Overview
 
-På Spåret Party Edition is a real-time multiplayer game where:
+Tripto is a real-time multiplayer game where:
 - **tvOS app** displays the game on Apple TV (big screen + audio mix)
 - **iOS/iPadOS Host app** creates and controls game sessions with a pro view
 - **Web Player app (PWA)** allows players to join via QR code without installing an app

@@ -1,4 +1,4 @@
-# SFX & musikprompt-bibliotek — På Spåret Party Edition
+# SFX & musikprompt-bibliotek — Tripto Party Edition
 
 **Version**: 1.0.0
 **Datum**: 2026-02-05

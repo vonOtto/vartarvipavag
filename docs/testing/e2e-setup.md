@@ -1,6 +1,6 @@
 # E2E Test Setup Guide
 
-This guide explains how to set up and configure the E2E test suite for På Spåret Party Edition.
+This guide explains how to set up and configure the E2E test suite for Tripto Party Edition.
 
 ## Prerequisites
 

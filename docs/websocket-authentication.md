@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document describes the WebSocket authentication mechanism and connection flow for the På Spåret Party Edition backend.
+This document describes the WebSocket authentication mechanism and connection flow for the Tripto Party Edition backend.
 
 ## Authentication
 

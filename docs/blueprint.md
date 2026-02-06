@@ -1,4 +1,5 @@
-# Blueprint: Interaktivt På Spåret-spel (tvOS + iOS Host + Web/PWA Players)
+# Blueprint: Tripto (tvOS + iOS Host + Web/PWA Players)
+**Big world. Small couch.**
 
 > Mål: Apple TV visar spelet (storbild), värden styr och har pro-vy i iPhone/iPad, spelare ansluter utan installation via QR till en webapp (PWA) som fungerar som handkontroll/svar. All synk är server-auktoritativ (en sanning). AI genererar destinationer/ledtrådar/följdfrågor med faktaverifiering, och TTS (t.ex. ElevenLabs) läser upp segment.
 

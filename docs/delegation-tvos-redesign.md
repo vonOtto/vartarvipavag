@@ -302,7 +302,7 @@ Redesignen är klar när:
 
 **Till:** tvOS-designer agent (subagent_type: tvos)
 
-**Kontext:** Du är UI/UX designer för På Spåret tvOS app. Nuvarande design är funktionell men känns inte som en professionell TV game show. Din uppgift är att redesigna hela tvOS-appen för att skapa en storbild TV game-show-känsla med mer animationer, bättre färger, bättre typografi och levande scoreboard — SYNKAT med web-player redesign.
+**Kontext:** Du är UI/UX designer för Tripto tvOS app. Nuvarande design är funktionell men känns inte som en professionell TV game show. Din uppgift är att redesigna hela tvOS-appen för att skapa en storbild TV game-show-känsla med mer animationer, bättre färger, bättre typografi och levande scoreboard — SYNKAT med web-player redesign.
 
 **Uppgift:**
 

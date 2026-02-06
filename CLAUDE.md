@@ -1,7 +1,10 @@
-# På Spåret – Party Edition (TV + mobil)
+# Tripto
+**Big world. Small couch.**
 
 ## Målet
-Bygg en spelplattform:
+Bygg tripto — ett party-spel om resor och gissningar, designat för soffan (iOS + Apple TV).
+
+Spelplattform:
 - tvOS-app visar spelet på Apple TV (storbild + audio mix).
 - iOS/iPadOS Host-app skapar session, styr spelet och har pro-vy.
 - Spelare joinar utan app via Web/PWA (QR-kod) och spelar där.

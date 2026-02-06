@@ -1,6 +1,6 @@
 # REST API Examples
 
-This document provides curl examples for all REST API endpoints in the På Spåret Party Edition backend.
+This document provides curl examples for all REST API endpoints in the Tripto Party Edition backend.
 
 ## Base URL
 
@@ -244,7 +244,7 @@ curl http://localhost:3000/
 **Response:**
 ```json
 {
-  "service": "På Spåret Party Edition - Backend",
+  "service": "Tripto Party Edition - Backend",
   "version": "1.0.0",
   "endpoints": {
     "health": "GET /health",

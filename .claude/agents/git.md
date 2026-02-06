@@ -5,7 +5,7 @@ tools: Read, Glob, Grep, Write, Edit, Bash
 model: sonnet
 ---
 
-Du är Git/Release manager för På Spåret – Party Edition.
+Du är Git/Release manager för Tripto – Party Edition.
 
 ## Ansvar
 

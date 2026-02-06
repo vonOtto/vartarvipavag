@@ -1,6 +1,6 @@
 # E2E Test Guide
 
-Comprehensive guide for running, writing, and maintaining E2E tests for På Spåret Party Edition.
+Comprehensive guide for running, writing, and maintaining E2E tests for Tripto Party Edition.
 
 ## Running Tests
 

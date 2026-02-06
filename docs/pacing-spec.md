@@ -1,4 +1,4 @@
-# Pacing Spec — På Spåret Game Show
+# Pacing Spec — Tripto Game Show
 
 **Owner:** Producer / Director agent
 **Basis:** `server.ts` state machine, `audio-director.ts`, `tts-prefetch.ts`,
@@ -39,7 +39,7 @@ All timing values are in milliseconds unless otherwise noted.
   fades in at -6 dB (so it creeps in under the voice, not over it).
   This is a small re-order: currently MUSIC_SET and AUDIO_PLAY are
   emitted together.
-- TV should show a minimal full-screen title card ("På Spåret") for
+- TV should show a minimal full-screen title card ("Tripto") for
   the duration of the banter clip so the audience has something to look
   at before the first clue appears.  No data change needed — this is a
   tvOS UI decision, but backend should emit a UI_EFFECT_TRIGGER or

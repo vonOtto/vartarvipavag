@@ -1,4 +1,4 @@
-# På Spåret Party Edition — CI/CD Pipeline Documentation
+# Tripto Party Edition — CI/CD Pipeline Documentation
 
 **Last updated:** 2026-02-05
 **Status:** Production-Ready

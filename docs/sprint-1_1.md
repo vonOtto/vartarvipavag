@@ -1,7 +1,7 @@
 # Sprint 1.1: Audio & Finale Polish
 
 ## Sprint Goal
-Add production-quality audio infrastructure to På Spåret Party Edition:
+Add production-quality audio infrastructure to Tripto Party Edition:
 - Background music during gameplay on TV (travel/journey theme during CLUE_LEVEL)
 - Audio ducking system for voice/narration priority
 - Sound effects for key game actions (brake, lock, reveal)

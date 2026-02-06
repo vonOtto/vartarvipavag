@@ -117,7 +117,7 @@ All animations are **0.2-0.3s slower** than web equivalents to account for TV vi
 **Purpose:** Show QR code for player join + player list with game-show energy
 
 **Layout:**
-- **Top:** Game show title "PÅ SPÅRET" (96 pt black rounded) with gradient (accentBlueBright -> accentBlue) and "PARTY EDITION" subtitle (28 pt, tracked)
+- **Top:** Game show title "TRIPTO" (96 pt black rounded) with gradient (accentBlueBright -> accentBlue) and "Big world. Small couch." tagline (28 pt, tracked)
 - **Main:** Two-column layout with 80 pt horizontal spacing
   - **Left column:** QR code section
     - QR code: 320x320 pt with 24 pt padding, white background with blue glow (radius 30/60)

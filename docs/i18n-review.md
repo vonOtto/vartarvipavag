@@ -1,4 +1,4 @@
-# i18n Review -- På Spåret
+# i18n Review -- Tripto
 
 Granskning av alla user-facing strings i kodebasen.  Radnummer är verifierade mot
 käll-filerna den 2026-02-05.
@@ -181,7 +181,7 @@ Flertalet strings i appen är brukliga svenska och behöver inte ändras.  Urval
 - `api.ts`: "En värd har redan hoppat in. Du kan hoppa in som spelare." (rad 22).
 - `RoundIntroView.swift`: "Vart är vi på väg?" (svenska).
 - `App.swift` (tvOS): "Värd: {host}", "Ny spel" (svenska).
-- `App.swift` (iOS Host): "På Spåret", "Fråga {N} / {Y}", "Rätt svar:" (rad 721), "Rätt svar"
+- `App.swift` (iOS Host): "Tripto", "Fråga {N} / {Y}", "Rätt svar:" (rad 721), "Rätt svar"
   (rad 175 i TVFollowupView) -- svenska.
 - `tts-prefetch.ts`: Alla banter-texten i BANTER_POOL, CLUE_ORDINALS och CLUE_VARIANT_B,
   plus varianter A–C i QUESTION_VARIANTS ("Frågan är:", "Nästa fråga:", "Lyssna på frågan:").

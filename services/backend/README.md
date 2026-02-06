@@ -1,6 +1,6 @@
-# På Spåret Party - Backend Service
+# Tripto Party - Backend Service
 
-Node.js + TypeScript backend service providing REST API and WebSocket server for the På Spåret Party Edition game.
+Node.js + TypeScript backend service providing REST API and WebSocket server for the Tripto Party Edition game.
 
 ## Architecture
 
@@ -118,7 +118,7 @@ GET /
 **Response:**
 ```json
 {
-  "service": "På Spåret Party Edition - Backend",
+  "service": "Tripto Party Edition - Backend",
   "version": "1.0.0",
   "endpoints": {
     "health": "GET /health",

@@ -356,7 +356,7 @@ Redesignen är klar när:
 
 **Till:** Web-designer agent (subagent_type: web)
 
-**Kontext:** Du är UI/UX designer för På Spåret web player. Nuvarande design är funktionell men känns inte som en professionell game show. Din uppgift är att redesigna hela web-playern för att skapa en game-show-känsla med mer animationer, bättre färger, bättre typografi och levande scoreboard.
+**Kontext:** Du är UI/UX designer för Tripto web player. Nuvarande design är funktionell men känns inte som en professionell game show. Din uppgift är att redesigna hela web-playern för att skapa en game-show-känsla med mer animationer, bättre färger, bättre typografi och levande scoreboard.
 
 **Uppgift:**
 

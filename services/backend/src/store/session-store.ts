@@ -309,6 +309,20 @@ class SessionStore {
   }
 
   /**
+   * Returns true when a TV-role WebSocket is connected.
+   * Used by the /tv endpoint to prevent duplicate TV connections.
+   */
+  hasActiveTV(sessionId: string): boolean {
+    const session = this.sessions.get(sessionId);
+    if (!session) return false;
+
+    for (const connection of session.connections.values()) {
+      if (connection.role === 'tv') return true;
+    }
+    return false;
+  }
+
+  /**
    * Removes a WebSocket connection from a session
    */
   removeConnection(sessionId: string, playerId: string): void {

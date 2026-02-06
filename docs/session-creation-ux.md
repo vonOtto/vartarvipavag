@@ -28,7 +28,7 @@ All clients (iOS Host, tvOS, Web) SHALL present the same two options at launch:
 
 ```
 ┌─────────────────────────────┐
-│     PÅ SPÅRET               │
+│     TRIPTO                  │
 │     PARTY EDITION           │
 │                             │
 │   [Skapa nytt spel]         │  ← POST /v1/sessions

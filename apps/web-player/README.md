@@ -397,7 +397,7 @@ Basic PWA configuration in `public/manifest.json`.
 
 ## License
 
-Part of På Spåret Party Edition project.
+Part of Tripto (Big world. Small couch.) project.
 
 ---
 

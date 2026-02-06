@@ -89,13 +89,20 @@ export function useWebSocket(
         try {
           const message = JSON.parse(event.data) as GameEvent;
           console.log('WebSocket: Received event', message.type, message);
-          setLastEvent(message);
 
-          // Update game state from STATE_SNAPSHOT events
+          // Update game state from STATE_SNAPSHOT events before setting lastEvent
+          // This ensures gameState is updated before components react to events
           if (message.type === 'STATE_SNAPSHOT') {
-            const payload = message.payload as { state: GameState };
-            setGameState(payload.state);
+            try {
+              const payload = message.payload as { state: GameState };
+              setGameState(payload.state);
+            } catch (stateErr) {
+              console.error('WebSocket: Failed to update game state', stateErr, message);
+              // Continue processing - don't break the connection
+            }
           }
+
+          setLastEvent(message);
 
           // NOTE: RESUME_SESSION is intentionally NOT sent here.
           // The server sends a complete STATE_SNAPSHOT immediately after WELCOME
@@ -104,6 +111,10 @@ export function useWebSocket(
           // sufficient to confirm the connection is authenticated and active.
         } catch (err) {
           console.error('WebSocket: Failed to parse message', err, event.data);
+          // Don't close the connection on parse errors - just log and continue
+          // Clear the error after a short delay to avoid persistent error UI
+          setError('Failed to process server message');
+          setTimeout(() => setError(null), 3000);
         }
       };
 

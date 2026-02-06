@@ -1,4 +1,4 @@
-# På Spåret Party Edition — Deployment Checklist
+# Tripto Party Edition — Deployment Checklist
 
 **Purpose:** Pre-deployment verification checklist to ensure safe, successful deployments.
 **Last updated:** 2026-02-05

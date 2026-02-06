@@ -102,7 +102,7 @@ Auditen är klar när:
 
 **Till:** Producer agent (subagent_type: general-purpose)
 
-**Kontext:** Du är producer för På Spåret game show. Du har tidigare gjort en audit (pacing-spec.md) och identifierat 5 kritiska pacing-gaps. Backend-agent har nu implementerat 3 av dem i batch 1. Din uppgift är att verifiera att batch 1 fungerar som förväntat och identifiera eventuella nya problem.
+**Kontext:** Du är producer för Tripto game show. Du har tidigare gjort en audit (pacing-spec.md) och identifierat 5 kritiska pacing-gaps. Backend-agent har nu implementerat 3 av dem i batch 1. Din uppgift är att verifiera att batch 1 fungerar som förväntat och identifiera eventuella nya problem.
 
 **Uppgift:**
 

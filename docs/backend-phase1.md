@@ -6,7 +6,7 @@
 
 ## Overview
 
-Phase 1 establishes the foundation for the På Spåret Party backend service with Express HTTP server, WebSocket endpoint, and TypeScript type system based on contracts.
+Phase 1 establishes the foundation for the Tripto Party backend service with Express HTTP server, WebSocket endpoint, and TypeScript type system based on contracts.
 
 ## Implemented Components
 

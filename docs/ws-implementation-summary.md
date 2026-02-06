@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document summarizes the WebSocket authentication and connection flow implementation for the På Spåret Party Edition backend.
+This document summarizes the WebSocket authentication and connection flow implementation for the Tripto Party Edition backend.
 
 ## Implementation Date
 

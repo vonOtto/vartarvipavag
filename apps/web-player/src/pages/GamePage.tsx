@@ -200,7 +200,6 @@ export const GamePage: React.FC = () => {
 
   const [braking, setBraking] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [answerSubmitted, setAnswerSubmitted] = useState(false);
   const [rejectionMessage, setRejectionMessage] = useState<string | null>(null);
 
   // Follow-up question state
@@ -241,7 +240,6 @@ export const GamePage: React.FC = () => {
   // Reset per-destination state when lockedAnswers clears (new destination)
   useEffect(() => {
     if (!gameState?.lockedAnswers?.length) {
-      setAnswerSubmitted(false);
       setSubmitting(false);
     }
   }, [gameState?.lockedAnswers?.length]);
@@ -273,7 +271,8 @@ export const GamePage: React.FC = () => {
         setBraking(false);
         break;
       case 'BRAKE_ANSWER_LOCKED':
-        setAnswerSubmitted(true);
+        // Don't update local state here - let the server state update drive the UI
+        // to avoid showing duplicate entries during the transition
         setSubmitting(false);
         break;
     }
@@ -360,13 +359,13 @@ export const GamePage: React.FC = () => {
 
     // No delay (or reconnect) — reveal instantly.
     setDisplayedClueText(currentClue.text);
-  }, [gameState?.clueText, gameState?.clueLevelPoints, lastEvent]);
+  }, [currentClue, lastEvent]);
 
   // Derived state
   const hasLockedAnswer = gameState?.lockedAnswers?.some(a => a.playerId === session?.playerId) ?? false;
   const lockedAtPoints = gameState?.lockedAnswers?.find(a => a.playerId === session?.playerId)?.lockedAtLevelPoints;
   const isMyBrake = gameState?.brakeOwnerPlayerId === session?.playerId;
-  const isLocked = answerSubmitted || hasLockedAnswer;
+  const isLocked = hasLockedAnswer;  // Use server state only to avoid duplicate display
   const canBrake = gameState?.phase === 'CLUE_LEVEL' && !hasLockedAnswer && !braking;
   const lockedCount = gameState?.lockedAnswers?.length ?? 0;
   const brakeOwnerName = gameState?.brakeOwnerPlayerId
