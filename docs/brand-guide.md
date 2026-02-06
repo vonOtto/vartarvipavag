@@ -189,7 +189,31 @@ Avoid:
 
 - **App Store:** [Link when published]
 - **Website:** [Link when launched]
-- **Design System:** [Link to Figma/Sketch file if available]
+- **Design System:** `/Users/oskar/pa-sparet-party/docs/design-system.md` — Complete token library, component specs, implementation guides
+
+### Related Documentation
+
+- **Design System (v1.0):** `/Users/oskar/pa-sparet-party/docs/design-system.md`
+  - Unified design tokens (colors, typography, spacing, shadows)
+  - Component library with code examples
+  - Platform-specific guidelines (Web, tvOS, iOS)
+  - QR + lobby specifications
+  - Token migration map (old → new)
+  - Implementation notes (CSS, SwiftUI)
+
+- **Web Redesign Spec:** `/Users/oskar/pa-sparet-party/docs/web-redesign-spec.md`
+  - Web-specific implementation details
+  - CSS animations and transitions
+  - Responsive breakpoints
+
+- **tvOS Redesign Spec:** `/Users/oskar/pa-sparet-party/docs/tvos-redesign-spec.md`
+  - TV-optimized design (3-4m viewing distance)
+  - Typography scaling (36 pt/rem)
+  - Animation timing (+0.2-0.3s for TV)
+
+- **Design Decisions:** `/Users/oskar/pa-sparet-party/docs/design-decisions.md`
+  - Platform deviations & rationale
+  - Cross-platform consistency rules
 
 ---
 
