@@ -22,17 +22,14 @@ export async function runGameFlowTests(): Promise<void> {
       // Host starts game
       host.send('HOST_START_GAME', {});
 
-      // Wait for state transition
-      await sleep(1000);
+      // Wait for CLUE_PRESENT event (arrives after ROUND_INTRO delay ~3s)
+      const hostClue = await host.waitForEvent('CLUE_PRESENT', 10000);
+      assertEqual(hostClue.payload.clueLevelPoints, 10, 'First clue should be 10 points');
 
-      // Check host received events
+      // Check host received STATE_SNAPSHOT with CLUE_LEVEL phase
       const hostSnapshot = host.getLatestMessage('STATE_SNAPSHOT');
       assertExists(hostSnapshot, 'Host should receive STATE_SNAPSHOT');
       assertEqual(hostSnapshot.payload.state.phase, 'CLUE_LEVEL', 'Phase should be CLUE_LEVEL');
-
-      const hostClue = host.getLatestMessage('CLUE_PRESENT');
-      assertExists(hostClue, 'Host should receive CLUE_PRESENT');
-      assertEqual(hostClue.payload.clueLevelPoints, 10, 'First clue should be 10 points');
 
       // Check TV received same events
       const tvSnapshot = tv.getLatestMessage('STATE_SNAPSHOT');
@@ -50,9 +47,9 @@ export async function runGameFlowTests(): Promise<void> {
     test('Should advance through all clue levels (10→8→6→4→2)', async () => {
       const { host, tv, players } = await createTestSession(2);
 
-      // Start game
+      // Start game and wait for first clue (10 points)
       host.send('HOST_START_GAME', {});
-      await sleep(1000);
+      await host.waitForEvent('CLUE_PRESENT', 10000);
 
       const expectedLevels = [8, 6, 4, 2]; // Already at 10
 
@@ -60,10 +57,9 @@ export async function runGameFlowTests(): Promise<void> {
         host.clearMessages();
 
         host.send('HOST_NEXT_CLUE', {});
-        await sleep(500);
 
-        const clue = host.getLatestMessage('CLUE_PRESENT');
-        assertExists(clue, `Should receive clue for ${points} points`);
+        // Wait for next CLUE_PRESENT event
+        const clue = await host.waitForEvent('CLUE_PRESENT', 5000);
         assertEqual(clue.payload.clueLevelPoints, points, `Clue should be ${points} points`);
       }
 
@@ -73,17 +69,25 @@ export async function runGameFlowTests(): Promise<void> {
     test('Should transition to REVEAL_DESTINATION after last clue', async () => {
       const { host, tv, players } = await createTestSession(2);
 
-      // Start game
+      // Start game and wait for first clue
       host.send('HOST_START_GAME', {});
-      await sleep(1000);
+      await host.waitForEvent('CLUE_PRESENT', 10000);
 
-      // Advance through all clues
-      for (let i = 0; i < 5; i++) {
+      // Advance through all 4 remaining clues (8, 6, 4, 2)
+      for (let i = 0; i < 4; i++) {
         host.send('HOST_NEXT_CLUE', {});
-        await sleep(500);
+        await host.waitForEvent('CLUE_PRESENT', 5000);
       }
 
-      // Should now be in reveal
+      // Advance one more time to trigger reveal
+      host.send('HOST_NEXT_CLUE', {});
+
+      // Wait for DESTINATION_REVEAL event
+      const reveal = await host.waitForEvent('DESTINATION_REVEAL', 5000);
+      assertProperty(reveal.payload, 'destinationName', undefined, 'Should have destination name');
+      assertProperty(reveal.payload, 'country', undefined, 'Should have country');
+
+      // Check phase is REVEAL_DESTINATION or FOLLOWUP_QUESTION
       const snapshot = host.getLatestMessage('STATE_SNAPSHOT');
       assertExists(snapshot, 'Should receive STATE_SNAPSHOT');
       assert(
@@ -92,29 +96,27 @@ export async function runGameFlowTests(): Promise<void> {
         'Phase should be REVEAL_DESTINATION or FOLLOWUP_QUESTION'
       );
 
-      const reveal = host.getLatestMessage('DESTINATION_REVEAL');
-      assertExists(reveal, 'Should receive DESTINATION_REVEAL');
-      assertProperty(reveal.payload, 'destinationName', undefined, 'Should have destination name');
-      assertProperty(reveal.payload, 'country', undefined, 'Should have country');
-
       cleanupClients(host, tv, ...players);
     }),
 
     test('Should broadcast DESTINATION_RESULTS with scoring', async () => {
       const { host, tv, players } = await createTestSession(2);
 
-      // Start and complete game
+      // Start game and wait for first clue
       host.send('HOST_START_GAME', {});
-      await sleep(1000);
+      await host.waitForEvent('CLUE_PRESENT', 10000);
 
-      // Advance to reveal
-      for (let i = 0; i < 5; i++) {
+      // Advance through all 4 remaining clues
+      for (let i = 0; i < 4; i++) {
         host.send('HOST_NEXT_CLUE', {});
-        await sleep(500);
+        await host.waitForEvent('CLUE_PRESENT', 5000);
       }
 
-      const results = host.getLatestMessage('DESTINATION_RESULTS');
-      assertExists(results, 'Should receive DESTINATION_RESULTS');
+      // Advance to reveal
+      host.send('HOST_NEXT_CLUE', {});
+
+      // Wait for DESTINATION_RESULTS event
+      const results = await host.waitForEvent('DESTINATION_RESULTS', 5000);
       assertProperty(results.payload, 'results', undefined, 'Should have results array');
       assert(Array.isArray(results.payload.results), 'Results should be an array');
 
@@ -124,15 +126,19 @@ export async function runGameFlowTests(): Promise<void> {
     test('Should send SCOREBOARD_UPDATE after results', async () => {
       const { host, tv, players } = await createTestSession(2);
 
-      // Start and complete game
+      // Start game and wait for first clue
       host.send('HOST_START_GAME', {});
-      await sleep(1000);
+      await host.waitForEvent('CLUE_PRESENT', 10000);
+
+      // Advance through all 4 remaining clues
+      for (let i = 0; i < 4; i++) {
+        host.send('HOST_NEXT_CLUE', {});
+        await host.waitForEvent('CLUE_PRESENT', 5000);
+      }
 
       // Advance to reveal
-      for (let i = 0; i < 5; i++) {
-        host.send('HOST_NEXT_CLUE', {});
-        await sleep(500);
-      }
+      host.send('HOST_NEXT_CLUE', {});
+      await host.waitForEvent('DESTINATION_REVEAL', 5000);
 
       // Wait for followup sequence if exists
       await sleep(2000);
@@ -166,9 +172,9 @@ export async function runGameFlowTests(): Promise<void> {
     test('Should reject HOST_NEXT_CLUE from non-host', async () => {
       const { host, tv, players } = await createTestSession(2);
 
-      // Start game first
+      // Start game and wait for first clue
       host.send('HOST_START_GAME', {});
-      await sleep(1000);
+      await host.waitForEvent('CLUE_PRESENT', 10000);
 
       tv.clearMessages();
 
