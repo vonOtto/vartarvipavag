@@ -2,11 +2,11 @@
 import PackageDescription
 
 let package = Package(
-    name: "PaSparetHost",
+    name: "Tripto",
     platforms: [.iOS(.v16), .macOS(.v12)],   // macOS 12 for overlay(alignment:)
     targets: [
         .executableTarget(
-            name: "PaSparetHost",
+            name: "Tripto",
             path: "Sources/PaSparetHost"
         )
     ]

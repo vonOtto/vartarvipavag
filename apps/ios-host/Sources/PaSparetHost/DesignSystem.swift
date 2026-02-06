@@ -8,8 +8,12 @@ extension Color {
     static let bgBase = Color(red: 10/255, green: 10/255, blue: 20/255)
     static let bgCard = Color(red: 30/255, green: 30/255, blue: 46/255).opacity(0.9)
 
-    // MARK: Accents
+    // MARK: Accents (Tripto brand)
 
+    static let accentOrange = Color(red: 255/255, green: 140/255, blue: 66/255)
+    static let accentMint = Color(red: 94/255, green: 242/255, blue: 204/255)
+
+    // Legacy blue (for backwards compatibility)
     static let accentBlue = Color(red: 100/255, green: 108/255, blue: 255/255)
     static let accentBlueBright = Color(red: 120/255, green: 128/255, blue: 255/255)
 

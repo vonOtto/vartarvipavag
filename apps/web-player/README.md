@@ -1,6 +1,6 @@
-# Web Player - På Spåret Party Edition
+# Tripto Web Player (PWA)
 
-PWA player client for På Spåret Party Edition game.
+PWA player client for Tripto — Big world. Small couch.
 
 ## Overview
 

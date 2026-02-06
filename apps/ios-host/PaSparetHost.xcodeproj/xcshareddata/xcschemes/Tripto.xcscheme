@@ -15,7 +15,7 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "BB000050"
-               BuildableName = "PaSparetHost.app"
+               BuildableName = "Tripto.app"
                BlueprintName = "PaSparetHost"
                ReferencedContainer = "container:PaSparetHost.xcodeproj">
             </BuildableReference>
@@ -45,7 +45,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "BB000050"
-            BuildableName = "PaSparetHost.app"
+            BuildableName = "Tripto.app"
             BlueprintName = "PaSparetHost"
             ReferencedContainer = "container:PaSparetHost.xcodeproj">
          </BuildableReference>
@@ -62,7 +62,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "BB000050"
-            BuildableName = "PaSparetHost.app"
+            BuildableName = "Tripto.app"
             BlueprintName = "PaSparetHost"
             ReferencedContainer = "container:PaSparetHost.xcodeproj">
          </BuildableReference>

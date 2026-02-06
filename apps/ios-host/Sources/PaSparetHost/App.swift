@@ -64,21 +64,20 @@ struct LaunchView: View {
 
             // Title with gradient
             VStack(spacing: 8) {
-                Text("PÅ SPÅRET")
+                Text("tripto")
                     .font(.gameShowHeading)
                     .foregroundStyle(
                         LinearGradient(
-                            colors: [.accentBlueBright, .accentBlue],
+                            colors: [.accentOrange, .accentMint],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         )
                     )
-                    .shadow(color: .accentBlue.opacity(0.5), radius: 16)
+                    .shadow(color: .accentOrange.opacity(0.5), radius: 16)
 
-                Text("PARTY EDITION")
-                    .font(.system(size: 18, weight: .semibold, design: .rounded))
-                    .tracking(3)
-                    .foregroundColor(.white.opacity(0.6))
+                Text("Big world. Small couch.")
+                    .font(.system(size: 16, weight: .regular, design: .rounded))
+                    .foregroundColor(.white.opacity(0.7))
             }
             .padding(.bottom, 24)
 

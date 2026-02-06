@@ -1,8 +1,8 @@
-# PaSparetHost — iOS/iPadOS host app
+# Tripto — iOS/iPadOS host app
 
-Host controller for the På Spåret party game.  Creates a session, shows a
-QR code for players to join, displays a live lobby, and provides a pro-view
-during the game (destination secret, locked answers, Next Clue controls).
+**Big world. Small couch.**
+
+Host controller for Tripto, the ultimate party game about travel and guessing. Creates a session, shows a QR code for players to join, displays a live lobby, and provides a pro-view during the game (destination secret, locked answers, Next Clue controls).
 
 ## Requirements
 
@@ -16,12 +16,23 @@ during the game (destination secret, locked answers, Next Clue controls).
 
 ```sh
 cd apps/ios-host
-swift package resolve          # no external deps
-open .                         # opens Package.swift in Xcode
+open PaSparetHost.xcodeproj    # opens the Xcode project
 ```
 
-Select the **PaSparetHost** target, choose an iOS Simulator (or your device),
-and hit **Run**.
+Select the **Tripto** scheme, choose an iOS Simulator (or your device),
+and hit **Run** (Cmd+R).
+
+### Alternative: Command Line Build
+
+```sh
+# Build for simulator
+xcodebuild -scheme Tripto -destination 'platform=iOS Simulator,name=iPhone 16 Pro' build
+
+# Build and run
+xcodebuild -scheme Tripto -destination 'platform=iOS Simulator,name=iPhone 16 Pro' run
+```
+
+See [BUILD-AND-RUN.md](./BUILD-AND-RUN.md) for detailed build instructions.
 
 ## Environment
 

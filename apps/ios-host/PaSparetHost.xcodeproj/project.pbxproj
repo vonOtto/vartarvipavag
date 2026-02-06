@@ -136,8 +136,8 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				INFOPLIST_FILE = Sources/PaSparetHost/Info.plist;
-				PRODUCT_NAME = PaSparetHost;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.pasparet.host";
+				PRODUCT_NAME = Tripto;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.tripto.host";
 				PRODUCT_TYPE = "com.apple.product-type.application";
 				SWIFT_VERSION = "5.9";
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
@@ -149,8 +149,8 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				INFOPLIST_FILE = Sources/PaSparetHost/Info.plist;
-				PRODUCT_NAME = PaSparetHost;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.pasparet.host";
+				PRODUCT_NAME = Tripto;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.tripto.host";
 				PRODUCT_TYPE = "com.apple.product-type.application";
 				SWIFT_VERSION = "5.9";
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;

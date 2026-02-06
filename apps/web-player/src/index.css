@@ -1,14 +1,20 @@
-@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@700;900&family=Inter:wght@300;400;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@700;900&family=Inter:wght@300;400;600;700&family=Nunito:wght@300;400;600;700;800;900&display=swap');
 
 :root {
   /* Fonts */
-  --font-heading: 'Montserrat', 'Helvetica Neue', Arial, sans-serif;
+  --font-heading: 'Nunito', 'Montserrat', 'Helvetica Neue', Arial, sans-serif;
   --font-body: 'Inter', system-ui, -apple-system, sans-serif;
 
-  /* Colors */
-  --bg-primary: linear-gradient(135deg, #0a0a14 0%, #12121e 100%);
+  /* Colors — Tripto Brand */
+  --bg-primary: linear-gradient(135deg, #0f1419 0%, #1a1f2e 100%);
   --bg-card: rgba(30, 30, 46, 0.9);
   --bg-card-hover: rgba(40, 40, 60, 0.95);
+  --accent-orange: #ff7f50;
+  --accent-orange-bright: #ff9a6f;
+  --accent-orange-glow: 0 0 20px rgba(255, 127, 80, 0.4);
+  --accent-mint: #4fd1c5;
+  --accent-mint-bright: #6ee7db;
+  --accent-mint-glow: 0 0 20px rgba(79, 209, 197, 0.4);
   --accent-blue: #646cff;
   --accent-blue-bright: #7c84ff;
   --accent-blue-glow: 0 0 20px rgba(100, 108, 255, 0.4);

@@ -80,8 +80,8 @@ export const LobbyPage: React.FC = () => {
       <div className="container">
         <div className="lobby-header">
           <h1 className="lobby-title">
-            <span className="lobby-title-main">PÅ SPÅRET</span>
-            <span className="lobby-title-sub">PARTY EDITION</span>
+            <span className="lobby-title-main">tripto</span>
+            <span className="lobby-title-sub">Big world. Small couch.</span>
           </h1>
         </div>
 
