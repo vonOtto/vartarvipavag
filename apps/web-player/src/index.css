@@ -1,42 +1,86 @@
-@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@700;900&family=Inter:wght@300;400;600;700&family=Nunito:wght@300;400;600;700;800;900&display=swap');
-
 :root {
+  /* ═══════════════════════════════════════════════════════════════════════ */
+  /* TRIPTO DESIGN TOKENS */
+  /* ═══════════════════════════════════════════════════════════════════════ */
+
   /* Fonts */
-  --font-heading: 'Nunito', 'Montserrat', 'Helvetica Neue', Arial, sans-serif;
-  --font-body: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-heading: system-ui, -apple-system, 'SF Pro Text', 'SF Pro Display', Inter, Arial, sans-serif;
+  --font-body: system-ui, -apple-system, 'SF Pro Text', Inter, Arial, sans-serif;
 
   /* Colors — Tripto Brand */
-  --bg-primary: linear-gradient(135deg, #0f1419 0%, #1a1f2e 100%);
-  --bg-card: rgba(30, 30, 46, 0.9);
-  --bg-card-hover: rgba(40, 40, 60, 0.95);
-  --accent-orange: #ff7f50;
-  --accent-orange-bright: #ff9a6f;
-  --accent-orange-glow: 0 0 20px rgba(255, 127, 80, 0.4);
-  --accent-mint: #4fd1c5;
-  --accent-mint-bright: #6ee7db;
-  --accent-mint-glow: 0 0 20px rgba(79, 209, 197, 0.4);
-  --accent-blue: #646cff;
-  --accent-blue-bright: #7c84ff;
-  --accent-blue-glow: 0 0 20px rgba(100, 108, 255, 0.4);
-  --success-green: #4ade80;
-  --success-glow: 0 0 15px rgba(74, 222, 128, 0.5);
-  --error-red: #ff453a;
-  --error-glow: 0 0 15px rgba(255, 69, 58, 0.5);
-  --warning-yellow: #fbbf24;
-  --brake-active: #ff453a;
-  --brake-glow: 0 0 30px rgba(255, 69, 58, 0.7);
-  --gold: #ffd700;
-  --text-primary: rgba(255, 255, 255, 0.95);
-  --text-secondary: rgba(255, 255, 255, 0.7);
-  --text-muted: rgba(255, 255, 255, 0.5);
+  --bg-0: #0B1220;
+  --bg-1: #101B2E;
+  --bg-2: #16233A;
+  --txt-1: #F5F7FF;
+  --txt-2: #C8D0E6;
+  --txt-3: #92A0C2;
+  --acc-orange: #FF8A00;
+  --acc-mint: #2DE2C5;
+  --acc-blue: #4DA3FF;
+  --ok: #2DE2C5;
+  --warn: #FFB020;
+  --bad: #FF4D4D;
+  --line: #243556;
+
+  /* Spacing */
+  --s-1: 8px;
+  --s-2: 16px;
+  --s-3: 24px;
+  --s-4: 32px;
+  --s-6: 48px;
+
+  /* Radius */
+  --r-s: 12px;
+  --r-m: 16px;
+  --r-l: 24px;
+
+  /* Typography scale (Web mobile) */
+  --text-h1-size: 26pt;
+  --text-h1-weight: 600;
+  --text-body-size: 16pt;
+  --text-body-weight: 400;
+  --text-button-size: 16pt;
+  --text-button-weight: 600;
+  --text-small-size: 12pt;
+  --text-small-weight: 400;
+
+  /* Transition timing */
+  --transition-fast: 180ms;
+  --transition-normal: 200ms;
+  --transition-slow: 220ms;
+
+  /* Legacy color aliases for backwards compatibility */
+  --bg-primary: linear-gradient(135deg, var(--bg-0) 0%, var(--bg-1) 100%);
+  --bg-card: var(--bg-1);
+  --bg-card-hover: var(--bg-2);
+  --accent-orange: var(--acc-orange);
+  --accent-orange-bright: #FFA033;
+  --accent-orange-glow: 0 0 20px rgba(255, 138, 0, 0.4);
+  --accent-mint: var(--acc-mint);
+  --accent-mint-bright: #5AEBD0;
+  --accent-mint-glow: 0 0 20px rgba(45, 226, 197, 0.4);
+  --accent-blue: var(--acc-blue);
+  --accent-blue-bright: #6DB5FF;
+  --accent-blue-glow: 0 0 20px rgba(77, 163, 255, 0.4);
+  --success-green: var(--ok);
+  --success-glow: 0 0 15px rgba(45, 226, 197, 0.5);
+  --error-red: var(--bad);
+  --error-glow: 0 0 15px rgba(255, 77, 77, 0.5);
+  --warning-yellow: var(--warn);
+  --brake-active: var(--bad);
+  --brake-glow: 0 0 30px rgba(255, 77, 77, 0.7);
+  --gold: #FFD700;
+  --text-primary: var(--txt-1);
+  --text-secondary: var(--txt-2);
+  --text-muted: var(--txt-3);
 
   /* Base styles */
   font-family: var(--font-body);
   line-height: 1.5;
-  font-weight: 400;
-  color-scheme: light dark;
-  color: var(--text-primary);
-  background: #12121e;
+  font-weight: var(--text-body-weight);
+  color-scheme: dark;
+  color: var(--txt-1);
+  background: var(--bg-0);
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -46,11 +90,11 @@
 
 a {
   font-weight: 500;
-  color: #646cff;
+  color: var(--acc-blue);
   text-decoration: inherit;
 }
 a:hover {
-  color: #535bf2;
+  color: var(--accent-blue-bright);
 }
 
 body {
@@ -64,38 +108,43 @@ body {
 }
 
 h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
+  font-size: var(--text-h1-size);
+  font-weight: var(--text-h1-weight);
+  line-height: 1.2;
+  margin: 0;
 }
 
 button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
+  border-radius: var(--r-m);
+  border: none;
+  padding: 0.75rem 1.5rem;
+  font-size: var(--text-button-size);
+  font-weight: var(--text-button-weight);
   font-family: inherit;
-  background-color: #1a1a1a;
+  background-color: var(--acc-orange);
+  color: var(--bg-0);
   cursor: pointer;
-  transition: border-color 0.25s;
-}
-button:hover {
-  border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
+  transition: transform var(--transition-normal) ease,
+              background-color var(--transition-normal) ease,
+              box-shadow var(--transition-normal) ease;
 }
 
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
-  }
-  a:hover {
-    color: #747bff;
-  }
-  button {
-    background-color: #f9f9f9;
-  }
+button:hover:not(:disabled) {
+  background-color: var(--accent-orange-bright);
+  box-shadow: var(--accent-orange-glow);
+}
+
+button:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+button:focus-visible {
+  outline: 2px solid var(--acc-mint);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(45, 226, 197, 0.2);
+}
+
+button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }

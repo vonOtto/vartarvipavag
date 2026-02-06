@@ -63,7 +63,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 1rem;
+  padding: var(--s-2);
 }
 
 .container {
@@ -71,36 +71,51 @@
   max-width: 600px;
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: var(--s-3);
 }
 
 /* ═══════════════════════════════════════════════════════════════════════ */
-/* TYPOGRAPHY */
+/* TYPOGRAPHY (Tripto Design) */
 /* ═══════════════════════════════════════════════════════════════════════ */
 
 h1, h2, h3 {
-  font-family: var(--font-heading);
+  font-family: var(--font-body);
   margin: 0;
+  color: var(--txt-1);
 }
 
+/* W-H1: 26pt Semibold */
 h1 {
-  font-size: 2.8rem;
-  font-weight: 900;
-  letter-spacing: -0.02em;
+  font-size: var(--text-h1-size);
+  font-weight: var(--text-h1-weight);
+  line-height: 1.2;
   text-align: center;
+  /* Max 2 lines for headings */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
+/* W-Body: 16pt Regular (for headings styled as body) */
 h2 {
-  font-size: 2rem;
-  font-weight: 700;
-  letter-spacing: -0.01em;
+  font-size: var(--text-body-size);
+  font-weight: var(--text-h1-weight);
+  line-height: 1.3;
   text-align: center;
 }
 
 h3 {
-  font-size: 1.5rem;
-  font-weight: 700;
-  letter-spacing: 0;
+  font-size: var(--text-body-size);
+  font-weight: var(--text-h1-weight);
+  line-height: 1.3;
+}
+
+/* W-Small: 12pt Regular */
+.text-small {
+  font-size: var(--text-small-size);
+  font-weight: var(--text-small-weight);
+  color: var(--txt-3);
 }
 
 /* ═══════════════════════════════════════════════════════════════════════ */
@@ -166,13 +181,13 @@ h3 {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.5rem;
-  padding: 1.5rem;
-  background: var(--bg-card);
-  border-radius: 12px;
-  border: 2px solid rgba(100, 108, 255, 0.3);
-  box-shadow: 0 4px 16px rgba(100, 108, 255, 0.2), 0 0 20px rgba(100, 108, 255, 0.15);
-  margin-bottom: 1.5rem;
+  gap: var(--s-1);
+  padding: var(--s-3);
+  background: var(--bg-1);
+  border-radius: var(--r-m);
+  border: 2px solid var(--acc-blue);
+  box-shadow: 0 4px 16px rgba(77, 163, 255, 0.2), var(--accent-blue-glow);
+  margin-bottom: var(--s-3);
   animation: fadeInUp 0.5s ease-out;
 }
 
@@ -268,26 +283,28 @@ h3 {
 }
 
 .start-game-button {
+  /* Prominent CTA: 48px height, orange bg */
   width: 100%;
-  padding: 1.25rem;
-  font-family: var(--font-heading);
-  font-size: 1.4rem;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  background: linear-gradient(135deg, var(--success-green) 0%, #22c55e 100%);
-  color: #1a1a2e;
+  min-height: 48px;
+  padding: 0 var(--s-4);
+  font-family: var(--font-body);
+  font-size: var(--text-button-size);
+  font-weight: var(--text-button-weight);
+  letter-spacing: 0;
+  text-transform: none;
+  background: var(--acc-orange);
+  color: var(--bg-0);
   border: none;
-  border-radius: 12px;
+  border-radius: var(--r-m);
   cursor: pointer;
-  transition: all 0.2s ease;
-  box-shadow: 0 4px 12px rgba(74, 222, 128, 0.3);
+  transition: all var(--transition-normal) ease;
+  box-shadow: var(--accent-orange-glow);
 }
 
 .start-game-button:hover:not(:disabled) {
-  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
-  transform: scale(1.02);
-  box-shadow: 0 6px 16px rgba(74, 222, 128, 0.4);
+  background: var(--accent-orange-bright);
+  transform: scale(1.01);
+  box-shadow: 0 0 24px rgba(255, 138, 0, 0.5);
 }
 
 .start-game-button:active:not(:disabled) {
@@ -418,49 +435,55 @@ h3 {
 }
 
 .form-group input {
-  padding: 1rem 1.25rem;
-  font-size: 1.2rem;
+  /* Input: 48px height, 16px radius, mint focus glow */
+  min-height: 48px;
+  padding: 0 var(--s-2);
+  font-size: var(--text-body-size);
   font-family: var(--font-body);
-  border: 2px solid rgba(255, 255, 255, 0.2);
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.08);
-  color: inherit;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  border: 2px solid var(--line);
+  border-radius: var(--r-m);
+  background: var(--bg-1);
+  color: var(--txt-1);
+  transition: border-color var(--transition-normal) ease,
+              box-shadow var(--transition-normal) ease;
 }
 
 .form-group input:focus {
   outline: none;
-  border-color: var(--accent-blue);
-  box-shadow: var(--accent-blue-glow);
+  border-color: var(--acc-mint);
+  box-shadow: 0 0 0 4px rgba(45, 226, 197, 0.2), var(--accent-mint-glow);
 }
 
 /* ═══════════════════════════════════════════════════════════════════════ */
-/* BUTTONS — Tactile & Responsive */
+/* BUTTONS — Tactile & Responsive (Tripto Design) */
 /* ═══════════════════════════════════════════════════════════════════════ */
 
 button {
-  padding: 1.25rem;
-  font-family: var(--font-heading);
-  font-size: 1.4rem;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
+  /* Primary button: orange bg, dark text, 48px height, 16px radius */
+  min-height: 48px;
+  padding: 0 var(--s-3);
+  font-family: var(--font-body);
+  font-size: var(--text-button-size);
+  font-weight: var(--text-button-weight);
+  letter-spacing: 0;
+  text-transform: none;
   border: none;
-  border-radius: 10px;
-  background: var(--accent-blue);
-  color: white;
+  border-radius: var(--r-m);
+  background: var(--acc-orange);
+  color: var(--bg-0);
   cursor: pointer;
-  transition: background 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
+  transition: transform var(--transition-normal) ease,
+              background-color var(--transition-normal) ease,
+              box-shadow var(--transition-normal) ease;
 }
 
 button:hover:not(:disabled) {
-  background: var(--accent-blue-bright);
-  transform: scale(1.02);
-  box-shadow: var(--accent-blue-glow);
+  background: var(--accent-orange-bright);
+  box-shadow: var(--accent-orange-glow);
 }
 
 button:active:not(:disabled) {
-  transform: scale(0.97);
+  transform: scale(0.98);
 }
 
 button:disabled {
@@ -471,29 +494,29 @@ button:disabled {
 
 /* Messages */
 .error-message {
-  padding: 1rem;
-  background: rgba(248, 113, 113, 0.2);
-  border: 1px solid #f87171;
-  border-radius: 8px;
-  color: #fca5a5;
+  padding: var(--s-2);
+  background: color-mix(in srgb, var(--bad) 10%, var(--bg-1));
+  border: 2px solid var(--bad);
+  border-radius: var(--r-m);
+  color: var(--bad);
   text-align: center;
 }
 
 .waiting-message {
   text-align: center;
-  font-size: 1.1rem;
-  padding: 2rem 1rem;
-  opacity: 0.7;
+  font-size: var(--text-body-size);
+  padding: var(--s-4) var(--s-2);
+  color: var(--txt-2);
 }
 
 .brake-message {
   text-align: center;
-  font-size: 1.1rem;
-  padding: 1rem;
-  background: rgba(251, 191, 36, 0.2);
-  border: 1px solid #fbbf24;
-  border-radius: 8px;
-  color: #fde68a;
+  font-size: var(--text-body-size);
+  padding: var(--s-2);
+  background: color-mix(in srgb, var(--warn) 10%, var(--bg-1));
+  border: 2px solid var(--warn);
+  border-radius: var(--r-m);
+  color: var(--warn);
 }
 
 /* ═══════════════════════════════════════════════════════════════════════ */
@@ -501,41 +524,42 @@ button:disabled {
 /* ═══════════════════════════════════════════════════════════════════════ */
 
 .brake-button {
+  /* Large tappable target: min 44px (we use 140px for prominence) */
   width: 80%;
   max-width: 450px;
   height: 140px;
   margin: 0 auto;
-  font-family: var(--font-heading);
+  font-family: var(--font-body);
   font-size: 2.2rem;
-  font-weight: 900;
-  letter-spacing: 0.05em;
+  font-weight: 700;
+  letter-spacing: 0;
   text-transform: uppercase;
-  border-radius: 16px;
+  border-radius: var(--r-l);
   border: 4px solid transparent;
-  transition: transform 0.15s ease-out, box-shadow 0.2s ease;
+  transition: transform var(--transition-normal) ease-out, box-shadow var(--transition-normal) ease;
   cursor: pointer;
 }
 
 .brake-button:not(:disabled) {
-  background: linear-gradient(135deg, #ff453a 0%, #e03528 100%);
-  border-color: rgba(255, 255, 255, 0.3);
+  background: var(--bad);
+  border-color: rgba(255, 255, 255, 0.2);
   color: white;
   animation: pulse 1.5s ease-in-out infinite, glowPulse 1.5s ease-in-out infinite;
 }
 
 .brake-button:not(:disabled):hover {
   transform: scale(1.02);
-  box-shadow: 0 0 50px rgba(255, 69, 58, 0.9);
+  box-shadow: var(--brake-glow);
 }
 
 .brake-button:not(:disabled):active {
   transform: scale(0.95);
-  box-shadow: 0 0 60px rgba(255, 69, 58, 1);
+  box-shadow: 0 0 40px rgba(255, 77, 77, 1);
 }
 
 .brake-button:disabled {
-  background: rgba(100, 100, 120, 0.25);
-  color: rgba(255, 255, 255, 0.4);
+  background: var(--bg-2);
+  color: var(--txt-3);
   cursor: not-allowed;
   border-color: transparent;
 }
@@ -552,13 +576,13 @@ button:disabled {
 /* Brake rejection toast */
 .brake-rejected-message {
   text-align: center;
-  font-size: 1.1rem;
+  font-size: var(--text-body-size);
   font-weight: 600;
-  padding: 1rem 1.25rem;
-  background: rgba(248, 113, 113, 0.25);
-  border: 2px solid var(--error-red);
-  border-radius: 10px;
-  color: #fca5a5;
+  padding: var(--s-2) var(--s-3);
+  background: color-mix(in srgb, var(--bad) 10%, var(--bg-1));
+  border: 2px solid var(--bad);
+  border-radius: var(--r-m);
+  color: var(--bad);
   box-shadow: var(--error-glow);
   animation: shake 0.4s ease-out, fadeInOut 2.5s ease forwards;
 }
@@ -582,11 +606,11 @@ button:disabled {
   text-align: center;
   font-size: 1.2rem;
   font-weight: 700;
-  padding: 1.25rem;
-  background: rgba(74, 222, 128, 0.2);
-  border: 2px solid var(--success-green);
-  border-radius: 10px;
-  color: #86efac;
+  padding: var(--s-2);
+  background: color-mix(in srgb, var(--ok) 12%, var(--bg-1));
+  border: 2px solid var(--ok);
+  border-radius: var(--r-m);
+  color: var(--ok);
   box-shadow: var(--success-glow);
   animation: fadeInUp 0.5s ease-out;
 }
@@ -611,23 +635,23 @@ button:disabled {
 .player-card {
   display: flex;
   align-items: center;
-  gap: 1rem;
-  padding: 1rem 1.25rem;
-  background: var(--bg-card);
-  border-radius: 10px;
-  border: 2px solid transparent;
+  gap: var(--s-2);
+  padding: var(--s-2) var(--s-3);
+  background: var(--bg-1);
+  border-radius: var(--r-m);
+  border: 2px solid var(--line);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
   transition: all 0.3s ease;
   animation: fadeInUp 0.4s ease-out;
 }
 
 .player-card.player-connected {
-  border-color: rgba(74, 222, 128, 0.4);
+  border-color: var(--ok);
 }
 
 .player-card.player-disconnected {
   opacity: 0.5;
-  border-color: rgba(248, 113, 113, 0.3);
+  border-color: var(--bad);
 }
 
 .player-number {
@@ -672,13 +696,13 @@ button:disabled {
 }
 
 .status-dot-connected {
-  background: var(--success-green);
-  box-shadow: 0 0 8px rgba(74, 222, 128, 0.6);
+  background: var(--ok);
+  box-shadow: 0 0 8px rgba(45, 226, 197, 0.6);
   animation: pulse 2s ease-in-out infinite;
 }
 
 .status-dot-disconnected {
-  background: var(--error-red);
+  background: var(--bad);
 }
 
 .status-label {
@@ -711,29 +735,36 @@ button:disabled {
 .clue-display {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
-  padding: 2.5rem 1.5rem;
-  background: var(--bg-card);
-  border-radius: 12px;
+  gap: var(--s-3);
+  padding: var(--s-4) var(--s-3);
+  background: var(--bg-1);
+  border-radius: var(--r-l);
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
 }
 
 .clue-points {
-  font-family: var(--font-heading);
+  /* Large, prominent points */
+  font-family: var(--font-body);
   font-size: 4rem;
-  font-weight: 900;
+  font-weight: 700;
   text-align: center;
-  color: var(--accent-blue);
+  color: var(--acc-blue);
   letter-spacing: -0.03em;
   animation: scalePop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .clue-text {
-  font-family: var(--font-heading);
+  /* Max 4 lines clue text */
+  font-family: var(--font-body);
   font-size: 1.8rem;
-  font-weight: 700;
-  line-height: 1.5;
+  font-weight: 600;
+  line-height: 1.4;
   text-align: center;
+  color: var(--txt-1);
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
   animation: fadeInUp 0.6s ease-out;
 }
 
@@ -789,17 +820,19 @@ button:disabled {
 }
 
 .result-correct {
-  background: rgba(74, 222, 128, 0.2);
-  border: 2px solid var(--success-green);
-  color: #86efac;
+  /* OK 12% overlay + OK border */
+  background: color-mix(in srgb, var(--ok) 12%, var(--bg-1));
+  border: 2px solid var(--ok);
+  color: var(--ok);
   box-shadow: var(--success-glow);
   animation: fadeInUp 0.5s ease-out;
 }
 
 .result-incorrect {
-  background: rgba(248, 113, 113, 0.15);
-  border: 2px solid var(--error-red);
-  color: #fca5a5;
+  /* BAD 10% overlay + BAD border */
+  background: color-mix(in srgb, var(--bad) 10%, var(--bg-1));
+  border: 2px solid var(--bad);
+  color: var(--bad);
   box-shadow: var(--error-glow);
   animation: fadeInUp 0.5s ease-out;
 }
@@ -834,9 +867,10 @@ button:disabled {
 .scoreboard li {
   counter-increment: rank;
   position: relative;
-  padding: 1rem 1.25rem;
-  background: rgba(255, 255, 255, 0.06);
-  border-radius: 8px;
+  padding: var(--s-2) var(--s-3);
+  background: var(--bg-1);
+  border: 2px solid var(--line);
+  border-radius: var(--r-m);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -853,23 +887,25 @@ button:disabled {
 
 /* Top rank — gold highlight with subtle pulse */
 .scoreboard li:first-child {
-  background: linear-gradient(90deg, rgba(255, 215, 0, 0.2) 0%, rgba(100, 108, 255, 0.12) 100%);
-  border-left: 4px solid var(--gold);
+  background: color-mix(in srgb, var(--warn) 15%, var(--bg-1));
+  border-color: var(--warn);
   animation: fadeInUp 0.4s ease-out, pulse 2s ease-in-out infinite;
 }
 
-/* Own entry — blue highlight */
+/* Own entry — mint highlight */
 .scoreboard li.my-entry {
-  background: rgba(100, 108, 255, 0.18);
-  border-left: 3px solid var(--accent-blue);
-  box-shadow: inset 0 0 0 1px rgba(100, 108, 255, 0.3);
+  background: color-mix(in srgb, var(--acc-mint) 12%, var(--bg-1));
+  border-color: var(--acc-mint);
+  box-shadow: var(--accent-mint-glow);
 }
 
 /* Own entry that's also top rank */
 .scoreboard li:first-child.my-entry {
-  background: linear-gradient(90deg, rgba(255, 215, 0, 0.25) 0%, rgba(100, 108, 255, 0.2) 100%);
-  border-left: 4px solid var(--gold);
-  box-shadow: inset 0 0 0 2px rgba(100, 108, 255, 0.4);
+  background: linear-gradient(90deg,
+    color-mix(in srgb, var(--warn) 20%, var(--bg-1)) 0%,
+    color-mix(in srgb, var(--acc-mint) 15%, var(--bg-1)) 100%);
+  border-color: var(--warn);
+  box-shadow: var(--accent-mint-glow);
 }
 
 /* Score update animation trigger (can be added dynamically via JS) */
@@ -898,27 +934,28 @@ button:disabled {
   color: #4ade80;
 }
 
-/* Leave button */
+/* Leave button (secondary/destructive action) */
 .leave-button {
   width: 100%;
+  min-height: 48px;
   background: transparent;
-  border: 2px solid rgba(255, 255, 255, 0.15);
-  color: rgba(255, 255, 255, 0.6);
-  font-size: 0.95rem;
-  font-weight: 600;
+  border: 2px solid var(--line);
+  color: var(--txt-3);
+  font-size: var(--text-button-size);
+  font-weight: var(--text-button-weight);
   font-family: var(--font-body);
-  padding: 0.85rem 1.25rem;
-  border-radius: 10px;
+  padding: 0 var(--s-3);
+  border-radius: var(--r-m);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all var(--transition-normal) ease;
   text-transform: none;
   letter-spacing: 0;
 }
 
 .leave-button:hover {
-  border-color: rgba(255, 69, 58, 0.4);
-  color: var(--error-red);
-  background: rgba(255, 69, 58, 0.05);
+  border-color: var(--bad);
+  color: var(--bad);
+  background: color-mix(in srgb, var(--bad) 5%, transparent);
   transform: none;
 }
 
@@ -987,35 +1024,36 @@ button:disabled {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════ */
-/* FOLLOWUP QUESTION — MC Options */
+/* FOLLOWUP QUESTION — MC Options (Tripto Answer Alternatives) */
 /* ═══════════════════════════════════════════════════════════════════════ */
 
 .followup-options {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: var(--s-2);
 }
 
 .followup-option-btn {
-  padding: 1rem 1.25rem;
+  /* BG-1 surface, LINE border, R-L (24px) radius */
+  min-height: 48px;
+  padding: var(--s-2) var(--s-3);
   font-family: var(--font-body);
-  font-size: 1.1rem;
-  font-weight: 600;
+  font-size: var(--text-body-size);
+  font-weight: var(--text-body-weight);
   text-align: left;
-  background: rgba(100, 108, 255, 0.15);
-  border: 2px solid rgba(100, 108, 255, 0.4);
-  border-radius: 10px;
-  color: inherit;
+  background: var(--bg-1);
+  border: 2px solid var(--line);
+  border-radius: var(--r-l);
+  color: var(--txt-1);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all var(--transition-normal) ease;
   animation: fadeInUp 0.4s ease-out;
 }
 
 .followup-option-btn:hover:not(:disabled) {
-  background: rgba(100, 108, 255, 0.3);
-  border-color: var(--accent-blue);
-  transform: translateX(4px);
-  box-shadow: var(--accent-blue-glow);
+  background: var(--bg-2);
+  border-color: var(--acc-mint);
+  box-shadow: 0 0 0 2px rgba(45, 226, 197, 0.2), var(--accent-mint-glow);
 }
 
 .followup-option-btn:active:not(:disabled) {
@@ -1028,6 +1066,26 @@ button:disabled {
   transform: none;
 }
 
+/* Selected state (mint border + glow) */
+.followup-option-btn.selected {
+  border-color: var(--acc-mint);
+  box-shadow: 0 0 0 2px rgba(45, 226, 197, 0.3), var(--accent-mint-glow);
+}
+
+/* Correct answer state (OK 12% overlay + OK border) */
+.followup-option-btn.correct {
+  background: color-mix(in srgb, var(--ok) 12%, var(--bg-1));
+  border-color: var(--ok);
+  box-shadow: var(--success-glow);
+}
+
+/* Incorrect answer state (BAD 10% overlay + BAD border) */
+.followup-option-btn.incorrect {
+  background: color-mix(in srgb, var(--bad) 10%, var(--bg-1));
+  border-color: var(--bad);
+  box-shadow: var(--error-glow);
+}
+
 /* Open-text input + submit */
 .followup-open-text {
   display: flex;
@@ -1037,20 +1095,23 @@ button:disabled {
 }
 
 .followup-open-input {
-  padding: 1rem 1.25rem;
+  /* Input: 48px height, 16px radius, mint focus glow */
+  min-height: 48px;
+  padding: 0 var(--s-2);
   font-family: var(--font-body);
-  font-size: 1.2rem;
-  border: 2px solid rgba(255, 255, 255, 0.2);
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.08);
-  color: inherit;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  font-size: var(--text-body-size);
+  border: 2px solid var(--line);
+  border-radius: var(--r-m);
+  background: var(--bg-1);
+  color: var(--txt-1);
+  transition: border-color var(--transition-normal) ease,
+              box-shadow var(--transition-normal) ease;
 }
 
 .followup-open-input:focus {
   outline: none;
-  border-color: var(--accent-blue);
-  box-shadow: var(--accent-blue-glow);
+  border-color: var(--acc-mint);
+  box-shadow: 0 0 0 4px rgba(45, 226, 197, 0.2), var(--accent-mint-glow);
 }
 
 .followup-open-input:disabled {
@@ -1058,8 +1119,15 @@ button:disabled {
 }
 
 .followup-submit-btn {
-  background: var(--accent-blue);
-  color: white;
+  /* Primary action: orange bg */
+  background: var(--acc-orange);
+  color: var(--bg-0);
+  min-height: 48px;
+}
+
+.followup-submit-btn:hover:not(:disabled) {
+  background: var(--accent-orange-bright);
+  box-shadow: var(--accent-orange-glow);
 }
 
 /* Result badge (reuses .result-correct / .result-incorrect) */
@@ -1153,18 +1221,18 @@ button:disabled {
 }
 
 .fq-result-overlay-row.fq-row-correct {
-  border-left: 3px solid var(--success-green);
-  background: rgba(74, 222, 128, 0.12);
+  border-left: 3px solid var(--ok);
+  background: color-mix(in srgb, var(--ok) 12%, var(--bg-1));
 }
 
 .fq-result-overlay-row.fq-row-incorrect {
-  border-left: 3px solid var(--error-red);
-  background: rgba(248, 113, 113, 0.1);
+  border-left: 3px solid var(--bad);
+  background: color-mix(in srgb, var(--bad) 10%, var(--bg-1));
 }
 
 .fq-result-overlay-row.fq-row-mine {
-  box-shadow: inset 0 0 0 2px var(--accent-blue);
-  background: rgba(100, 108, 255, 0.15);
+  box-shadow: inset 0 0 0 2px var(--acc-mint);
+  background: color-mix(in srgb, var(--acc-mint) 15%, var(--bg-1));
 }
 
 .fq-row-name {
@@ -1193,11 +1261,11 @@ button:disabled {
 }
 
 .fq-row-correct .fq-row-verdict {
-  color: #4ade80;
+  color: var(--ok);
 }
 
 .fq-row-incorrect .fq-row-verdict {
-  color: #f87171;
+  color: var(--bad);
 }
 
 /* ── Followup-incoming nudge (destination-reveal pause) ── */
@@ -1263,25 +1331,30 @@ button:disabled {
 }
 
 .landing-join-btn {
+  /* Prominent CTA: orange, 48px min height */
   width: 100%;
   max-width: 320px;
-  padding: 1.5rem;
-  font-family: var(--font-heading);
-  font-size: 1.6rem;
-  font-weight: 900;
-  text-transform: uppercase;
-  background: linear-gradient(135deg, var(--accent-blue) 0%, var(--accent-blue-bright) 100%);
-  color: white;
-  border-radius: 12px;
-  letter-spacing: 0.05em;
-  transition: background 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
+  min-height: 48px;
+  padding: var(--s-2) var(--s-4);
+  font-family: var(--font-body);
+  font-size: var(--text-button-size);
+  font-weight: var(--text-button-weight);
+  text-transform: none;
+  background: var(--acc-orange);
+  color: var(--bg-0);
+  border: none;
+  border-radius: var(--r-m);
+  letter-spacing: 0;
+  cursor: pointer;
+  transition: all var(--transition-normal) ease;
   animation: fadeInUp 0.5s ease-out 0.3s backwards;
+  box-shadow: var(--accent-orange-glow);
 }
 
 .landing-join-btn:hover {
-  background: linear-gradient(135deg, var(--accent-blue-bright) 0%, #8c94ff 100%);
-  transform: scale(1.05);
-  box-shadow: var(--accent-blue-glow);
+  background: var(--accent-orange-bright);
+  transform: scale(1.02);
+  box-shadow: 0 0 24px rgba(255, 138, 0, 0.5);
 }
 
 .landing-join-btn:active {
@@ -1297,27 +1370,28 @@ button:disabled {
 }
 
 .role-card {
+  /* Card: BG-1, LINE border, R-M radius, large tappable (min 44px padding) */
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 0.5rem;
+  gap: var(--s-1);
   width: 100%;
-  padding: 2rem 1.5rem;
-  border-radius: 12px;
-  border: 2px solid rgba(255, 255, 255, 0.15);
-  background: var(--bg-card);
-  color: inherit;
+  padding: var(--s-4) var(--s-3);
+  border-radius: var(--r-m);
+  border: 2px solid var(--line);
+  background: var(--bg-1);
+  color: var(--txt-1);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all var(--transition-normal) ease;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 .role-card:hover {
-  background: var(--bg-card-hover);
-  border-color: rgba(255, 255, 255, 0.35);
+  background: var(--bg-2);
+  border-color: var(--acc-mint);
   transform: translateY(-2px);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--accent-mint-glow);
 }
 
 .role-card:active {
@@ -1325,15 +1399,15 @@ button:disabled {
 }
 
 .role-card--host {
-  border-color: rgba(100, 108, 255, 0.4);
-  background: rgba(100, 108, 255, 0.1);
-  box-shadow: 0 2px 12px rgba(100, 108, 255, 0.2);
+  border-color: var(--acc-blue);
+  background: color-mix(in srgb, var(--acc-blue) 10%, var(--bg-1));
+  box-shadow: var(--accent-blue-glow);
 }
 
 .role-card--host:hover {
-  background: rgba(100, 108, 255, 0.2);
-  border-color: var(--accent-blue);
-  box-shadow: 0 4px 20px rgba(100, 108, 255, 0.3);
+  background: color-mix(in srgb, var(--acc-blue) 15%, var(--bg-1));
+  border-color: var(--acc-blue);
+  box-shadow: 0 4px 20px rgba(77, 163, 255, 0.4);
 }
 
 .role-card__label {
@@ -1350,24 +1424,29 @@ button:disabled {
 
 /* ── Host pro-view ── */
 .host-next-clue-btn {
+  /* Host action: orange bg, 48px height */
   width: 100%;
   max-width: 360px;
-  padding: 1.25rem;
-  font-size: 1.4rem;
-  font-weight: 700;
-  background: #4ade80;
-  color: #1a1a2e;
-  border-radius: 12px;
-  letter-spacing: 0.02em;
-  transition: background 0.2s, transform 0.1s;
+  min-height: 48px;
+  padding: 0 var(--s-4);
+  font-size: var(--text-button-size);
+  font-weight: var(--text-button-weight);
+  background: var(--acc-orange);
+  color: var(--bg-0);
+  border: none;
+  border-radius: var(--r-m);
+  letter-spacing: 0;
+  cursor: pointer;
+  transition: all var(--transition-normal) ease;
 }
 
 .host-next-clue-btn:hover:not(:disabled) {
-  background: #22c55e;
+  background: var(--accent-orange-bright);
+  box-shadow: var(--accent-orange-glow);
 }
 
 .host-next-clue-btn:active:not(:disabled) {
-  transform: scale(0.97);
+  transform: scale(0.98);
 }
 
 .host-next-clue-btn:disabled {
