@@ -13,6 +13,10 @@ extension Color {
     static let accentBlue = Color(red: 100/255, green: 108/255, blue: 255/255)
     static let accentBlueBright = Color(red: 120/255, green: 128/255, blue: 255/255)
 
+    // Tripto accent colors
+    static let accentOrange = Color(red: 255/255, green: 159/255, blue: 64/255)
+    static let accentMint = Color(red: 80/255, green: 227/255, blue: 194/255)
+
     // MARK: Success / Error
 
     static let successGreen = Color(red: 74/255, green: 222/255, blue: 128/255)

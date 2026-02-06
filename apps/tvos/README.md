@@ -1,8 +1,8 @@
-# PaSparetTV — tvOS client
+# Tripto (tvOS)
 
-Read-only TV view for the På Spåret party game. Enter a join code from the
-iOS Host app to connect to an existing session, then displays live game state
-received over WebSocket.
+**Big world. Small couch.**
+
+Apple TV client for Tripto, a party game about travel and trivia designed for iOS and Apple TV. Can create a new session (becoming the TV display with QR code for players) or join an existing session by entering a join code. Displays live game state received over WebSocket.
 
 ## Requirements
 
@@ -47,14 +47,32 @@ The app reads `BASE_URL` at startup to locate the backend.
 No values are needed when the backend is running on localhost and you are
 testing on the same machine.
 
+## About Tripto
+
+Tripto is a party game that brings the excitement of travel trivia to your living room. Players compete through multiple rounds by guessing destinations from progressively revealing clues, answering follow-up questions, and scoring points based on speed and accuracy.
+
 ## Usage flow
 
-1. **iOS Host** creates a session and gets a 6-character join code
-2. **tvOS app** launches and shows a join code input screen
-3. User enters the join code from the iOS Host
+The tvOS app offers two options at launch:
+
+### Option 1: Create new session
+
+1. Launch tvOS app and tap **"Skapa nytt spel"**
+2. tvOS creates a session (`POST /v1/sessions`) and receives `tvJoinToken`
+3. WebSocket connects as TV role
+4. Lobby displays QR code and join code for players to scan
+5. Host (iOS or Web) can join the session to control the game
+
+### Option 2: Join existing session
+
+1. **iOS Host** or **Web** creates a session and gets a 6-character join code
+2. **tvOS app** launches and shows join code input
+3. User enters the join code
 4. tvOS looks up the session (`GET /v1/sessions/by-code/:code`)
 5. tvOS joins as TV client (`POST /v1/sessions/:id/tv`)
 6. WebSocket connects and receives live game state
+
+Both flows result in the same lobby view with QR code for players to join.
 
 ## WebSocket flow
 
@@ -73,6 +91,11 @@ up to **10 attempts** before showing an error.
 
 ## Session management
 
-The tvOS app **never creates sessions**. It only joins existing sessions created
-by the iOS Host app. This ensures that both clients share the same session and
-see the same lobby, players, and game state.
+The tvOS app can **create or join** sessions:
+
+- **Create mode:** tvOS creates the session and becomes the TV display. An iOS Host or Web client can join as the game controller.
+- **Join mode:** tvOS joins an existing session created by iOS or Web.
+
+In both cases, only **one TV** is allowed per session. If a second tvOS device tries to join, the backend returns a 409 Conflict error.
+
+The **"Nytt spel"** button in the lobby calls `appState.resetSession()`, disconnects the WebSocket, and returns to the launch screen for a fresh start.

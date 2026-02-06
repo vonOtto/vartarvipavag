@@ -99,9 +99,9 @@ struct LaunchView: View {
     var body: some View {
         VStack(spacing: 48) {
             // Title
-            VStack(spacing: 8) {
-                Text("PÅ SPÅRET")
-                    .font(.system(size: 96, weight: .black, design: .rounded))
+            VStack(spacing: 16) {
+                Text("tripto")
+                    .font(.system(size: 110, weight: .black, design: .rounded))
                     .foregroundStyle(
                         LinearGradient(
                             colors: [.accentBlueBright, .accentBlue],
@@ -112,10 +112,10 @@ struct LaunchView: View {
                     .shadow(color: .accentBlue.opacity(0.6), radius: 40)
                     .shadow(color: .accentBlue.opacity(0.4), radius: 20)
 
-                Text("PARTY EDITION")
-                    .font(.system(size: 28, weight: .semibold, design: .rounded))
-                    .tracking(4)
-                    .foregroundColor(.white.opacity(0.7))
+                Text("Big world. Small couch.")
+                    .font(.system(size: 32, weight: .light, design: .rounded))
+                    .tracking(6)
+                    .foregroundColor(.white.opacity(0.75))
             }
 
             // Create button (primary action)
@@ -396,9 +396,9 @@ struct LobbyView: View {
     // ── Game show title ──
     @ViewBuilder
     private var gameShowTitle: some View {
-        VStack(spacing: 8) {
-            Text("PÅ SPÅRET")
-                .font(.system(size: 96, weight: .black, design: .rounded))
+        VStack(spacing: 12) {
+            Text("tripto")
+                .font(.system(size: 110, weight: .black, design: .rounded))
                 .foregroundStyle(
                     LinearGradient(
                         colors: [.accentBlueBright, .accentBlue],
@@ -411,10 +411,10 @@ struct LobbyView: View {
                 .scaleEffect(titleScale)
                 .opacity(titleOpacity)
 
-            Text("PARTY EDITION")
-                .font(.system(size: 28, weight: .semibold, design: .rounded))
-                .tracking(4)
-                .foregroundColor(.white.opacity(0.7))
+            Text("Big world. Small couch.")
+                .font(.system(size: 32, weight: .light, design: .rounded))
+                .tracking(6)
+                .foregroundColor(.white.opacity(0.75))
         }
     }
 
