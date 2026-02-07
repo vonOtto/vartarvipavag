@@ -8,7 +8,9 @@ struct TVFollowupView: View {
 
     var body: some View {
         ZStack(alignment: .top) {
-            VStack(spacing: 48) {
+            Color.bg0.ignoresSafeArea()
+
+            VStack(spacing: Layout.space48) {
                 progressHeader
                 timerBar
                 questionText
@@ -40,9 +42,8 @@ struct TVFollowupView: View {
         if let fq = appState.followupQuestion {
             HStack {
                 Text("Fråga \(fq.currentQuestionIndex + 1) / \(fq.totalQuestions)")
-                    .font(.bodyRegular)
-                    .foregroundColor(.accentBlueBright)
-                    .shadow(color: .black.opacity(Layout.textShadowOpacity), radius: Layout.textShadowRadius)
+                    .font(.tvBody)  // 34pt
+                    .foregroundColor(.txt2)
                 Spacer()
                 CountdownLabel(fq: fq)
             }
@@ -65,12 +66,11 @@ struct TVFollowupView: View {
         if let fq = appState.followupQuestion {
             let hasText = !fq.questionText.isEmpty
             Text(fq.questionText)
-                .font(.clueText)
-                .foregroundColor(.white)
+                .font(.tvBody)  // 34pt
+                .foregroundColor(.txt1)
                 .multilineTextAlignment(.center)
-                .lineSpacing(4)
+                .lineSpacing(8)
                 .lineLimit(3)
-                .shadow(color: .black.opacity(Layout.textShadowOpacity), radius: Layout.textShadowRadius)
                 .padding(.horizontal, Layout.horizontalPadding)
                 .opacity(hasText ? 1 : 0)
                 .animation(.fadeIn(duration: AnimationDuration.questionFadeIn), value: fq.questionText)
@@ -81,13 +81,13 @@ struct TVFollowupView: View {
 
     private var reconnectBanner: some View {
         Text("○ Återansluter…")
-            .font(.label)
-            .foregroundColor(.errorRed)
-            .padding(.horizontal, 20)
-            .padding(.vertical, 8)
-            .background(Color.black.opacity(0.6))
-            .cornerRadius(Layout.cornerRadiusSmall)
-            .padding(.top, Layout.tightSpacing)
+            .font(.tvMeta)  // 28pt
+            .foregroundColor(.txt1)
+            .padding(.horizontal, Layout.space24)
+            .padding(.vertical, Layout.space16)
+            .background(Color.statusBad.opacity(0.9))
+            .cornerRadius(Layout.radiusS)
+            .padding(.top, Layout.space16)
     }
 }
 
@@ -105,12 +105,17 @@ private struct CountdownLabel: View {
     var body: some View {
         TimelineView(.periodic(from: Date(), by: 1.0)) { timeline in
             let remaining = max(0, Int(deadline.timeIntervalSince(timeline.date)))
+            let isUrgent = remaining <= 10
+            let isCritical = remaining <= 3
+
             Text("\(remaining) s")
-                .font(.bodyLarge)
-                .foregroundColor(remaining <= 3 ? .errorRedBright : .goldYellow)
-                .shadow(
-                    color: (remaining <= 3 ? Color.errorRed : Color.goldYellow).opacity(0.4),
-                    radius: Layout.shadowRadius / 3
+                .font(.tvMeta)  // 28pt
+                .foregroundColor(isCritical ? .statusBad : (isUrgent ? .statusWarn : .statusOk))
+                .padding(.horizontal, Layout.space24)
+                .padding(.vertical, Layout.space16)
+                .background(
+                    Capsule()
+                        .fill(Color.bg2)
                 )
         }
     }
@@ -141,16 +146,12 @@ private struct AnimatedTimerBar: View {
                 ZStack(alignment: .leading) {
                     // track
                     Capsule()
-                        .fill(Color.white.opacity(0.12))
+                        .fill(Color.bg2)
                         .frame(height: 12)
                     // fill
                     Capsule()
-                        .fill(urgent ? Color.errorRedBright : Color.accentBlueBright)
+                        .fill(urgent ? Color.statusBad : Color.accMint)
                         .frame(width: geo.size.width * fraction, height: 12)
-                        .shadow(
-                            color: (urgent ? Color.errorRed : Color.accentBlue).opacity(0.4),
-                            radius: Layout.shadowRadius / 4
-                        )
                 }
             }
             .frame(height: 12)
@@ -165,15 +166,15 @@ private struct OptionsDisplay: View {
     let options: [String]
 
     var body: some View {
-        HStack(spacing: 24) {
+        HStack(spacing: Layout.space24) {
             ForEach(options, id: \.self) { opt in
                 Text(opt)
-                    .font(.bodyRegular)
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 32)
-                    .padding(.vertical, 16)
-                    .background(Color.bgCard)
-                    .cornerRadius(Layout.cornerRadiusMedium)
+                    .font(.tvBody)  // 34pt
+                    .foregroundColor(.txt1)
+                    .padding(.horizontal, Layout.cardPadding)
+                    .padding(.vertical, Layout.space16)
+                    .background(Color.bg2)
+                    .cornerRadius(Layout.radiusM)
             }
         }
     }
@@ -203,23 +204,22 @@ private struct ResultsOverlay: View {
                 .animation(.fadeIn(duration: AnimationDuration.resultsOverlayFadeIn), value: true)
 
             VStack(spacing: 40) {
-                // correct-answer heading — 1.8 rem ~ 64 pt on tvOS
+                // correct-answer heading
                 VStack(spacing: 6) {
                     Text("Rätt svar")
-                        .font(.bodyRegular)
-                        .foregroundColor(.successGreen.opacity(0.7))
+                        .font(.tvBody)  // 34pt
+                        .foregroundColor(.statusOk)
                     Text(correctAnswer)
-                        .font(.gameShowSubheading)
-                        .foregroundColor(.successGreenBright)
-                        .shadow(color: .successGreen.opacity(0.3), radius: Layout.shadowRadius / 3)
+                        .font(.tvH2)  // 48pt Semibold
+                        .foregroundColor(.statusOk)
                 }
-                .padding(.vertical, 16)
-                .padding(.horizontal, 48)
-                .background(Color.successGreen.opacity(0.12))
-                .cornerRadius(Layout.cornerRadiusLarge)
+                .padding(.vertical, Layout.space16)
+                .padding(.horizontal, Layout.space48)
+                .background(Color.statusOk.opacity(0.12))
+                .cornerRadius(Layout.radiusL)
 
                 // per-player rows
-                VStack(alignment: .leading, spacing: 14) {
+                VStack(alignment: .leading, spacing: Layout.space16) {
                     ForEach(rows) { row in
                         FQResultRow(row: row)
                     }
@@ -239,38 +239,38 @@ private struct FQResultRow: View {
     let row: FollowupResultRow
 
     var body: some View {
-        HStack(spacing: 20) {
+        HStack(spacing: Layout.space24) {
             // name — flex 1 equivalent
             Text(row.playerName)
-                .font(.bodyRegular)
-                .foregroundColor(.white)
+                .font(.tvBody)  // 34pt
+                .foregroundColor(.txt1)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
             // verdict badge pill
             Text(row.isCorrect
                  ? (row.pointsAwarded > 0 ? "Rätt +\(row.pointsAwarded)p" : "Rätt")
                  : "Fel")
-                .font(.label)
-                .foregroundColor(row.isCorrect ? .successGreenBright : .errorRedBright)
-                .padding(.horizontal, 20)
-                .padding(.vertical, 8)
+                .font(.tvMeta)  // 28pt
+                .foregroundColor(row.isCorrect ? .statusOk : .statusBad)
+                .padding(.horizontal, Layout.space24)
+                .padding(.vertical, Layout.space16)
                 .background(row.isCorrect
-                    ? Color.successGreen.opacity(0.2)
-                    : Color.errorRed.opacity(0.15))
+                    ? Color.statusOk.opacity(0.2)
+                    : Color.statusBad.opacity(0.15))
                 .overlay(
                     RoundedRectangle(cornerRadius: 6)
-                        .stroke(row.isCorrect ? Color.successGreen : Color.errorRed,
+                        .stroke(row.isCorrect ? Color.statusOk : Color.statusBad,
                                 lineWidth: 1.5)
                 )
                 .cornerRadius(6)
         }
-        .padding(.vertical, 10)
-        .padding(.horizontal, 24)
+        .padding(.vertical, Layout.space16)
+        .padding(.horizontal, Layout.space24)
         .background(
             row.isCorrect
-                ? Color.successGreen.opacity(0.08)
-                : Color.errorRed.opacity(0.06)
+                ? Color.statusOk.opacity(0.08)
+                : Color.statusBad.opacity(0.06)
         )
-        .cornerRadius(Layout.cornerRadiusMedium)
+        .cornerRadius(Layout.radiusM)
     }
 }

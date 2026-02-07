@@ -7,6 +7,8 @@ struct TVScoreboardView: View {
 
     var body: some View {
         ZStack(alignment: .top) {
+            Color.bg0.ignoresSafeArea()
+
             VStack(spacing: 0) {
                 HStack(spacing: 80) {
                     resultsColumn
@@ -44,16 +46,15 @@ struct TVScoreboardView: View {
 
     @ViewBuilder
     private var resultsColumn: some View {
-        VStack(alignment: .leading, spacing: 20) {
+        VStack(alignment: .leading, spacing: Layout.space24) {
             Text("Resultat")
-                .font(.gameShowSubheading)
-                .foregroundColor(.accentBlueBright)
-                .shadow(color: .black.opacity(Layout.textShadowOpacity), radius: Layout.textShadowRadius)
+                .font(.tvH2)  // 48pt Semibold
+                .foregroundColor(.txt1)
 
             if appState.results.isEmpty {
                 Text("Inga resultat än…")
-                    .font(.bodySmall)
-                    .foregroundColor(.white.opacity(0.5))
+                    .font(.tvMeta)  // 28pt
+                    .foregroundColor(.txt3)
             } else {
                 ForEach(appState.results) { r in
                     ResultRow(result: r)
@@ -71,16 +72,15 @@ struct TVScoreboardView: View {
 
     @ViewBuilder
     private var standingsColumn: some View {
-        VStack(alignment: .leading, spacing: 20) {
+        VStack(alignment: .leading, spacing: Layout.space24) {
             Text("Poängtabell")
-                .font(.gameShowSubheading)
-                .foregroundColor(.accentBlueBright)
-                .shadow(color: .black.opacity(Layout.textShadowOpacity), radius: Layout.textShadowRadius)
+                .font(.tvH2)  // 48pt Semibold
+                .foregroundColor(.txt1)
 
             if appState.scoreboard.isEmpty {
                 Text("Inga poäng än…")
-                    .font(.bodySmall)
-                    .foregroundColor(.white.opacity(0.5))
+                    .font(.tvMeta)  // 28pt
+                    .foregroundColor(.txt3)
             } else {
                 ForEach(appState.scoreboard.enumerated().map({ $0 }), id: \.offset) { idx, entry in
                     StandingRow(rank: idx + 1, entry: entry)
@@ -101,10 +101,9 @@ struct TVScoreboardView: View {
     @ViewBuilder
     private func followupIncomingBanner(destination: String) -> some View {
         Text("Frågor om \(destination) väntar…")
-            .font(.scoreboardName)
-            .foregroundColor(.white)
+            .font(.tvBody)  // 34pt
+            .foregroundColor(.txt2)
             .italic()
-            .opacity(0.7)
             .multilineTextAlignment(.center)
             .padding(.bottom, Layout.cardPadding)
     }
@@ -113,13 +112,13 @@ struct TVScoreboardView: View {
 
     private var reconnectBanner: some View {
         Text("○ Återansluter…")
-            .font(.label)
-            .foregroundColor(.errorRed)
-            .padding(.horizontal, 20)
-            .padding(.vertical, 8)
-            .background(Color.black.opacity(0.6))
-            .cornerRadius(Layout.cornerRadiusSmall)
-            .padding(.top, Layout.tightSpacing)
+            .font(.tvMeta)  // 28pt
+            .foregroundColor(.txt1)
+            .padding(.horizontal, Layout.space24)
+            .padding(.vertical, Layout.space16)
+            .background(Color.statusBad.opacity(0.9))
+            .cornerRadius(Layout.radiusS)
+            .padding(.top, Layout.space16)
     }
 }
 
@@ -130,38 +129,37 @@ private struct ResultRow: View {
     let result: PlayerResult
 
     var body: some View {
-        HStack(spacing: 16) {
+        HStack(spacing: Layout.space16) {
             // ✓ / ✗ icon
             Text(result.isCorrect ? "✓" : "✗")
                 .font(.system(size: 32, weight: .bold))
-                .foregroundColor(result.isCorrect ? .successGreenBright : .errorRedBright)
+                .foregroundColor(result.isCorrect ? .statusOk : .statusBad)
                 .frame(width: 36)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(result.playerName)
-                    .font(.bodySmall)
-                    .foregroundColor(.white)
+                    .font(.tvMeta)  // 28pt
+                    .foregroundColor(.txt1)
                 Text(result.answerText)
-                    .font(.label)
-                    .foregroundColor(.white.opacity(0.7))
+                    .font(.tvMeta)  // 28pt
+                    .foregroundColor(.txt2)
             }
 
             Spacer()
 
             // points badge
             Text("+\(result.pointsAwarded)")
-                .font(.bodySmall)
-                .foregroundColor(.goldYellow)
-                .shadow(color: .goldYellow.opacity(0.3), radius: Layout.shadowRadius / 4)
+                .font(.tvMeta)  // 28pt
+                .foregroundColor(.accOrange)
         }
-        .padding(.vertical, 8)
-        .padding(.horizontal, 16)
+        .padding(.vertical, Layout.space16)
+        .padding(.horizontal, Layout.space24)
         .background(
             result.isCorrect
-                ? Color.successGreen.opacity(0.08)
-                : Color.errorRed.opacity(0.03)
+                ? Color.statusOk.opacity(0.08)
+                : Color.statusBad.opacity(0.03)
         )
-        .cornerRadius(Layout.cornerRadiusSmall)
+        .cornerRadius(Layout.radiusS)
     }
 }
 
@@ -173,54 +171,50 @@ private struct StandingRow: View {
     let entry: ScoreboardEntry
 
     var body: some View {
-        HStack(spacing: 16) {
+        HStack(spacing: Layout.space16) {
             // rank badge
             ZStack {
                 Circle()
                     .fill(rankColor)
                     .frame(width: 44, height: 44)
-                    .shadow(
-                        color: rank == 1 ? Color.goldYellow.opacity(0.5) : .clear,
-                        radius: Layout.shadowRadius / 3
-                    )
                 Text("\(rank)")
-                    .font(.label)
-                    .foregroundColor(.black)
+                    .font(.tvMeta)  // 28pt
+                    .foregroundColor(.bg0)
             }
 
             Text(entry.name)
-                .font(.scoreboardName)
-                .foregroundColor(.white)
+                .font(.tvBody)  // 34pt
+                .foregroundColor(.txt1)
 
             Spacer()
 
             Text("\(entry.totalScore)")
-                .font(.scoreboardPoints)
-                .foregroundColor(.white)
+                .font(.tvH2)  // 48pt Semibold
+                .foregroundColor(.accOrange)
         }
-        .padding(.vertical, 10)
-        .padding(.horizontal, rank == 1 ? 12 : 0)
+        .padding(.vertical, Layout.space16)
+        .padding(.horizontal, rank == 1 ? Layout.space24 : 0)
         .background(
             rank == 1
-                ? Color.goldYellow.opacity(0.15)
+                ? Color.bg1
                 : Color.clear
         )
         .overlay(
             Rectangle()
-                .fill(rank == 1 ? Color.goldYellow : Color.clear)
+                .fill(rank == 1 ? Color.accOrange : Color.clear)
                 .frame(width: 6),
             alignment: .leading
         )
-        .cornerRadius(Layout.cornerRadiusSmall)
+        .cornerRadius(Layout.radiusL)
     }
 
     /// Gold / silver / bronze for top 3; neutral for the rest.
     private var rankColor: Color {
         switch rank {
-        case 1: return .goldYellow
-        case 2: return .silverGray
-        case 3: return .bronzeOrange
-        default: return .gray.opacity(0.5)
+        case 1: return .accOrange
+        case 2: return .accMint
+        case 3: return .accBlue
+        default: return .txt3
         }
     }
 }

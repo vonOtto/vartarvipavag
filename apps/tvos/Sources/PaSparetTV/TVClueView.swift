@@ -10,6 +10,8 @@ struct TVClueView: View {
 
     var body: some View {
         ZStack(alignment: .top) {
+            Color.bg0.ignoresSafeArea()
+
             VStack(spacing: 0) {
                 // ── level badge + progress bar ──
                 levelHeader
@@ -47,12 +49,11 @@ struct TVClueView: View {
         let hasClue = appState.clueText != nil && !(appState.clueText?.isEmpty ?? true)
         return ZStack {
             Circle()
-                .fill(Color.goldYellow)
+                .fill(Color.accOrange)
                 .frame(width: 140, height: 140)
-                .shadow(color: .black.opacity(Layout.shadowOpacity), radius: Layout.shadowRadius / 2)
             Text(appState.levelPoints.map { "\($0)" } ?? "–")
-                .font(.system(size: 72, weight: .bold))
-                .foregroundColor(.black)
+                .font(.tvH1)  // 72pt Semibold
+                .foregroundColor(.bg0)
         }
         .opacity(hasClue ? 1 : 0)
         .scaleEffect(hasClue ? 1.0 : 0.8)
@@ -76,12 +77,11 @@ struct TVClueView: View {
         return Group {
             if let clue = appState.clueText, !clue.isEmpty {
                 Text(clue)
-                    .font(.clueText)
-                    .foregroundColor(.white)
+                    .font(.tvBody)  // 34pt Regular
+                    .foregroundColor(.txt1)
                     .multilineTextAlignment(.center)
-                    .lineSpacing(4)
+                    .lineSpacing(8)
                     .lineLimit(4)
-                    .shadow(color: .black.opacity(Layout.textShadowOpacity), radius: Layout.textShadowRadius)
                     .opacity(hasClue ? 1 : 0)
                     .offset(y: hasClue ? 0 : 10)
                     .animation(
@@ -90,15 +90,15 @@ struct TVClueView: View {
                     )
             } else {
                 Text("Väntar på ledtråd…")
-                    .font(.bodyLarge)
-                    .foregroundColor(.secondary)
+                    .font(.tvBody)  // 34pt
+                    .foregroundColor(.txt3)
             }
         }
         .padding(.horizontal, Layout.horizontalPadding)
         .padding(.vertical, Layout.cardPadding)
         .background(
-            RoundedRectangle(cornerRadius: Layout.cornerRadiusLarge)
-                .fill(Color.bgCard)
+            RoundedRectangle(cornerRadius: Layout.radiusL)
+                .fill(Color.bg1)
                 .opacity(hasClue ? 1 : 0)
                 .animation(.fadeIn(duration: AnimationDuration.clueBackgroundFadeIn), value: appState.clueText)
         )
@@ -119,13 +119,12 @@ struct TVClueView: View {
     /// Red banner shown while a player's brake is active.
     private func brakeBanner(playerName: String) -> some View {
         Text("● \(playerName) bromsade!")
-            .font(.bodyRegular)
-            .foregroundColor(.white)
-            .padding(.horizontal, 32)
-            .padding(.vertical, 14)
-            .background(Color.errorRedBright.opacity(0.85))
-            .cornerRadius(Layout.cornerRadiusMedium)
-            .shadow(color: .errorRed.opacity(0.6), radius: Layout.shadowRadius / 2)
+            .font(.tvBody)  // 34pt
+            .foregroundColor(.txt1)
+            .padding(.horizontal, Layout.cardPadding)
+            .padding(.vertical, Layout.space16)
+            .background(Color.statusBad.opacity(0.85))
+            .cornerRadius(Layout.radiusM)
             .transition(.move(edge: .bottom).combined(with: .opacity))
             .animation(.easeOut(duration: AnimationDuration.brakeBannerSlide), value: appState.brakeOwnerName)
     }
@@ -135,21 +134,21 @@ struct TVClueView: View {
         let total  = appState.players.count
         let locked = appState.lockedAnswersCount
         return Text("\(locked) / \(total) spelare låsta")
-            .font(.bodySmall)
-            .foregroundColor(.white.opacity(0.7))
+            .font(.tvMeta)  // 28pt
+            .foregroundColor(.txt2)
     }
 
     // MARK: – reconnect banner ─────────────────────────────────────────────
 
     private var reconnectBanner: some View {
         Text("○ Återansluter…")
-            .font(.label)
-            .foregroundColor(.errorRed)
-            .padding(.horizontal, 20)
-            .padding(.vertical, 8)
-            .background(Color.black.opacity(0.6))
-            .cornerRadius(Layout.cornerRadiusSmall)
-            .padding(.top, Layout.tightSpacing)
+            .font(.tvMeta)  // 28pt
+            .foregroundColor(.txt1)
+            .padding(.horizontal, Layout.space24)
+            .padding(.vertical, Layout.space16)
+            .background(Color.statusBad.opacity(0.9))
+            .cornerRadius(Layout.radiusS)
+            .padding(.top, Layout.space16)
     }
 }
 
@@ -180,7 +179,7 @@ private struct SegmentView: View {
                 .fill(state.color)
                 .frame(width: 100, height: 18)
             Text("\(points)")
-                .font(.system(size: 18, weight: .medium))
+                .font(.tvMeta)  // 28pt
                 .foregroundColor(state.labelColor)
         }
     }
@@ -190,17 +189,17 @@ private struct SegmentView: View {
 
         var color: Color {
             switch self {
-            case .passed  : return .yellow.opacity(0.6)
-            case .current : return .white
-            case .future  : return .gray.opacity(0.3)
+            case .passed  : return .accOrange.opacity(0.6)
+            case .current : return .accMint
+            case .future  : return .txt3.opacity(0.3)
             }
         }
 
         var labelColor: Color {
             switch self {
-            case .passed  : return .yellow.opacity(0.7)
-            case .current : return .white
-            case .future  : return .gray.opacity(0.5)
+            case .passed  : return .accOrange
+            case .current : return .txt1
+            case .future  : return .txt3
             }
         }
     }

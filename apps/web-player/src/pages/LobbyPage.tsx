@@ -79,10 +79,10 @@ export const LobbyPage: React.FC = () => {
     <div className="page lobby-page">
       <div className="container">
         <div className="lobby-header">
-          <h1 className="lobby-title">
-            <span className="lobby-title-main">tripto</span>
-            <span className="lobby-title-sub">Big world. Small couch.</span>
-          </h1>
+          <div className="lobby-title">
+            <h1 className="lobby-title-main">tripto</h1>
+            <p className="lobby-title-sub">Big world. Small couch.</p>
+          </div>
         </div>
 
         {error && <div className="error-message">{error}</div>}

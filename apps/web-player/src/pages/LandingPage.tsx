@@ -7,10 +7,10 @@ export const LandingPage: React.FC = () => {
   return (
     <div className="page landing-page">
       <div className="container landing-container">
-        <h1 className="landing-title">
-          <span className="landing-title-main">tripto</span>
-          <span className="landing-title-sub">Big world. Small couch.</span>
-        </h1>
+        <div className="landing-title">
+          <h1 className="landing-title-main">tripto</h1>
+          <p className="landing-title-sub">Big world. Small couch.</p>
+        </div>
 
         <p className="landing-description">
           A travel guessing game for the whole party. Five clues, five chances —

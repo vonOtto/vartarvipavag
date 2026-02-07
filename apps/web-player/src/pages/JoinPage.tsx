@@ -138,10 +138,10 @@ export const JoinPage: React.FC = () => {
   return (
     <div className="page join-page">
       <div className="container join-container">
-        <h1 className="join-title">
-          <span className="join-title-main">tripto</span>
-          <span className="join-title-tagline">Big world. Small couch.</span>
-        </h1>
+        <div className="join-title">
+          <h1 className="join-title-main">tripto</h1>
+          <p className="join-title-tagline">Big world. Small couch.</p>
+        </div>
 
         <form onSubmit={handleLookup} className="join-form">
           {/* Code input – only shown when no code was in the URL */}

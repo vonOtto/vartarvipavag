@@ -94,12 +94,31 @@ struct LaunchView: View {
     @State private var joinCode: String = ""
     @State private var busy = false
     @State private var errorMessage: String?
+    @State private var heroScale: CGFloat = 1.0
+    @State private var heroOffset: CGFloat = 0
 
     var body: some View {
         ZStack {
             Color.bg0.ignoresSafeArea()
 
+            // Moving particles background
+            MovingParticlesView()
+
             VStack(spacing: Layout.space48) {
+                // Hero image with floating animation
+                Image("hero")
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 350)
+                    .scaleEffect(heroScale)
+                    .offset(y: heroOffset)
+                    .onAppear {
+                        withAnimation(.easeInOut(duration: 2.5).repeatForever(autoreverses: true)) {
+                            heroScale = 1.05
+                            heroOffset = -10
+                        }
+                    }
+
                 // Title
                 VStack(spacing: Layout.space16) {
                     Text("tripto")
@@ -752,10 +771,11 @@ struct BackButton: View {
                     .overlay(
                         RoundedRectangle(cornerRadius: Layout.radiusM, style: .continuous)
                             .stroke(
-                                isFocused ? Color.accMint.opacity(0.3) : Color.clear,
+                                isFocused ? Color.accMint.opacity(0.5) : Color.clear,
                                 lineWidth: 2
                             )
                     )
+                    .shadow(color: isFocused ? Color.accMint.opacity(0.3) : .clear, radius: 12, x: 0, y: 0)
             )
             .scaleEffect(isFocused ? 1.05 : 1.0)
         }
@@ -789,10 +809,11 @@ struct NewGameButton: View {
                     .overlay(
                         RoundedRectangle(cornerRadius: Layout.radiusM, style: .continuous)
                             .stroke(
-                                isFocused ? Color.accMint.opacity(0.3) : Color.clear,
+                                isFocused ? Color.accMint.opacity(0.5) : Color.clear,
                                 lineWidth: 2
                             )
                     )
+                    .shadow(color: isFocused ? Color.accMint.opacity(0.3) : .clear, radius: 12, x: 0, y: 0)
             )
             .scaleEffect(isFocused ? 1.05 : 1.0)
         }
@@ -881,17 +902,75 @@ struct PrimaryButton: View {
             .background(
                 RoundedRectangle(cornerRadius: Layout.radiusM, style: .continuous)  // 16pt
                     .fill(isFocused ? Color.accOrange.opacity(0.9) : Color.accOrange)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: Layout.radiusM, style: .continuous)
-                            .stroke(
-                                isFocused ? Color.accOrange.opacity(0.3) : Color.clear,
-                                lineWidth: 2
-                            )
-                    )
+                    .shadow(color: isFocused ? Color.accMint.opacity(0.4) : .clear, radius: 16, x: 0, y: 0)
             )
             .scaleEffect(isFocused ? 1.05 : 1.0)
         }
         .buttonStyle(.plain)
         .animation(.easeInOut(duration: 0.2), value: isFocused)
+    }
+}
+
+// MARK: – Moving Particles Background ───────────────────────────────────────
+
+/// Animated particles for LaunchView background — adds life and energy to the screen.
+struct MovingParticle: Identifiable {
+    let id = UUID()
+    let startX: CGFloat
+    let startY: CGFloat
+    let size: CGFloat
+    let color: Color
+    let moveX: CGFloat
+    let moveY: CGFloat
+    let duration: Double
+    let delay: Double
+}
+
+struct MovingParticlesView: View {
+    @State private var isAnimating = false
+    let particles: [MovingParticle]
+
+    init() {
+        // 25 particles for TV (larger screen than mobile)
+        particles = (0..<25).map { i in
+            // Use simple LCG for deterministic pseudo-random values
+            let seed = i * 48271 % 2147483647
+            let colors: [Color] = [.accMint, .accMint, .accMint, .accMint, .accOrange, .accBlue]
+
+            return MovingParticle(
+                startX: CGFloat((seed * 17) % 1600 - 800),
+                startY: CGFloat((seed * 23) % 1200 - 600),
+                size: CGFloat(4 + ((seed * 13) % 5)),  // 4-8pt for TV
+                color: colors[(seed * 7) % colors.count],
+                moveX: CGFloat(((seed * 29) % 80) - 40),  // -40 to 40
+                moveY: CGFloat(((seed * 31) % 80) - 40),  // -40 to 40
+                duration: Double(3 + ((seed * 11) % 3)),  // 3-5 seconds
+                delay: Double(i) * 0.15
+            )
+        }
+    }
+
+    var body: some View {
+        ZStack {
+            ForEach(particles) { particle in
+                Circle()
+                    .fill(particle.color)
+                    .frame(width: particle.size, height: particle.size)
+                    .blur(radius: 2)
+                    .offset(
+                        x: particle.startX + (isAnimating ? particle.moveX : 0),
+                        y: particle.startY + (isAnimating ? particle.moveY : 0)
+                    )
+                    .opacity(isAnimating ? 0.7 : 0.3)
+                    .animation(
+                        .easeInOut(duration: particle.duration)
+                        .repeatForever(autoreverses: true)
+                        .delay(particle.delay),
+                        value: isAnimating
+                    )
+            }
+        }
+        .allowsHitTesting(false)
+        .onAppear { isAnimating = true }
     }
 }
