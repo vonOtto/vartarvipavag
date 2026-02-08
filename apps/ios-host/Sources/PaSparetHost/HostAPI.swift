@@ -77,7 +77,7 @@ enum HostAPI {
     }
 
     /// Create AI-generated game plan with multiple destinations.
-    static func createGamePlanAI(sessionId: String, numDestinations: Int, prompt: String? = nil) async throws -> GamePlanResponse {
+    static func createGamePlanAI(sessionId: String, numDestinations: Int, regions: [String]? = nil, prompt: String? = nil) async throws -> GamePlanResponse {
         guard let url = URL(string: "\(baseURL)/v1/sessions/\(sessionId)/game-plan/generate-ai") else {
             throw APIError.invalidURL
         }
@@ -87,6 +87,9 @@ enum HostAPI {
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
         var body: [String: Any] = ["numDestinations": numDestinations]
+        if let regions = regions, !regions.isEmpty {
+            body["regions"] = regions
+        }
         if let prompt = prompt {
             body["prompt"] = prompt
         }

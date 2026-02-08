@@ -54,6 +54,7 @@ struct RootView: View {
 struct LaunchView: View {
     @EnvironmentObject var state: HostState
     @State private var showJoinSheet = false
+    @State private var showGenerateSheet = false
     @State private var joinCode = ""
     @State private var busy = false
     @State private var errorMessage: String?
@@ -112,7 +113,7 @@ struct LaunchView: View {
                     #if os(iOS)
                     hapticImpact(.medium)
                     #endif
-                    Task { await createSession() }
+                    showGenerateSheet = true
                 } label: {
                     HStack(spacing: Layout.space2) {
                         Image(systemName: "plus.circle.fill")
@@ -161,12 +162,17 @@ struct LaunchView: View {
                     Task { await joinSession(code: code) }
                 })
             }
+            .sheet(isPresented: $showGenerateSheet) {
+                GenerateGamePlanView { numDestinations, regions, prompt in
+                    Task { await createSession(numDestinations: numDestinations, regions: regions, prompt: prompt) }
+                }
+            }
         }
     }
 
     // MARK: – Actions
 
-    private func createSession() async {
+    private func createSession(numDestinations: Int, regions: [String]?, prompt: String?) async {
         busy = true
         errorMessage = nil
 
@@ -183,12 +189,14 @@ struct LaunchView: View {
             state.joinURL       = resp.joinUrlTemplate.replacingOccurrences(
                                       of: "{joinCode}", with: resp.joinCode)
 
-            // Step 2: Auto-generate game plan (3 AI destinations)
+            // Step 2: Auto-generate game plan with user-selected configuration
             state.isGeneratingPlan = true
             do {
                 let planResp = try await HostAPI.createGamePlanAI(
                     sessionId: resp.sessionId,
-                    numDestinations: 3
+                    numDestinations: numDestinations,
+                    regions: regions,
+                    prompt: prompt
                 )
                 state.gamePlan = planResp.gamePlan
                 state.destinations = planResp.destinations
