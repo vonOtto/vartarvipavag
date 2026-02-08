@@ -965,11 +965,11 @@ async function handleHostNextClue(
       const clueClipId = `voice_clue_${result.clueLevelPoints!}`;
       const clueClip = (session as any)._ttsManifest?.find((c: any) => c.clipId === clueClipId);
 
-      // Broadcast STATE_SNAPSHOT to all clients
-      broadcastStateSnapshot(sessionId);
-
       // Start auto-advance timer for this clue (sets clueTimerEnd in state)
       scheduleClueTimer(sessionId);
+
+      // Broadcast STATE_SNAPSHOT to all clients (timer must be set first)
+      broadcastStateSnapshot(sessionId);
 
       // Broadcast CLUE_PRESENT event (includes timer info from state)
       const clueEvent = buildCluePresentEvent(
@@ -2255,11 +2255,11 @@ async function autoAdvanceClue(sessionId: string): Promise<void> {
       const clueClipId = `voice_clue_${result.clueLevelPoints!}`;
       const clueClip = (session as any)._ttsManifest?.find((c: any) => c.clipId === clueClipId);
 
-      // Broadcast STATE_SNAPSHOT to all clients
-      broadcastStateSnapshot(sessionId);
-
       // Schedule timer for the new clue level (sets clueTimerEnd in state)
       scheduleClueTimer(sessionId);
+
+      // Broadcast STATE_SNAPSHOT to all clients (timer must be set first)
+      broadcastStateSnapshot(sessionId);
 
       // Broadcast CLUE_PRESENT event (includes timer info from state)
       const clueEvent = buildCluePresentEvent(
