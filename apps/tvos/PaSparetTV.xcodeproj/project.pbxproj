@@ -34,6 +34,7 @@
 		AA000018 /* Fonts.swift in Sources */              = {isa = PBXBuildFile; fileRef = BB000018 /* Fonts.swift */; };
 		AA000019 /* Layout.swift in Sources */             = {isa = PBXBuildFile; fileRef = BB000019 /* Layout.swift */; };
 		AA00001A /* background.png in Resources */         = {isa = PBXBuildFile; fileRef = BB00001A /* background.png */; };
+		AA00001C /* BonjourDiscovery.swift in Sources */   = {isa = PBXBuildFile; fileRef = BB00001C /* BonjourDiscovery.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -64,6 +65,7 @@
 		BB000018 /* Fonts.swift */            = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Design/Fonts.swift;      sourceTree = "<group>"; };
 		BB000019 /* Layout.swift */           = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Design/Layout.swift;     sourceTree = "<group>"; };
 		BB00001A /* background.png */         = {isa = PBXFileReference; lastKnownFileType = image.png; path = background.png; sourceTree = "<group>"; };
+		BB00001C /* BonjourDiscovery.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BonjourDiscovery.swift; sourceTree = "<group>"; };
 		BB000099 /* Info.plist */             = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		BB0000F0 /* PaSparetTV.app */         = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PaSparetTV.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -83,6 +85,7 @@
 				BB000001 /* App.swift */,
 				BB000002 /* AppState.swift */,
 				BB000003 /* AudioManager.swift */,
+				BB00001C /* BonjourDiscovery.swift */,
 				BB000004 /* ConfettiView.swift */,
 				BB000005 /* GameModels.swift */,
 				BB000006 /* QRCodeView.swift */,
@@ -170,6 +173,7 @@
 				AA000001 /* App.swift in Sources */,
 				AA000002 /* AppState.swift in Sources */,
 				AA000003 /* AudioManager.swift in Sources */,
+				AA00001C /* BonjourDiscovery.swift in Sources */,
 				AA000004 /* ConfettiView.swift in Sources */,
 				AA000005 /* GameModels.swift in Sources */,
 				AA000006 /* QRCodeView.swift in Sources */,
