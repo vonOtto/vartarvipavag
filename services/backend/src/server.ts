@@ -211,10 +211,15 @@ export function createWebSocketServer(server: HTTPServer) {
         session.joinCode,
         session.state
       );
+      const connectedCount = session.connections.size;
+      const playerCount = session.state.players.length;
       sessionStore.broadcastEventToSession(sessionId, lobbyEvent);
       logger.info('Broadcasted LOBBY_UPDATED after connection', {
         sessionId,
         playerId: actualPlayerId,
+        role,
+        connectedClients: connectedCount,
+        totalPlayers: playerCount,
       });
     }
 

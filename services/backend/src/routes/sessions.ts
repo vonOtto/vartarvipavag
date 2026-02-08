@@ -6,7 +6,6 @@ import { Router, Request, Response } from 'express';
 import { sessionStore } from '../store/session-store';
 import { signToken } from '../utils/auth';
 import { logger } from '../utils/logger';
-import { buildLobbyUpdatedEvent } from '../utils/lobby-events';
 
 const router = Router();
 
@@ -153,27 +152,27 @@ router.post('/v1/sessions/:id/join', (req: Request, res: Response) => {
     const PUBLIC_BASE_URL = getPublicBaseUrl();
     const wsUrl = `ws://${PUBLIC_BASE_URL.replace(/^https?:\/\//, '')}/ws`;
 
+    // Log player join. Note that the player is now in the session but has NOT
+    // yet established a WebSocket connection. WebSocket connections are tracked
+    // separately in sessionStore.connections.
+    const currentSession = sessionStore.getSession(sessionId);
+    const connectedCount = currentSession?.connections.size ?? 0;
+    const totalPlayers = currentSession?.state.players.length ?? 0;
+
     logger.info('Player joined session via REST API', {
       sessionId,
       playerId: player.playerId,
       name: player.name,
       role: effectiveRole,
+      totalPlayers,
+      connectedClients: connectedCount,
+      note: 'WebSocket not yet connected - LOBBY_UPDATED will broadcast on WS connect',
     });
 
-    // Broadcast LOBBY_UPDATED to all connected clients
-    const updatedSession = sessionStore.getSession(sessionId);
-    if (updatedSession) {
-      const lobbyEvent = buildLobbyUpdatedEvent(
-        sessionId,
-        updatedSession.joinCode,
-        updatedSession.state
-      );
-      sessionStore.broadcastEventToSession(sessionId, lobbyEvent);
-      logger.info('Broadcasted LOBBY_UPDATED after player join', {
-        sessionId,
-        playerId: player.playerId,
-      });
-    }
+    // Note: LOBBY_UPDATED will be broadcasted when the player establishes
+    // their WebSocket connection (see server.ts ws.on('connection') handler).
+    // Broadcasting here would race with the WebSocket connection and cause
+    // inconsistent lobby state updates.
 
     return res.status(200).json({
       playerId: player.playerId,
