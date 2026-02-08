@@ -773,9 +773,9 @@ export function scoreFollowupQuestion(session: Session): {
       },
     };
   } else {
-    // Sequence complete — clear and move to SCOREBOARD
+    // Sequence complete — clear followup question
     session.state.followupQuestion = null;
-    session.state.phase = 'SCOREBOARD';
+    // Phase transition hanteras i server.ts efter 4s FOLLOWUP_RESULTS-visning
 
     // Check if there are more destinations in the game plan
     const hasMore = hasMoreDestinations(session);

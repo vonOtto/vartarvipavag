@@ -2390,32 +2390,37 @@ function scheduleFollowupTimer(sessionId: string, durationMs: number): void {
         scheduleFollowupTimer(sessionId, nextFq.timer!.durationMs);
       }, BETWEEN_FOLLOWUPS_MS);
     } else {
-      // Audio: stop followup music (mutate audioState before snapshot)
+      // Last followup — hold FOLLOWUP_RESULTS for 4s before transitioning
       const endAudioEvents = onFollowupSequenceEnd(sess);
 
-      // Broadcast updated state (audioState.isPlaying = false) then audio event
-      broadcastStateSnapshot(sessionId);
+      // Do NOT broadcast STATE_SNAPSHOT yet — phase still = FOLLOWUP_QUESTION
+      // so clients keep showing FOLLOWUP_RESULTS overlay
       endAudioEvents.forEach((e) => sessionStore.broadcastEventToSession(sessionId, e));
 
-      // Sequence done — broadcast SCOREBOARD_UPDATE
-      const scoreboardEvent = buildScoreboardUpdateEvent(sessionId, sess.state.scoreboard, false);
-      sessionStore.broadcastEventToSession(sessionId, scoreboardEvent);
+      console.log(`[Followup] Holding FOLLOWUP_RESULTS for 4s before transition...`);
 
-      // Schedule auto-advance timer if next destination is available
-      // Otherwise, schedule transition to FINAL_RESULTS after 4 s scoreboard hold
-      if (sess.state.nextDestinationAvailable && sess.gamePlan) {
-        scheduleScoreboardTimer(sessionId);
-      } else {
-        // No more destinations - transition to FINAL_RESULTS after 4 s hold (pacing-spec section 10)
-        setTimeout(() => {
-          const session = sessionStore.getSession(sessionId);
-          if (!session || session.state.phase !== 'SCOREBOARD') {
-            logger.debug('SCOREBOARD hold expired but phase changed, ignoring', { sessionId });
-            return;
-          }
+      setTimeout(() => {
+        const s = sessionStore.getSession(sessionId);
+        if (!s || s.state.phase !== 'FOLLOWUP_QUESTION') return;
+
+        console.log(`[Followup] 4s elapsed, transitioning from FOLLOWUP_RESULTS...`);
+
+        // Now transition to SCOREBOARD or FINAL_RESULTS
+        if (s.state.nextDestinationAvailable && s.gamePlan) {
+          console.log(`[Followup] More destinations → SCOREBOARD`);
+          s.state.phase = 'SCOREBOARD';
+          broadcastStateSnapshot(sessionId);
+
+          const scoreboardEvent = buildScoreboardUpdateEvent(sessionId, s.state.scoreboard, false);
+          sessionStore.broadcastEventToSession(sessionId, scoreboardEvent);
+
+          scheduleScoreboardTimer(sessionId);
+        } else {
+          console.log(`[Followup] Last destination → FINAL_RESULTS`);
+          // Last destination — go straight to FINAL_RESULTS (skip SCOREBOARD)
           transitionToFinalResults(sessionId);
-        }, 4000);
-      }
+        }
+      }, 4000);
     }
   }, durationMs);
 
