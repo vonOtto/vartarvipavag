@@ -118,9 +118,28 @@ export function parseClaudeJSON<T>(response: string): T {
   }
 
   try {
+    // First attempt: Parse as-is
     return JSON.parse(cleaned) as T;
-  } catch (error) {
-    throw new Error(`Failed to parse JSON from Claude: ${(error as Error).message}\n\nResponse:\n${response}`);
+  } catch (firstError) {
+    // Second attempt: Fix common JSON issues from Claude
+    try {
+      // Replace literal newlines in string values with \n
+      // This regex finds strings and replaces control chars inside them
+      const fixed = cleaned.replace(
+        /"([^"]*?)"/g,
+        (match, content) => {
+          // Escape control characters in string content
+          const escaped = content
+            .replace(/\n/g, '\\n')
+            .replace(/\r/g, '\\r')
+            .replace(/\t/g, '\\t');
+          return `"${escaped}"`;
+        }
+      );
+      return JSON.parse(fixed) as T;
+    } catch (secondError) {
+      throw new Error(`Failed to parse JSON from Claude: ${(firstError as Error).message}\n\nResponse:\n${response}`);
+    }
   }
 }
 

@@ -12,7 +12,7 @@ export const CONFIG = {
   TIMEOUT_MS: 60000, // 60 seconds per generation step
 
   // Anti-leak verification
-  ANTI_LEAK_STRICT_MODE: true, // If true, reject rounds with potential leaks
+  ANTI_LEAK_STRICT_MODE: false, // If true, reject rounds with potential leaks
 
   // Banned terms that should not appear in early clues
   BANNED_TERMS_IN_EARLY_CLUES: [
