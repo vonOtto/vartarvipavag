@@ -8,6 +8,7 @@ import { Router, Request, Response } from 'express';
 import { generateRound } from '../generators/round-generator';
 import { GenerationProgress, GenerationResponse } from '../types/content-pack';
 import { CONFIG } from '../config';
+import { getContentPackStorage } from '../storage/content-pack-storage';
 
 const router = Router();
 
@@ -174,6 +175,63 @@ router.get('/status', (_req: Request, res: Response) => {
     antiLeakStrictMode: CONFIG.ANTI_LEAK_STRICT_MODE,
     maxRetries: CONFIG.MAX_RETRIES,
   });
+});
+
+/**
+ * GET /generate/packs/index
+ *
+ * Returns the content pack index with metadata for all stored packs.
+ * This allows quick access to pack information without loading full files.
+ */
+router.get('/packs/index', (_req: Request, res: Response) => {
+  try {
+    const storage = getContentPackStorage();
+    const index = storage.getIndex();
+
+    res.json({
+      success: true,
+      index,
+    });
+  } catch (error) {
+    console.error('[generate] Failed to load content pack index:', error);
+    res.status(500).json({
+      success: false,
+      error: (error as Error).message,
+    });
+  }
+});
+
+/**
+ * GET /generate/packs/:roundId
+ *
+ * Loads a specific content pack by ID.
+ */
+router.get('/packs/:roundId', (req: Request, res: Response) => {
+  const { roundId } = req.params;
+
+  try {
+    const storage = getContentPackStorage();
+    const pack = storage.loadPack(roundId);
+
+    if (!pack) {
+      res.status(404).json({
+        success: false,
+        error: `Content pack not found: ${roundId}`,
+      });
+      return;
+    }
+
+    res.json({
+      success: true,
+      contentPack: pack,
+    });
+  } catch (error) {
+    console.error(`[generate] Failed to load pack ${roundId}:`, error);
+    res.status(500).json({
+      success: false,
+      error: (error as Error).message,
+    });
+  }
 });
 
 export default router;

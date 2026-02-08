@@ -79,6 +79,7 @@ Du bör se:
 | `PORT` | Nej | `3001` | Server port |
 | `PUBLIC_BASE_URL` | Nej | `http://localhost:3001` | För TTS URLs. Sätt till LAN IP för tvOS. |
 | `TTS_CACHE_DIR` | Nej | `/tmp/pa-sparet-tts-cache` | Cache för TTS audio clips |
+| `CONTENT_PACKS_DIR` | Nej | `./data/content-packs` | Persistent storage för genererade content packs |
 
 ### Workaround: Pre-genererade Content Packs
 
@@ -90,11 +91,48 @@ npm run generate-test-packs
 
 Detta skapar exempel-packs i `test-packs/` som backend kan ladda direkt utan att anropa AI-tjänsten.
 
+## Content Pack Storage
+
+Genererade content packs sparas automatiskt till persistent storage för återanvändning.
+
+### Storage Location
+
+Default: `./data/content-packs` (relativ till service root)
+
+Detta säkerställer att packs överlever omstarter (till skillnad från `/tmp`).
+
+För att ändra location, sätt `CONTENT_PACKS_DIR` miljövariabel:
+
+```bash
+CONTENT_PACKS_DIR=/custom/path/to/packs
+```
+
+### Deduplication
+
+Innan en ny destination genereras, kontrollerar systemet om destinationen redan finns:
+
+- Case-insensitive matchning på destinationsnamn
+- Om match hittas, returneras befintlig pack utan ny generation
+- Sparar API-kostnader och tid
+- Loggar när befintlig pack återanvänds
+
+### Content Pack Index
+
+Systemet underhåller en index-fil (`content-packs-index.json`) som innehåller:
+
+- Lista på alla genererade packs
+- Metadata per pack (destination, country, verified status, timestamps)
+- Snabb tillgång till pack-information utan att ladda hela filer
+
+Index uppdateras automatiskt när nya packs genereras.
+
 ## API Endpoints
 
 ### POST /generate/round
 
 Genererar en komplett content pack (destination + ledtrådar + följdfrågor).
+
+**Deduplication:** Om destinationen redan finns, returneras befintlig pack.
 
 **Response:**
 ```json
@@ -133,6 +171,45 @@ Genererar en komplett content pack (destination + ledtrådar + följdfrågor).
     "totalSteps": 8,
     "stepName": "Klar"
   }
+}
+```
+
+### GET /generate/packs/index
+
+Returnerar index över alla sparade content packs.
+
+**Response:**
+```json
+{
+  "success": true,
+  "index": {
+    "version": "1.0",
+    "lastUpdated": "2025-01-01T00:00:00.000Z",
+    "totalPacks": 42,
+    "packs": [
+      {
+        "roundId": "uuid",
+        "destination": "Paris",
+        "country": "Frankrike",
+        "generatedAt": "2025-01-01T00:00:00.000Z",
+        "verified": true,
+        "antiLeakChecked": true,
+        "filePath": "uuid.json"
+      }
+    ]
+  }
+}
+```
+
+### GET /generate/packs/:roundId
+
+Laddar en specifik content pack från storage.
+
+**Response:**
+```json
+{
+  "success": true,
+  "contentPack": { /* full content pack */ }
 }
 ```
 

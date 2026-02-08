@@ -11,8 +11,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { generateRound } from '../generators/round-generator';
+import { getContentPackStorage } from '../storage/content-pack-storage';
 
-const CONTENT_PACKS_DIR = process.env.CONTENT_PACKS_DIR || './content-pool';
+const CONTENT_PACKS_DIR = process.env.CONTENT_PACKS_DIR || './data/content-packs';
 
 interface GenerationStats {
   totalRequested: number;
@@ -59,7 +60,7 @@ function parseArgs(): { count: number; parallel: number } {
 /**
  * Generate a single content pack with error handling
  */
-async function generateSinglePack(index: number): Promise<{
+async function generateSinglePack(index: number, excludeDestinations: string[]): Promise<{
   success: boolean;
   roundId?: string;
   destination?: string;
@@ -69,12 +70,10 @@ async function generateSinglePack(index: number): Promise<{
 }> {
   try {
     console.log(`[${index}] Starting generation...`);
-    const pack = await generateRound();
+    const pack = await generateRound(undefined, 3, excludeDestinations);
 
-    // Save to disk
-    const filename = `${pack.roundId}.json`;
-    const filepath = path.join(CONTENT_PACKS_DIR, filename);
-    fs.writeFileSync(filepath, JSON.stringify(pack, null, 2));
+    // Note: generateRound now automatically saves to storage via content-pack-storage.ts
+    // No need to manually save here
 
     console.log(`[${index}] ✅ Generated: ${pack.destination.name}, ${pack.destination.country}`);
 
@@ -117,8 +116,12 @@ async function generatePool(count: number, parallelism: number): Promise<Generat
     packs: [],
   };
 
-  // Ensure output directory exists
-  fs.mkdirSync(CONTENT_PACKS_DIR, { recursive: true });
+  // Track generated destinations to avoid duplicates within this batch
+  const excludeDestinations: string[] = [];
+
+  // Initialize storage (creates directory if needed)
+  const storage = getContentPackStorage();
+  console.log(`Storage directory: ${storage.getStorageDir()}\n`);
 
   // Generate in batches
   for (let i = 0; i < count; i += parallelism) {
@@ -129,7 +132,7 @@ async function generatePool(count: number, parallelism: number): Promise<Generat
 
     for (let j = 0; j < batchSize; j++) {
       const index = i + j + 1;
-      batchPromises.push(generateSinglePack(index));
+      batchPromises.push(generateSinglePack(index, excludeDestinations));
     }
 
     // Wait for batch to complete
@@ -139,6 +142,7 @@ async function generatePool(count: number, parallelism: number): Promise<Generat
     for (const result of results) {
       if (result.success) {
         stats.successful++;
+        excludeDestinations.push(result.destination!);
         metadata.packs.push({
           roundId: result.roundId!,
           destination: result.destination!,
@@ -161,7 +165,7 @@ async function generatePool(count: number, parallelism: number): Promise<Generat
 
   metadata.totalPacks = stats.successful;
 
-  // Save metadata
+  // Save legacy metadata for backwards compatibility
   const metadataPath = path.join(CONTENT_PACKS_DIR, 'metadata.json');
   fs.writeFileSync(metadataPath, JSON.stringify(metadata, null, 2));
 

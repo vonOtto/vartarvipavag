@@ -3,9 +3,14 @@ import express from 'express';
 import { CACHE_DIR, PUBLIC_URL, generateOrFetch } from './tts-client';
 import { validateConfig } from './config';
 import generateRoutes from './routes/generate';
+import { getContentPackStorage } from './storage/content-pack-storage';
 
 // Validate configuration on startup
 validateConfig();
+
+// Initialize content pack storage (creates directory if needed)
+const storage = getContentPackStorage();
+console.log(`[ai-content] Content packs storage: ${storage.getStorageDir()}`);
 
 const app = express();
 app.use(express.json());

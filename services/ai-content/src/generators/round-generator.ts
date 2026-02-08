@@ -23,6 +23,7 @@ import {
 import { checkFollowupOverlaps } from '../verification/overlap-checker';
 import { costTracker } from '../metrics/cost-tracker';
 import { polishClue, polishFollowup } from '../utils/swedish-polish';
+import { getContentPackStorage } from '../storage/content-pack-storage';
 
 export type ProgressCallback = (progress: GenerationProgress) => void;
 
@@ -39,6 +40,9 @@ export async function generateRound(
 
   // Start cost tracking
   costTracker.startRound(roundId);
+
+  // Get storage instance
+  const storage = getContentPackStorage();
 
   while (attempt < maxRetries) {
     attempt++;
@@ -62,6 +66,23 @@ export async function generateRound(
       });
 
       const destination = await generateDestination(excludeDestinations);
+
+      // Deduplication check: If destination already exists, return existing pack
+      const existingPackId = storage.findExistingDestination(destination.name);
+      if (existingPackId) {
+        console.log(`[round-generator] Destination "${destination.name}" already exists (${existingPackId}), reusing existing pack`);
+        const existingPack = storage.loadPack(existingPackId);
+        if (existingPack) {
+          onProgress?.({
+            currentStep: CONFIG.GENERATION_STEPS.COMPLETE,
+            totalSteps: CONFIG.TOTAL_STEPS,
+            stepName: 'Klar (återanvänd befintlig pack)',
+            roundId: existingPackId,
+            destination: destination.name,
+          });
+          return existingPack;
+        }
+      }
 
       // Step 3: Generate clues
       onProgress?.({
@@ -195,6 +216,9 @@ export async function generateRound(
       console.log(`  Verified: ${allVerified}`);
       console.log(`  Anti-leak passed: ${antiLeakPassed}`);
       console.log(`  Overlap check passed: ${overlapPassed}`);
+
+      // Save content pack to persistent storage
+      storage.savePack(contentPack);
 
       // Save cost metrics
       costTracker.saveMetrics();
