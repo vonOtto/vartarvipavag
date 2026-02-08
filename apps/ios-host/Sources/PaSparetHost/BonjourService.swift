@@ -10,6 +10,9 @@ class BonjourService: NSObject, NetServiceDelegate {
     private var netService: NetService?
     private var isPublishing = false
 
+    /// Callback invoked when publishing state changes
+    var onPublishingStateChanged: ((Bool) -> Void)?
+
     // MARK: - Public API
 
     /// Start broadcasting the session on the local network.
@@ -19,6 +22,8 @@ class BonjourService: NSObject, NetServiceDelegate {
     ///   - joinCode: The 6-character join code (used as service name)
     ///   - destinationCount: Number of destinations in the game plan
     func startBroadcasting(sessionId: String, joinCode: String, destinationCount: Int) {
+        print("[Bonjour] startBroadcasting called with sessionId: \(sessionId), joinCode: \(joinCode), destinations: \(destinationCount)")
+
         // Stop any existing service first
         stopBroadcasting()
 
@@ -38,6 +43,8 @@ class BonjourService: NSObject, NetServiceDelegate {
             txtDict["destinations"] = destCountData
         }
 
+        print("[Bonjour] TXT record keys: \(txtDict.keys)")
+
         let txtData = NetService.data(fromTXTRecord: txtDict)
         service.setTXTRecord(txtData)
 
@@ -46,9 +53,9 @@ class BonjourService: NSObject, NetServiceDelegate {
         service.publish()
 
         self.netService = service
-        self.isPublishing = true
+        // Don't set isPublishing = true yet; wait for delegate callback
 
-        print("[Bonjour] Started broadcasting session '\(joinCode)' on local network")
+        print("[Bonjour] NetService.publish() called, waiting for delegate callback...")
     }
 
     /// Stop broadcasting the session.
@@ -71,16 +78,20 @@ class BonjourService: NSObject, NetServiceDelegate {
     // MARK: - NetServiceDelegate
 
     func netServiceDidPublish(_ sender: NetService) {
-        print("[Bonjour] Service published successfully: \(sender.name)")
+        print("[Bonjour] ✅ Service published successfully: \(sender.name)")
+        isPublishing = true
+        onPublishingStateChanged?(true)
     }
 
     func netService(_ sender: NetService, didNotPublish errorDict: [String : NSNumber]) {
-        print("[Bonjour] Failed to publish service: \(errorDict)")
+        print("[Bonjour] ❌ Failed to publish service: \(errorDict)")
         isPublishing = false
+        onPublishingStateChanged?(false)
     }
 
     func netServiceDidStop(_ sender: NetService) {
         print("[Bonjour] Service stopped: \(sender.name)")
         isPublishing = false
+        onPublishingStateChanged?(false)
     }
 }

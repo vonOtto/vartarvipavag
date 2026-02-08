@@ -185,6 +185,49 @@ struct LaunchView: View {
                 // Discovered sessions section (Bonjour)
                 if !bonjourDiscovery.discoveredSessions.isEmpty {
                     discoveredSessionsSection
+                } else {
+                    // Debug: Show searching status
+                    VStack(spacing: Layout.space16) {
+                        Text("Sessioner i närheten")
+                            .font(.tvBody)  // 34pt
+                            .foregroundColor(.txt1)
+
+                        HStack(spacing: Layout.space16) {
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle(tint: .txt3))
+                                .scaleEffect(0.8)
+
+                            Text("Söker efter sessioner...")
+                                .font(.tvMeta)  // 28pt
+                                .foregroundColor(.txt3)
+                                .italic()
+                        }
+
+                        // Force refresh button
+                        Button(action: {
+                            print("[Bonjour Debug] Manual refresh triggered")
+                            bonjourDiscovery.stopDiscovery()
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                                bonjourDiscovery.startDiscovery()
+                            }
+                        }) {
+                            HStack(spacing: Layout.space16) {
+                                Image(systemName: "arrow.clockwise")
+                                    .font(.system(size: 24, weight: .semibold))
+                                Text("Uppdatera sökning")
+                                    .font(.tvMeta)  // 28pt
+                            }
+                            .foregroundColor(.txt2)
+                            .padding(.horizontal, Layout.space24)
+                            .padding(.vertical, Layout.space16)
+                            .background(
+                                RoundedRectangle(cornerRadius: Layout.radiusM, style: .continuous)
+                                    .fill(Color.bg1)
+                            )
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    .padding(.vertical, Layout.space24)
                 }
 
                 // Join code input (secondary action)

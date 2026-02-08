@@ -7,10 +7,14 @@ import Foundation
 class HostState: ObservableObject {
 
     // MARK: – session credentials (set after REST create)
-    var sessionId     : String?
+    var sessionId     : String? {
+        didSet { startBroadcastingIfNeeded() }
+    }
     var hostAuthToken : String?
     var wsUrl         : String?
-    var joinCode      : String?
+    var joinCode      : String? {
+        didSet { startBroadcastingIfNeeded() }
+    }
     /// Resolved join URL template with {joinCode} replaced.
     var joinURL       : String?
 
@@ -47,8 +51,25 @@ class HostState: ObservableObject {
     private static let maxDelay       = 10.0
 
     // MARK: – Bonjour service
-    private let bonjourService = BonjourService()
+    private let bonjourService: BonjourService = {
+        let service = BonjourService()
+        return service
+    }()
     @Published var isBroadcasting: Bool = false
+
+    // MARK: – initialization
+    init() {
+        setupBonjourCallback()
+    }
+
+    private func setupBonjourCallback() {
+        bonjourService.onPublishingStateChanged = { [weak self] isPublishing in
+            Task { @MainActor in
+                self?.isBroadcasting = isPublishing
+                print("[HostState] Broadcasting state changed: \(isPublishing)")
+            }
+        }
+    }
 
     // MARK: – connect ──────────────────────────────────────────────────────────
 
@@ -403,16 +424,22 @@ class HostState: ObservableObject {
     }
 
     /// Start Bonjour broadcasting if we have all required data and aren't already broadcasting.
-    private func startBroadcastingIfNeeded() {
-        guard !isBroadcasting,
-              let sid = sessionId,
+    func startBroadcastingIfNeeded() {
+        guard !isBroadcasting else {
+            print("[HostState] Already broadcasting, skipping")
+            return
+        }
+
+        guard let sid = sessionId,
               let code = joinCode else {
+            print("[HostState] Cannot start broadcasting - missing credentials. sessionId: \(sessionId != nil), joinCode: \(joinCode != nil)")
             return
         }
 
         let destCount = destinations.count
+        print("[HostState] Starting broadcast for session \(sid) with code \(code), \(destCount) destinations")
         bonjourService.startBroadcasting(sessionId: sid, joinCode: code, destinationCount: destCount)
-        isBroadcasting = true
+        // isBroadcasting will be set via callback when publishing succeeds
     }
 
     /// Fire-and-forget JSON send.

@@ -450,17 +450,22 @@ struct LobbyHostView: View {
                             .foregroundColor(.txt2)
 
                         // Bonjour broadcast status
-                        if state.isBroadcasting {
-                            HStack(spacing: Layout.space1) {
-                                Image(systemName: "antenna.radiowaves.left.and.right")
-                                    .font(.system(size: 14, weight: .medium))
-                                    .foregroundColor(.stateOk)
-                                Text("Synlig på lokalt nätverk")
-                                    .font(.small)
-                                    .foregroundColor(.txt2)
+                        HStack(spacing: Layout.space1) {
+                            Image(systemName: state.isBroadcasting ? "antenna.radiowaves.left.and.right" : "antenna.radiowaves.left.and.right.slash")
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundColor(state.isBroadcasting ? .stateOk : .txt3)
+                            Text(state.isBroadcasting ? "Synlig på lokalt nätverk" : "Väntar på broadcast...")
+                                .font(.small)
+                                .foregroundColor(state.isBroadcasting ? .txt2 : .txt3)
+                            #if DEBUG
+                            if let code = state.joinCode {
+                                Text("(\(code))")
+                                    .font(.system(size: 10))
+                                    .foregroundColor(.txt3)
                             }
-                            .padding(.top, Layout.space1)
+                            #endif
                         }
+                        .padding(.top, Layout.space1)
                     }
                     .padding(.top, Layout.space4)
                     .padding(.bottom, Layout.space3)

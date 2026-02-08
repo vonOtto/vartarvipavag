@@ -19,6 +19,7 @@ class BonjourDiscovery: NSObject, ObservableObject {
 
     private let browser = NetServiceBrowser()
     private var resolvingServices: [NetService] = []
+    private var debugTimer: Timer?
 
     override init() {
         super.init()
@@ -30,13 +31,31 @@ class BonjourDiscovery: NSObject, ObservableObject {
         discoveredSessions.removeAll()
         resolvingServices.removeAll()
         browser.searchForServices(ofType: "_tripto._tcp.", inDomain: "local.")
+
+        // Debug: Log status every 5 seconds
+        debugTimer?.invalidate()
+        debugTimer = Timer.scheduledTimer(withTimeInterval: 5.0, repeats: true) { [weak self] _ in
+            Task { @MainActor in
+                guard let self = self else { return }
+                print("[Bonjour Debug] Discovered sessions: \(self.discoveredSessions.count)")
+                print("[Bonjour Debug] Resolving services: \(self.resolvingServices.count)")
+                if !self.discoveredSessions.isEmpty {
+                    for session in self.discoveredSessions {
+                        print("[Bonjour Debug]   - \(session.joinCode) (\(session.destinationCount) destinations)")
+                    }
+                }
+            }
+        }
     }
 
     /// Stop browsing for services and clear discovered sessions.
     func stopDiscovery() {
         browser.stop()
+        debugTimer?.invalidate()
+        debugTimer = nil
         discoveredSessions.removeAll()
         resolvingServices.removeAll()
+        print("[Bonjour] Discovery stopped")
     }
 }
 
@@ -46,6 +65,7 @@ extension BonjourDiscovery: NetServiceBrowserDelegate {
 
     nonisolated func netServiceBrowserWillSearch(_ browser: NetServiceBrowser) {
         print("[Bonjour] Starting search for _tripto._tcp. services...")
+        print("[Bonjour Debug] Browser state: searching on domain 'local.'")
     }
 
     nonisolated func netServiceBrowser(_ browser: NetServiceBrowser,
@@ -57,6 +77,7 @@ extension BonjourDiscovery: NetServiceBrowserDelegate {
                                       didFind service: NetService,
                                       moreComing: Bool) {
         print("[Bonjour] Found service: \(service.name)")
+        print("[Bonjour Debug] Service domain: \(service.domain), type: \(service.type)")
         service.delegate = self
         Task { @MainActor in
             resolvingServices.append(service)
@@ -87,6 +108,7 @@ extension BonjourDiscovery: NetServiceDelegate {
         }
 
         let txtRecord = NetService.dictionary(fromTXTRecord: txtData)
+        print("[Bonjour Debug] TXT record keys: \(txtRecord.keys.joined(separator: ", "))")
 
         // Extract sessionId from TXT record
         guard let sessionIdData = txtRecord["sessionId"],
