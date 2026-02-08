@@ -381,6 +381,155 @@ $ git log --all --full-history -- "**/secrets*"
 
 ---
 
-**Report Generated:** 2026-02-03 14:47 CET
+### Commit 5: Bonjour Auto-Discovery + API Key Documentation
+**Hash:** `bace0276b63fb138fbf6dea56a71ec8f354c79f4`
+**Date:** 2026-02-08 03:22 CET
+**Message:** `feat: Bonjour auto-discovery + API key docs`
+**Author:** vonOtto <oskar@tupac.se>
+
+**Files Committed (12 files, 723 insertions, 32 deletions):**
+
+**iOS Host Implementation:**
+- `apps/ios-host/Sources/PaSparetHost/BonjourService.swift` (86 lines) - Bonjour broadcast service (_tripto._tcp.)
+- `apps/ios-host/Sources/PaSparetHost/HostState.swift` (34 lines added) - Bonjour integration and visibility status
+- `apps/ios-host/Sources/PaSparetHost/App.swift` (13 lines added) - BonjourService lifecycle
+- `apps/ios-host/Sources/PaSparetHost/Info.plist` (6 lines added) - Bonjour services declaration
+- `apps/ios-host/PaSparetHost.xcodeproj/project.pbxproj` (4 lines added) - BonjourService.swift in build
+
+**tvOS Implementation:**
+- `apps/tvos/Sources/PaSparetTV/BonjourDiscovery.swift` (130 lines) - Network service browser and auto-discovery
+- `apps/tvos/Sources/PaSparetTV/App.swift` (123 lines added) - Discovery UI, auto-join flow, manual code fallback
+- `apps/tvos/Sources/PaSparetTV/Info.plist` (6 lines added) - Bonjour services declaration
+- `apps/tvos/BONJOUR_IMPLEMENTATION.md` (120 lines) - Complete implementation documentation
+
+**AI Content Service Documentation:**
+- `services/ai-content/.env.example` (71 lines updated) - Enhanced with setup instructions, API key guides
+- `services/ai-content/README.md` (154 lines added) - Environment setup, troubleshooting, pre-generated content workaround
+- `services/ai-content/src/config.ts` (8 lines updated) - Startup warning when ANTHROPIC_API_KEY missing
+
+**Safety Checks:**
+- ✅ No secrets committed (.env.example is template only)
+- ✅ No API keys or tokens in source code
+- ✅ Info.plist declarations are safe (service type definitions)
+- ✅ All implementation files are application code
+- ✅ Documentation enhances developer experience
+
+**Features Implemented:**
+
+1. **Bonjour Session Broadcasting (iOS Host):**
+   - Service type: _tripto._tcp.
+   - TXT record: sessionId, joinCode, name, version
+   - Auto-start when session created
+   - Auto-stop when session ends
+   - UI shows "Synlig på lokalt nätverk" status
+
+2. **Bonjour Auto-Discovery (tvOS):**
+   - Automatically scans local network for sessions
+   - One-tap join (no manual code needed)
+   - Fallback to manual code entry still available
+   - Shows session name and join code in discovery list
+   - Auto-connects when single session found
+
+3. **Enhanced API Key Documentation:**
+   - .env.example with detailed instructions for each variable
+   - README sections:
+     - Environment Setup with step-by-step guide
+     - Troubleshooting for 503/401 errors
+     - Workaround using pre-generated content packs
+   - Startup warning logs when ANTHROPIC_API_KEY missing
+   - Clear error messages guide developers to documentation
+
+4. **Developer Experience Improvements:**
+   - New developers can see what API keys are needed
+   - Pre-generated content packs allow testing without API keys
+   - MOCK MODE for ElevenLabs TTS (silent WAV files)
+   - Clear troubleshooting steps for common issues
+
+**User Flow:**
+
+1. **iOS Host creates session**
+   → Bonjour service broadcasts on local network
+
+2. **tvOS app launches**
+   → BonjourDiscovery finds nearby sessions
+   → Shows list with session names and join codes
+
+3. **User taps session**
+   → App auto-fills join code
+   → Connects to session instantly
+
+4. **Fallback available**
+   → Manual code entry still works
+   → Supports remote sessions (outside LAN)
+
+**Testing Notes:**
+- Requires physical devices on same WiFi network
+- Simulator cannot test Bonjour (network isolation)
+- Manual code entry tested and working
+- Session visibility confirmed on LAN
+
+**Contracts Compliance:**
+- ✅ No changes to contracts/ (pure client implementation)
+- ✅ Uses existing REST API endpoints
+- ✅ WebSocket connection flow unchanged
+
+---
+
+## Security Verification Summary (Updated)
+
+### All Commits
+```bash
+# Verified no secrets in git history
+$ git log --all --full-history -- "**/.env"
+# (no output - .env files never tracked) ✅
+
+$ git log --all --full-history -- "**/secrets*"
+# (no output - no secret files tracked) ✅
+```
+
+### Protected Files (Never Committed)
+- ⚠️ `services/backend/.env` - JWT_SECRET, PUBLIC_BASE_URL
+- ⚠️ `services/ai-content/.env` - ANTHROPIC_API_KEY, ELEVENLABS_API_KEY
+- 🗑️ `**/node_modules/` - Dependencies
+- 🗑️ `**/dist/` - Build artifacts
+- 🗑️ `.DS_Store` files - macOS metadata
+
+---
+
+## Commit Statistics (Updated)
+
+| Commit | Files | Insertions | Deletions | Safe |
+|--------|-------|------------|-----------|------|
+| 2e5867f (git agent) | 3 | 186 | 0 | ✅ |
+| 53105a4 (REST API) | 16 | 2028 | 14 | ✅ |
+| ca6726d (WS + lobby) | 17 | 2912 | 40 | ✅ |
+| dd75340 (game flow) | 8 | 1883 | 3 | ✅ |
+| bace027 (Bonjour + docs) | 12 | 723 | 32 | ✅ |
+| **Total** | **56** | **8732** | **89** | **✅** |
+
+---
+
+## Next Actions (Updated)
+
+1. ✅ Backend REST API fully implemented
+2. ✅ WebSocket authentication working
+3. ✅ Lobby realtime updates implemented
+4. ✅ Connection tracking functional
+5. ✅ Role-based state projection working
+6. ✅ HOST_START_GAME event implemented
+7. ✅ Clue flow implemented (10→8→6→4→2 points)
+8. ✅ Destination reveal working
+9. ✅ Bonjour auto-discovery (iOS Host + tvOS)
+10. ✅ API key documentation enhanced
+11. 🔜 Implement brake mechanism (BRAKE_PULL, BRAKE_ACCEPTED, BRAKE_REJECTED)
+12. 🔜 Implement answer submission (BRAKE_ANSWER_SUBMIT, BRAKE_ANSWER_LOCKED)
+13. 🔜 Implement scoring with locked answers
+14. 🔜 Build web player client
+15. 🔜 Continue tvOS client development
+16. 🔜 Continue iOS host client development
+
+---
+
+**Report Generated:** 2026-02-08 03:22 CET
 **Git Manager:** claude-code git agent
 **Status:** ✅ ALL SAFETY CHECKS PASSED
