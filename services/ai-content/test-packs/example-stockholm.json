@@ -1,0 +1,95 @@
+{
+  "roundId": "example-stockholm-001",
+  "destination": {
+    "name": "Stockholm",
+    "country": "Sverige",
+    "aliases": ["stockholm", "sthlm"]
+  },
+  "clues": [
+    {
+      "level": 10,
+      "text": "Här finns 14 öar sammanbundna av över 50 broar, och staden byggdes på platsen där Mälaren möter Östersjön."
+    },
+    {
+      "level": 8,
+      "text": "Staden är känd för sitt Nobelpris-ceremoni som hålls i stadshuset varje december."
+    },
+    {
+      "level": 6,
+      "text": "I denna stad ligger Gamla Stan, en av Europas bäst bevarade medeltida stadskärnor."
+    },
+    {
+      "level": 4,
+      "text": "Vasamuseet i denna stad hyser ett 1600-talsskepp som sjönk på sin jungfruresa 1628."
+    },
+    {
+      "level": 2,
+      "text": "Sveriges huvudstad och största stad, känd för sina vackra byggnader och vattenvägar."
+    }
+  ],
+  "followups": [
+    {
+      "questionText": "Vilket år sjönk skeppet Vasa som nu visas i museet här?",
+      "options": ["1528", "1628", "1728", "1828"],
+      "correctAnswer": "1628"
+    },
+    {
+      "questionText": "Vad heter sjön som möter Östersjön vid denna stad?",
+      "options": ["Vänern", "Vättern", "Mälaren", "Hjälmaren"],
+      "correctAnswer": "Mälaren"
+    }
+  ],
+  "metadata": {
+    "generatedAt": "2025-02-07T00:00:00.000Z",
+    "verified": true,
+    "antiLeakChecked": true,
+    "verificationDetails": {
+      "destinationVerified": {
+        "verified": true,
+        "status": "verified",
+        "reason": "Stockholm är Sveriges huvudstad och ligger verkligen på 14 öar där Mälaren möter Östersjön.",
+        "sources": ["Geographic knowledge"]
+      },
+      "cluesVerified": [
+        {
+          "verified": true,
+          "status": "verified",
+          "reason": "Korrekt information om Stockholms geografi"
+        },
+        {
+          "verified": true,
+          "status": "verified",
+          "reason": "Nobelprisceremonin hålls i Stadshuset"
+        },
+        {
+          "verified": true,
+          "status": "verified",
+          "reason": "Gamla Stan är verkligen en välbevarad medeltida stadskärna"
+        },
+        {
+          "verified": true,
+          "status": "verified",
+          "reason": "Vasa sjönk 1628 och finns på Vasamuseet"
+        },
+        {
+          "verified": true,
+          "status": "verified",
+          "reason": "Korrekt beskrivning av Stockholm"
+        }
+      ],
+      "followupsVerified": [
+        {
+          "verified": true,
+          "status": "verified",
+          "reason": "Vasa sjönk 1628"
+        },
+        {
+          "verified": true,
+          "status": "verified",
+          "reason": "Mälaren möter Östersjön vid Stockholm"
+        }
+      ],
+      "antiLeakPassed": true
+    }
+  }
+}

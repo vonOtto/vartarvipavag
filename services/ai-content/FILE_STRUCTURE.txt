@@ -1,0 +1,95 @@
+AI Content Service - File Structure
+=====================================
+
+services/ai-content/
+│
+├── src/                                  # Source code
+│   ├── index.ts                          # Main Express server + routes
+│   ├── config.ts                         # Configuration & constants
+│   ├── claude-client.ts                  # Claude API wrapper
+│   ├── tts-client.ts                     # ElevenLabs TTS client
+│   │
+│   ├── types/
+│   │   └── content-pack.ts               # TypeScript type definitions
+│   │
+│   ├── generators/                       # Content generation
+│   │   ├── destination-generator.ts      # Generate destinations
+│   │   ├── clue-generator.ts             # Generate 5-level clues
+│   │   ├── followup-generator.ts         # Generate followup questions
+│   │   └── round-generator.ts            # Main orchestrator
+│   │
+│   ├── verification/                     # Quality checks
+│   │   ├── fact-checker.ts               # Verify facts with Claude
+│   │   └── anti-leak-checker.ts          # Anti-leak detection
+│   │
+│   ├── routes/
+│   │   └── generate.ts                   # API endpoints for generation
+│   │
+│   └── scripts/
+│       └── generate-test-packs.ts        # Generate sample test data
+│
+├── docs/                                 # Documentation
+│   ├── architecture.md                   # System architecture & flow
+│   ├── integration.md                    # Backend integration guide
+│   └── testing.md                        # Testing guide & checklists
+│
+├── test-packs/                           # Generated test content
+│   ├── README.md
+│   └── example-stockholm.json            # Example content pack
+│
+├── README.md                             # Service overview & API docs
+├── QUICKSTART.md                         # Quick start guide
+├── IMPLEMENTATION_SUMMARY.md             # Implementation summary
+├── FILE_STRUCTURE.txt                    # This file
+│
+├── package.json                          # Dependencies & scripts
+├── tsconfig.json                         # TypeScript config
+├── .env.example                          # Environment variables template
+└── .env                                  # Environment variables (not committed)
+
+
+Key Files by Function
+=====================
+
+API Endpoints:
+  src/index.ts                  - Main server setup
+  src/routes/generate.ts        - Generation endpoints
+
+Content Generation:
+  src/generators/round-generator.ts     - Main orchestrator
+  src/generators/destination-generator.ts
+  src/generators/clue-generator.ts
+  src/generators/followup-generator.ts
+
+Verification:
+  src/verification/fact-checker.ts      - Fact verification
+  src/verification/anti-leak-checker.ts - Anti-leak detection
+
+Infrastructure:
+  src/config.ts                 - Configuration
+  src/claude-client.ts          - Claude API wrapper
+  src/tts-client.ts             - TTS client
+
+Types:
+  src/types/content-pack.ts     - Type definitions
+
+Testing:
+  src/scripts/generate-test-packs.ts    - Test data generator
+  test-packs/example-stockholm.json     - Example output
+
+Documentation:
+  README.md                     - Overview
+  QUICKSTART.md                 - Quick start
+  IMPLEMENTATION_SUMMARY.md     - Implementation details
+  docs/architecture.md          - System design
+  docs/integration.md           - Backend integration
+  docs/testing.md               - Testing guide
+
+
+Lines of Code (approx)
+======================
+Source files:          ~1,500 LOC
+Documentation:         ~1,200 LOC
+Configuration:         ~50 LOC
+Total:                 ~2,750 LOC
+

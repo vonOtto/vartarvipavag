@@ -31,6 +31,23 @@ struct RootView: View {
                 ConnectingView()
             } else if Self.lobbyPhases.contains(appState.phase) {
                 LobbyView()
+            } else if appState.phase == "NEXT_DESTINATION" {
+                // Show transition screen between destinations
+                if let name = appState.destinationName,
+                   let country = appState.destinationCountry,
+                   let index = appState.destinationIndex,
+                   let total = appState.totalDestinations {
+                    NextDestinationView(
+                        destinationName: name,
+                        destinationCountry: country,
+                        destinationIndex: index,
+                        totalDestinations: total
+                    )
+                    .transition(.opacity)
+                } else {
+                    // Fallback if data is missing
+                    LiveView()
+                }
             } else if appState.phase == "ROUND_INTRO" {
                 RoundIntroView()
             } else if Self.cluePhases.contains(appState.phase) {
@@ -53,6 +70,7 @@ struct RootView: View {
                 ConfettiView { appState.showConfetti = false }
             }
         }
+        .animation(.easeInOut(duration: 0.5), value: appState.phase)
     }
 }
 
@@ -536,10 +554,24 @@ struct LobbyView: View {
 
             // Empty state
             if appState.players.isEmpty {
-                VStack(spacing: Layout.space16) {
-                    Image(systemName: "person.2.badge.gearshape")
-                        .font(.system(size: 64, weight: .light))
-                        .foregroundColor(.txt3.opacity(0.3))
+                VStack(spacing: Layout.space24) {
+                    // Friendly waiting state for TV
+                    ZStack {
+                        Circle()
+                            .fill(Color.accOrange.opacity(0.08))
+                            .frame(width: 160, height: 160)
+
+                        Image(systemName: "hand.wave.fill")
+                            .font(.system(size: 72, weight: .regular))
+                            .foregroundStyle(
+                                LinearGradient(
+                                    colors: [Color.accOrange, Color.accMint],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                            .rotationEffect(.degrees(-15))
+                    }
 
                     Text("Väntar på spelare...")
                         .font(.tvMeta)  // 28pt

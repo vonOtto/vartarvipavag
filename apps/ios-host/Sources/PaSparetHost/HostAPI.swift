@@ -75,9 +75,79 @@ enum HostAPI {
 
         return try JSONDecoder().decode(JoinResponse.self, from: data)
     }
-}
 
-// MARK: – errors ──────────────────────────────────────────────────────────────
+    /// Create AI-generated game plan with multiple destinations.
+    static func createGamePlanAI(sessionId: String, numDestinations: Int, prompt: String? = nil) async throws -> GamePlanResponse {
+        guard let url = URL(string: "\(baseURL)/v1/sessions/\(sessionId)/game-plan/generate-ai") else {
+            throw APIError.invalidURL
+        }
+
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        var body: [String: Any] = ["numDestinations": numDestinations]
+        if let prompt = prompt {
+            body["prompt"] = prompt
+        }
+        req.httpBody = try JSONSerialization.data(withJSONObject: body)
+
+        let (data, response) = try await URLSession.shared.data(for: req)
+
+        guard let http = response as? HTTPURLResponse, http.statusCode == 200 || http.statusCode == 201 else {
+            throw APIError.http((response as? HTTPURLResponse)?.statusCode ?? 0)
+        }
+
+        return try JSONDecoder().decode(GamePlanResponse.self, from: data)
+    }
+
+    /// Import existing content packs as game plan.
+    static func createGamePlanManual(sessionId: String, contentPackIds: [String]) async throws -> GamePlanResponse {
+        guard let url = URL(string: "\(baseURL)/v1/sessions/\(sessionId)/game-plan/import") else {
+            throw APIError.invalidURL
+        }
+
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        let body: [String: Any] = ["contentPackIds": contentPackIds]
+        req.httpBody = try JSONSerialization.data(withJSONObject: body)
+
+        let (data, response) = try await URLSession.shared.data(for: req)
+
+        guard let http = response as? HTTPURLResponse, http.statusCode == 200 || http.statusCode == 201 else {
+            throw APIError.http((response as? HTTPURLResponse)?.statusCode ?? 0)
+        }
+
+        return try JSONDecoder().decode(GamePlanResponse.self, from: data)
+    }
+
+    /// Create hybrid game plan (mix of AI and manual content).
+    static func createGamePlanHybrid(sessionId: String, aiGenerated: Int, manualPackIds: [String]) async throws -> GamePlanResponse {
+        guard let url = URL(string: "\(baseURL)/v1/sessions/\(sessionId)/game-plan/hybrid") else {
+            throw APIError.invalidURL
+        }
+
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        let body: [String: Any] = [
+            "aiGenerated": aiGenerated,
+            "manualPackIds": manualPackIds
+        ]
+        req.httpBody = try JSONSerialization.data(withJSONObject: body)
+
+        let (data, response) = try await URLSession.shared.data(for: req)
+
+        guard let http = response as? HTTPURLResponse, http.statusCode == 200 || http.statusCode == 201 else {
+            throw APIError.http((response as? HTTPURLResponse)?.statusCode ?? 0)
+        }
+
+        return try JSONDecoder().decode(GamePlanResponse.self, from: data)
+    }
+}
 
 // MARK: – Response types ─────────────────────────────────────────────────────
 
@@ -93,6 +163,30 @@ struct JoinResponse: Decodable {
     let playerAuthToken: String
     let role: String
     let wsUrl: String
+}
+
+/// Game plan response for all game plan endpoints
+struct GamePlanResponse: Decodable {
+    let gamePlan: GamePlan
+    let destinations: [DestinationSummary]
+}
+
+struct GamePlan: Decodable {
+    let destinations: [DestinationConfig]
+    let currentIndex: Int
+    let mode: String
+    let createdAt: Int
+}
+
+struct DestinationConfig: Decodable {
+    let contentPackId: String
+    let sourceType: String
+    let order: Int
+}
+
+struct DestinationSummary: Decodable {
+    let name: String
+    let country: String
 }
 
 // MARK: – Errors ──────────────────────────────────────────────────────────────

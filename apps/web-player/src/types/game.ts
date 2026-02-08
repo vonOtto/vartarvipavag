@@ -86,6 +86,13 @@ export interface GameState {
   followupQuestion: FollowupQuestionState | null;
   scoreboard: ScoreboardEntry[];
   timer?: Timer | null;
+  // Multi-destination game tracking
+  destinationIndex?: number;      // Current destination index (1-based)
+  totalDestinations?: number;     // Total number of destinations
+  nextDestinationAvailable?: boolean; // True if there's another destination to play
+  // Answer count tracking
+  answeredCount?: number;         // Number of players who have answered
+  totalPlayers?: number;          // Total number of players (excluding host/tv)
 }
 
 // Event envelope
@@ -138,6 +145,8 @@ export interface CluePresentPayload {
   roundIndex: number;
   clueIndex?: number;
   textRevealAfterMs?: number;   // TTS clip duration — text hidden until this many ms have elapsed
+  timerDurationMs?: number;     // Total timer duration in milliseconds (e.g., 14000)
+  timerEnd?: number;            // Unix timestamp (milliseconds) when the timer expires
 }
 
 export interface ClueAdvancePayload {
@@ -216,10 +225,22 @@ export interface FollowupResultsPayload {
   nextQuestionIndex: number | null;
 }
 
+export interface NextDestinationEventPayload {
+  destinationIndex: number;
+  totalDestinations: number;
+  destinationName: string;
+  destinationCountry: string;
+}
+
 export interface ErrorPayload {
   errorCode: 'INVALID_SESSION' | 'UNAUTHORIZED' | 'RATE_LIMITED' | 'INVALID_PHASE' | 'VALIDATION_ERROR' | 'INTERNAL_ERROR';
   message: string;
   details?: any;
+}
+
+export interface AnswerCountUpdatePayload {
+  answeredCount: number;
+  totalPlayers: number;
 }
 
 // Typed events
@@ -237,7 +258,9 @@ export type GameEvent =
   | EventEnvelope<DestinationRevealPayload>
   | EventEnvelope<DestinationResultsPayload>
   | EventEnvelope<ScoreboardUpdatePayload>
+  | EventEnvelope<NextDestinationEventPayload>
   | EventEnvelope<FollowupQuestionPresentPayload>
   | EventEnvelope<FollowupAnswersLockedPayload>
   | EventEnvelope<FollowupResultsPayload>
+  | EventEnvelope<AnswerCountUpdatePayload>
   | EventEnvelope<ErrorPayload>;

@@ -173,6 +173,7 @@ struct LaunchView: View {
         defer { busy = false }
 
         do {
+            // Step 1: Create session
             let resp = try await HostAPI.createSession()
 
             state.sessionId     = resp.sessionId
@@ -181,6 +182,23 @@ struct LaunchView: View {
             state.joinCode      = resp.joinCode
             state.joinURL       = resp.joinUrlTemplate.replacingOccurrences(
                                       of: "{joinCode}", with: resp.joinCode)
+
+            // Step 2: Auto-generate game plan (3 AI destinations)
+            state.isGeneratingPlan = true
+            do {
+                let planResp = try await HostAPI.createGamePlanAI(
+                    sessionId: resp.sessionId,
+                    numDestinations: 3
+                )
+                state.gamePlan = planResp.gamePlan
+                state.destinations = planResp.destinations
+            } catch {
+                // Log error but continue - game can work without multi-destination
+                print("Failed to generate game plan: \(error)")
+            }
+            state.isGeneratingPlan = false
+
+            // Step 3: Connect to WebSocket
             state.connect()
 
             #if os(iOS)
@@ -188,6 +206,7 @@ struct LaunchView: View {
             #endif
         } catch {
             errorMessage = error.localizedDescription
+            state.isGeneratingPlan = false
             #if os(iOS)
             hapticNotification(.error)
             #endif
@@ -356,13 +375,14 @@ struct ConnectingView: View {
                         .padding(.horizontal, Layout.space2)
                 }
             }
+            #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
+            #endif
             .toolbar {
+                #if os(iOS)
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button {
-                        #if os(iOS)
                         hapticImpact(.light)
-                        #endif
                         state.resetSession()
                     } label: {
                         HStack(spacing: 6) {
@@ -372,6 +392,7 @@ struct ConnectingView: View {
                         .foregroundColor(.txt1)
                     }
                 }
+                #endif
             }
         }
     }
@@ -380,10 +401,32 @@ struct ConnectingView: View {
 // MARK: – lobby host screen ──────────────────────────────────────────────────
 
 /// QR code + join code on top; live player list below; Start Game button.
+/// Enhanced with tabs for Lobby and Content management.
 struct LobbyHostView: View {
     @EnvironmentObject var state: HostState
+    @State private var selectedTab = 0
 
     var body: some View {
+        TabView(selection: $selectedTab) {
+            lobbyTab
+                .tabItem {
+                    Label("Lobby", systemImage: "person.3.fill")
+                }
+                .tag(0)
+
+            ContentLibraryView()
+                .environmentObject(state)
+                .tabItem {
+                    Label("Innehåll", systemImage: "tray.fill")
+                }
+                .tag(1)
+        }
+        .accentColor(.accOrange)
+    }
+
+    // MARK: – Lobby Tab ──────────────────────────────────────────────────────────
+
+    private var lobbyTab: some View {
         NavigationView {
             ScrollView {
                 VStack(spacing: 0) {
@@ -413,6 +456,62 @@ struct LobbyHostView: View {
                     .background(Color.line)
                     .padding(.vertical, Layout.space2)
 
+                // ── game plan status ──
+                if state.isGeneratingPlan {
+                    VStack(spacing: Layout.space2) {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle(tint: .accMint))
+                            .scaleEffect(1.2)
+                        Text("Genererar resmål...")
+                            .font(.body)
+                            .foregroundColor(.txt2)
+                    }
+                    .padding(.vertical, Layout.space4)
+                } else if let _ = state.gamePlan, !state.destinations.isEmpty {
+                    VStack(alignment: .leading, spacing: Layout.space2) {
+                        HStack {
+                            Image(systemName: "map.fill")
+                                .font(.system(size: 16))
+                                .foregroundColor(.accMint)
+                            Text("Redo med \(state.destinations.count) resmål")
+                                .font(.body)
+                                .fontWeight(.semibold)
+                                .foregroundColor(.txt1)
+                            Spacer()
+                            Image(systemName: "checkmark.circle.fill")
+                                .font(.system(size: 18))
+                                .foregroundColor(.stateOk)
+                        }
+
+                        // Show destination preview
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: Layout.space1) {
+                                ForEach(Array(state.destinations.enumerated()), id: \.offset) { index, dest in
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text("\(index + 1). \(dest.name)")
+                                            .font(.small)
+                                            .fontWeight(.medium)
+                                            .foregroundColor(.txt1)
+                                        Text(dest.country)
+                                            .font(.system(size: 11))
+                                            .foregroundColor(.txt2)
+                                    }
+                                    .padding(.horizontal, Layout.space2)
+                                    .padding(.vertical, Layout.space1)
+                                    .background(Color.bg2)
+                                    .cornerRadius(Layout.radiusS)
+                                }
+                            }
+                        }
+                    }
+                    .padding(.horizontal, Layout.space2)
+                    .padding(.bottom, Layout.space2)
+                }
+
+                Divider()
+                    .background(Color.line)
+                    .padding(.vertical, Layout.space2)
+
                 // ── player list header ──
                 HStack {
                     Text("Spelare (\(state.players.count))")
@@ -429,10 +528,25 @@ struct LobbyHostView: View {
 
                 // ── player cards ──
                 if state.players.isEmpty {
-                    VStack(spacing: Layout.space2) {
-                        Image(systemName: "person.2.badge.gearshape")
-                            .font(.system(size: 56, weight: .light))
-                            .foregroundColor(.txt3)
+                    VStack(spacing: Layout.space3) {
+                        // Friendly waiting state
+                        ZStack {
+                            Circle()
+                                .fill(Color.accOrange.opacity(0.1))
+                                .frame(width: 80, height: 80)
+
+                            Image(systemName: "hand.wave.fill")
+                                .font(.system(size: 40, weight: .regular))
+                                .foregroundStyle(
+                                    LinearGradient(
+                                        colors: [Color.accOrange, Color.accMint],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    )
+                                )
+                                .rotationEffect(.degrees(-15))
+                        }
+
                         Text("Väntar på spelare...")
                             .font(.body)
                             .foregroundColor(.txt2)
@@ -461,28 +575,29 @@ struct LobbyHostView: View {
                     HStack(spacing: Layout.space2) {
                         Image(systemName: "play.circle.fill")
                             .font(.system(size: 24, weight: .bold))
-                        Text("Starta spelet")
+                        Text(state.isGeneratingPlan ? "Förbereder spel..." : "Starta spelet")
                     }
                 }
                 .buttonStyle(.primary)
-                .disabled(state.players.isEmpty)
-                .opacity(state.players.isEmpty ? 0.5 : 1.0)
+                .disabled(state.players.isEmpty || state.isGeneratingPlan)
+                .opacity((state.players.isEmpty || state.isGeneratingPlan) ? 0.5 : 1.0)
                 .padding(.horizontal, Layout.space2)
                 .padding(.bottom, Layout.space4)
-                .shadow(color: state.players.isEmpty ? .clear : .accOrange.opacity(0.4), radius: Layout.shadowRadius)
+                .shadow(color: (state.players.isEmpty || state.isGeneratingPlan) ? .clear : .accOrange.opacity(0.4), radius: Layout.shadowRadius)
                 }
                 .animation(.spring(response: 0.4, dampingFraction: 0.75), value: state.players.count)
             }
             .overlay(alignment: .top) {
                 if !state.isConnected { reconnectBanner }
             }
+            #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
+            #endif
             .toolbar {
+                #if os(iOS)
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button {
-                        #if os(iOS)
                         hapticImpact(.light)
-                        #endif
                         state.resetSession()
                     } label: {
                         HStack(spacing: 6) {
@@ -497,6 +612,7 @@ struct LobbyHostView: View {
                         .font(.headline)
                         .foregroundColor(.txt1)
                 }
+                #endif
             }
         }
     }

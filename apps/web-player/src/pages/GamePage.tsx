@@ -5,19 +5,22 @@ import { loadSession } from '../services/storage';
 import { ClueDisplay } from '../components/ClueDisplay';
 import { BrakeButton } from '../components/BrakeButton';
 import { AnswerForm } from '../components/AnswerForm';
-import type { CluePresentPayload, BrakeRejectedPayload, FollowupResultsPayload, ClueLevelPoints } from '../types/game';
+import { ClueTimer } from '../components/ClueTimer';
+import type { CluePresentPayload, BrakeRejectedPayload, FollowupResultsPayload, ClueLevelPoints, AnswerCountUpdatePayload } from '../types/game';
 
 // ---------------------------------------------------------------------------
 // HostGameView — pro-view rendered when session.role === 'host'
 // ---------------------------------------------------------------------------
 const HostGameView: React.FC<{
   gameState: NonNullable<ReturnType<typeof useWebSocket>['gameState']>;
-  currentClue: { points: ClueLevelPoints; text: string } | null;
+  currentClue: { points: ClueLevelPoints; text: string; timerEnd?: number } | null;
   isConnected: boolean;
   error: string | null;
   sendMessage: (type: string, payload: Record<string, unknown>) => void;
   sessionId: string;
-}> = ({ gameState, currentClue, isConnected, error, sendMessage, sessionId }) => {
+  answeredCount: number;
+  totalPlayers: number;
+}> = ({ gameState, currentClue, isConnected, error, sendMessage, sessionId, answeredCount, totalPlayers }) => {
   const hostPlayerId = gameState?.players?.find(p => p.role === 'host')?.playerId;
 
   const brakeOwnerName = gameState.brakeOwnerPlayerId
@@ -118,6 +121,18 @@ const HostGameView: React.FC<{
         {/* ── Clue-phase UI (hidden during followup) ──────────────────── */}
         {!isFollowup && (
           <>
+            {/* Answer count badge */}
+            {totalPlayers > 0 && (
+              <div className="answer-badge">
+                {answeredCount}/{totalPlayers} svarat
+              </div>
+            )}
+
+            {/* Clue timer (if available) */}
+            {currentClue?.timerEnd && (
+              <ClueTimer timerEnd={currentClue.timerEnd} />
+            )}
+
             {/* Current clue */}
             {currentClue ? (
               <ClueDisplay points={currentClue.points} clueText={currentClue.text} />
@@ -202,6 +217,10 @@ export const GamePage: React.FC = () => {
   const [submitting, setSubmitting] = useState(false);
   const [rejectionMessage, setRejectionMessage] = useState<string | null>(null);
 
+  // Answer count state
+  const [answeredCount, setAnsweredCount] = useState<number>(0);
+  const [totalPlayers, setTotalPlayers] = useState<number>(0);
+
   // Follow-up question state
   const [fqSubmitted, setFqSubmitted] = useState(false);
   const [fqOpenText, setFqOpenText] = useState('');
@@ -228,6 +247,8 @@ export const GamePage: React.FC = () => {
   useEffect(() => {
     if (gameState?.phase === 'LOBBY') {
       navigate('/lobby');
+    } else if (gameState?.phase === 'ROUND_INTRO') {
+      navigate('/next-destination');
     } else if (
       gameState?.phase === 'REVEAL_DESTINATION' ||
       gameState?.phase === 'SCOREBOARD' ||
@@ -243,6 +264,16 @@ export const GamePage: React.FC = () => {
       setSubmitting(false);
     }
   }, [gameState?.lockedAnswers?.length]);
+
+  // Sync answer counts from gameState (for reconnect or initial state)
+  useEffect(() => {
+    if (gameState?.answeredCount !== undefined) {
+      setAnsweredCount(gameState.answeredCount);
+    }
+    if (gameState?.totalPlayers !== undefined) {
+      setTotalPlayers(gameState.totalPlayers);
+    }
+  }, [gameState?.answeredCount, gameState?.totalPlayers]);
 
   // Reset braking flag on phase change (covers server-side override / timeout)
   useEffect(() => {
@@ -275,6 +306,12 @@ export const GamePage: React.FC = () => {
         // to avoid showing duplicate entries during the transition
         setSubmitting(false);
         break;
+      case 'ANSWER_COUNT_UPDATE': {
+        const payload = lastEvent.payload as AnswerCountUpdatePayload;
+        setAnsweredCount(payload.answeredCount);
+        setTotalPlayers(payload.totalPlayers);
+        break;
+      }
     }
   }, [lastEvent]);
 
@@ -317,14 +354,22 @@ export const GamePage: React.FC = () => {
     }
   }, [lastEvent, session?.playerId]);
 
-  // Current clue info
+  // Current clue info + timer
   const currentClue = React.useMemo(() => {
     if (lastEvent?.type === 'CLUE_PRESENT') {
       const payload = lastEvent.payload as CluePresentPayload;
-      return { points: payload.clueLevelPoints, text: payload.clueText };
+      return {
+        points: payload.clueLevelPoints,
+        text: payload.clueText,
+        timerEnd: payload.timerEnd
+      };
     }
     if (gameState?.clueLevelPoints && gameState?.clueText) {
-      return { points: gameState.clueLevelPoints, text: gameState.clueText };
+      return {
+        points: gameState.clueLevelPoints,
+        text: gameState.clueText,
+        timerEnd: undefined
+      };
     }
     return null;
   }, [lastEvent, gameState]);
@@ -406,6 +451,8 @@ export const GamePage: React.FC = () => {
         error={error}
         sendMessage={sendMessage}
         sessionId={session.sessionId}
+        answeredCount={answeredCount}
+        totalPlayers={totalPlayers}
       />
     );
   }
@@ -465,9 +512,21 @@ export const GamePage: React.FC = () => {
           <div className="brake-rejected-message">{rejectionMessage}</div>
         )}
 
-        {/* CLUE_LEVEL: brake button + locked badge */}
+        {/* CLUE_LEVEL: timer + brake button + locked badge */}
         {gameState?.phase === 'CLUE_LEVEL' && (
           <>
+            {/* Answer count badge */}
+            {totalPlayers > 0 && (
+              <div className="answer-badge">
+                {answeredCount}/{totalPlayers} svarat
+              </div>
+            )}
+
+            {/* Clue timer (if available) */}
+            {currentClue?.timerEnd && (
+              <ClueTimer timerEnd={currentClue.timerEnd} />
+            )}
+
             <BrakeButton disabled={!canBrake} onPullBrake={handlePullBrake} />
             {hasLockedAnswer && (
               <div className="answer-locked">

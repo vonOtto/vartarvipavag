@@ -73,6 +73,28 @@ struct TVScoreboardView: View {
     @ViewBuilder
     private var standingsColumn: some View {
         VStack(alignment: .leading, spacing: Layout.space24) {
+            // Destination progress header (if multi-destination game)
+            if let index = appState.destinationIndex,
+               let total = appState.totalDestinations,
+               total > 1 {
+                HStack(spacing: 16) {
+                    Image(systemName: "map.fill")
+                        .font(.system(size: 32))
+                        .foregroundColor(.accMint)
+
+                    Text("Destination \(index) / \(total)")
+                        .font(.system(size: 40, weight: .semibold))
+                        .foregroundColor(.txt1)
+
+                    if appState.nextDestinationAvailable {
+                        Image(systemName: "arrow.right.circle.fill")
+                            .font(.system(size: 36))
+                            .foregroundColor(.accOrange)
+                    }
+                }
+                .padding(.bottom, Layout.space16)
+            }
+
             Text("Poängtabell")
                 .font(.tvH2)  // 48pt Semibold
                 .foregroundColor(.txt1)
@@ -86,6 +108,28 @@ struct TVScoreboardView: View {
                     StandingRow(rank: idx + 1, entry: entry)
                         .transition(.opacity.combined(with: .move(edge: .trailing)))
                 }
+            }
+
+            // "Nästa destination kommer!" banner
+            if appState.nextDestinationAvailable {
+                HStack(spacing: 20) {
+                    Image(systemName: "airplane.departure")
+                        .font(.system(size: 48))
+                        .foregroundColor(.accOrange)
+
+                    Text("Nästa destination kommer snart!")
+                        .font(.system(size: 44, weight: .medium))
+                        .foregroundColor(.txt1)
+
+                    Image(systemName: "airplane.arrival")
+                        .font(.system(size: 48))
+                        .foregroundColor(.accMint)
+                }
+                .padding(.top, 60)
+                .padding(.horizontal, 60)
+                .padding(.vertical, 40)
+                .background(Color.accOrange.opacity(0.1))
+                .cornerRadius(24)
             }
 
             Spacer()

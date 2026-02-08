@@ -151,6 +151,10 @@ struct GameState: Decodable {
     let destinationName    : String?                 // nil until revealed (TV projection)
     let destinationCountry : String?
     let followupQuestion   : FollowupQuestionInfo?   // non-nil when phase == FOLLOWUP_QUESTION
+    // Multi-destination tracking
+    let destinationIndex         : Int?              // 1-based (1, 2, 3...)
+    let totalDestinations        : Int?              // total number of destinations
+    let nextDestinationAvailable : Bool?             // true if more destinations exist
 
     init(from decoder: Decoder) throws {
         let c                  = try  decoder.container(keyedBy: CodingKeys.self)
@@ -178,12 +182,17 @@ struct GameState: Decodable {
             self.destinationCountry = nil
         }
         self.followupQuestion = try? c.decode(FollowupQuestionInfo.self, forKey: .followupQuestion)
+        // Multi-destination tracking
+        self.destinationIndex         = try? c.decode(Int.self,  forKey: .destinationIndex)
+        self.totalDestinations        = try? c.decode(Int.self,  forKey: .totalDestinations)
+        self.nextDestinationAvailable = try? c.decode(Bool.self, forKey: .nextDestinationAvailable)
     }
 
     private enum CodingKeys: String, CodingKey {
         case phase, players, clueText, scoreboard, joinCode, destination, followupQuestion
         case levelPoints = "clueLevelPoints"   // match backend key
         case lockedAnswersCount, lockedAnswers, brakeOwnerName
+        case destinationIndex, totalDestinations, nextDestinationAvailable
     }
 
     /// Thin wrapper for the nested destination object in STATE_SNAPSHOT.

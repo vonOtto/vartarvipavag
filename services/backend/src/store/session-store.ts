@@ -17,6 +17,26 @@ export interface WSConnection {
   connectedAt: number;
 }
 
+/**
+ * Configuration for a single destination in a game plan
+ */
+export interface DestinationConfig {
+  contentPackId: string;      // Content pack ID (from ai-content or manual)
+  sourceType: 'ai' | 'manual'; // How this destination was created
+  order: number;               // Position in game (1-5)
+}
+
+/**
+ * Game plan defining a complete multi-destination game session
+ */
+export interface GamePlan {
+  destinations: DestinationConfig[];  // 3-5 destinations to play
+  currentIndex: number;                // Which destination we're on (0-based)
+  mode: 'ai' | 'manual' | 'hybrid';   // How destinations were sourced
+  createdAt: number;
+  generatedBy?: string;                // "ai-content" | "manual-import" | "hybrid"
+}
+
 export interface Session {
   sessionId: string;
   joinCode: string;
@@ -25,11 +45,19 @@ export interface Session {
   state: GameState;
   createdAt: number;
   connections: Map<string, WSConnection>; // playerId -> connection
+  // Game plan for multi-destination games
+  gamePlan?: GamePlan;
   // Internal state for brake fairness and rate limiting
   _brakeTimestamps?: Map<string, number>; // playerId -> last brake timestamp
   _brakeFairness?: Map<string, { playerId: string; timestamp: number }>; // clue_key -> first brake
   // Grace period cleanup timers for disconnected players
   _disconnectTimers?: Map<string, NodeJS.Timeout>; // playerId -> cleanup timer
+  // Clue auto-advance timer (graduated per level)
+  _clueTimer?: NodeJS.Timeout; // Timer handle for auto-advance
+  // Scoreboard auto-advance timer (multi-destination only)
+  _scoreboardTimer?: NodeJS.Timeout; // Timer handle for auto-advance to next destination
+  // Clue start time tracking for speed bonus calculation
+  _clueStartTime?: number; // Timestamp when current clue level started (for speed bonus)
 }
 
 class SessionStore {

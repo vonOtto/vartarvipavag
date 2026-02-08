@@ -27,6 +27,12 @@ class HostState: ObservableObject {
     @Published var results            : [PlayerResult]    = []
     @Published var followupQuestion   : HostFollowupQuestion?
     @Published var followupResults    : (correctAnswer: String, rows: [HostFollowupResultRow])?
+    @Published var selectedContentPackId: String?
+
+    // MARK: – game plan state
+    @Published var gamePlan       : GamePlan?
+    @Published var destinations   : [DestinationSummary] = []
+    @Published var isGeneratingPlan: Bool = false
 
     // MARK: – connection status
     @Published var isConnected     : Bool   = false
@@ -236,6 +242,14 @@ class HostState: ObservableObject {
             }
             followupResults = (correctAnswer: correct, rows: rows)
 
+        case "CONTENT_PACK_SELECTED":
+            guard let payload = json["payload"] as? [String: Any] else { break }
+            if let packId = payload["contentPackId"] as? String {
+                selectedContentPackId = packId
+            } else {
+                selectedContentPackId = nil
+            }
+
         default:
             break
         }
@@ -263,6 +277,24 @@ class HostState: ObservableObject {
             "sessionId"   : sid,
             "serverTimeMs": Int(Date().timeIntervalSince1970 * 1000),
             "payload"     : [String: Any]()
+        ])
+    }
+
+    /// Send HOST_SELECT_CONTENT_PACK to the server.
+    /// Pass nil to deselect.
+    func selectContentPack(_ packId: String?) {
+        guard let sid = sessionId else { return }
+        let payload: [String: Any]
+        if let packId = packId {
+            payload = ["contentPackId": packId]
+        } else {
+            payload = ["contentPackId": NSNull()]
+        }
+        send([
+            "type"        : "HOST_SELECT_CONTENT_PACK",
+            "sessionId"   : sid,
+            "serverTimeMs": Int(Date().timeIntervalSince1970 * 1000),
+            "payload"     : payload
         ])
     }
 
@@ -351,6 +383,12 @@ class HostState: ObservableObject {
         results = []
         followupQuestion = nil
         followupResults = nil
+        selectedContentPackId = nil
+
+        // 5. Clear game plan state
+        gamePlan = nil
+        destinations = []
+        isGeneratingPlan = false
     }
 
     /// Fire-and-forget JSON send.

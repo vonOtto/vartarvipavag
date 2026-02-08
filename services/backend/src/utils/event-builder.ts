@@ -109,7 +109,9 @@ export function buildCluePresentEvent(
   clueLevelPoints: 10 | 8 | 6 | 4 | 2,
   roundIndex: number,
   clueIndex: number,
-  textRevealAfterMs: number = 0
+  textRevealAfterMs: number = 0,
+  timerDurationMs?: number,
+  timerEnd?: number
 ): EventEnvelope {
   return buildEvent('CLUE_PRESENT', sessionId, {
     clueText,
@@ -117,6 +119,8 @@ export function buildCluePresentEvent(
     roundIndex,
     clueIndex,
     ...(textRevealAfterMs > 0 ? { textRevealAfterMs } : {}),
+    ...(timerDurationMs !== undefined ? { timerDurationMs } : {}),
+    ...(timerEnd !== undefined ? { timerEnd } : {}),
   });
 }
 
@@ -150,6 +154,7 @@ export function buildDestinationResultsEvent(
     isCorrect: boolean;
     pointsAwarded: number;
     lockedAtLevelPoints: 10 | 8 | 6 | 4 | 2;
+    speedBonus?: number;
   }>
 ): EventEnvelope {
   return buildEvent('DESTINATION_RESULTS', sessionId, {
@@ -167,6 +172,7 @@ export function buildScoreboardUpdateEvent(
     name: string;
     score: number;
     rank?: number;
+    speedBonus?: number;
   }>,
   isGameOver: boolean = false
 ): EventEnvelope {
@@ -368,4 +374,70 @@ export function buildUiEffectTriggerEvent(
   durationMs: number = 2500
 ): EventEnvelope {
   return buildEvent('UI_EFFECT_TRIGGER', sessionId, { effectId, intensity, durationMs });
+}
+
+/**
+ * Creates a CONTENT_PACK_SELECTED event
+ * Broadcast when host selects a content pack for the next destination
+ */
+export function buildContentPackSelectedEvent(
+  sessionId: string,
+  contentPackId: string | null,
+  destinationName?: string
+): EventEnvelope {
+  return buildEvent('CONTENT_PACK_SELECTED', sessionId, {
+    contentPackId,
+    ...(destinationName ? { destinationName } : {}),
+  });
+}
+
+/**
+ * Creates a NEXT_DESTINATION_EVENT event
+ * Broadcast when host advances to the next destination
+ */
+export function buildNextDestinationEvent(
+  sessionId: string,
+  destinationIndex: number,
+  totalDestinations: number,
+  destinationName: string,
+  destinationCountry: string
+): EventEnvelope {
+  return buildEvent('NEXT_DESTINATION_EVENT', sessionId, {
+    destinationIndex,
+    totalDestinations,
+    destinationName,
+    destinationCountry,
+  });
+}
+
+/**
+ * Creates a GAME_ENDED_EVENT event
+ * Broadcast when host ends the game or all destinations are completed
+ */
+export function buildGameEndedEvent(
+  sessionId: string,
+  finalScores: Array<{ playerId: string; name: string; totalScore: number }>,
+  destinationsCompleted: number,
+  reason: 'host_ended' | 'all_completed'
+): EventEnvelope {
+  return buildEvent('GAME_ENDED_EVENT', sessionId, {
+    finalScores,
+    destinationsCompleted,
+    reason,
+  });
+}
+
+/**
+ * Creates an ANSWER_COUNT_UPDATE event
+ * Broadcast when a player locks their answer during clue phase
+ */
+export function buildAnswerCountUpdateEvent(
+  sessionId: string,
+  answeredCount: number,
+  totalPlayers: number
+): EventEnvelope {
+  return buildEvent('ANSWER_COUNT_UPDATE', sessionId, {
+    answeredCount,
+    totalPlayers,
+  });
 }

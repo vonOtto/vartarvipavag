@@ -12,7 +12,22 @@ import {
   isAnswerCorrect,
   isFollowupAnswerCorrect,
 } from './content-hardcoded';
+import { loadContentPack, NormalizedContentPack } from './content-pack-loader';
 import { getServerTimeMs } from '../utils/time';
+
+/**
+ * Converts a NormalizedContentPack to Destination format
+ */
+function contentPackToDestination(pack: NormalizedContentPack): Destination {
+  return {
+    id: pack.id,
+    name: pack.name,
+    country: pack.country,
+    aliases: pack.aliases,
+    clues: pack.clues,
+    followupQuestions: pack.followupQuestions,
+  };
+}
 
 /**
  * Validates that a session is in LOBBY phase
@@ -33,31 +48,72 @@ export function validateInClueLevel(session: Session): void {
 }
 
 /**
- * Starts the game - transitions from LOBBY to CLUE_LEVEL
+ * Starts a new destination (round) with optional AI-generated content pack
+ * @param session - The game session
+ * @param contentPackId - Optional content pack ID. If not provided, uses hardcoded content
+ * @returns Destination data and first clue info
  */
-export function startGame(session: Session): {
+export function startNewDestination(
+  session: Session,
+  contentPackId?: string
+): {
   destination: Destination;
   clueText: string;
   clueLevelPoints: 10 | 8 | 6 | 4 | 2;
   clueIndex: number;
 } {
-  validateInLobby(session);
+  let destination: Destination;
 
-  // Load a random destination
-  const destination = getRandomDestination();
+  // Load destination from content pack or fallback to hardcoded
+  if (contentPackId) {
+    logger.info('Loading destination from content pack', {
+      sessionId: session.sessionId,
+      contentPackId,
+    });
 
-  logger.info('Starting game with destination', {
+    try {
+      const pack = loadContentPack(contentPackId);
+      destination = contentPackToDestination(pack);
+
+      // Store contentPackId in session state
+      session.state.contentPackId = contentPackId;
+
+      logger.info('Content pack loaded successfully', {
+        sessionId: session.sessionId,
+        contentPackId,
+        destinationName: destination.name,
+      });
+    } catch (error: any) {
+      logger.error('Failed to load content pack, falling back to hardcoded', {
+        sessionId: session.sessionId,
+        contentPackId,
+        error: error.message,
+      });
+
+      // Fallback to hardcoded content
+      destination = getRandomDestination();
+      session.state.contentPackId = null;
+    }
+  } else {
+    // Use hardcoded content
+    logger.info('Using hardcoded destination', {
+      sessionId: session.sessionId,
+    });
+    destination = getRandomDestination();
+    session.state.contentPackId = null;
+  }
+
+  logger.info('Starting destination', {
     sessionId: session.sessionId,
     destinationId: destination.id,
     destinationName: destination.name,
+    contentPackId: session.state.contentPackId,
   });
 
   // Set first clue (10 points)
   const firstClue = destination.clues[0];
 
   // Update session state
-  session.state.phase = 'CLUE_LEVEL';
-  session.state.roundIndex = 0;
   session.state.destination = {
     name: destination.name,
     country: destination.country,
@@ -71,11 +127,21 @@ export function startGame(session: Session): {
   // We'll use a private property that won't be in the projected state
   (session as any)._currentDestination = destination;
 
-  logger.info('Game started', {
+  // Update multi-destination tracking if game plan exists
+  const destInfo = getCurrentDestinationInfo(session);
+  if (destInfo) {
+    session.state.destinationIndex = destInfo.index;
+    session.state.totalDestinations = destInfo.total;
+    session.state.nextDestinationAvailable = hasMoreDestinations(session);
+  }
+
+  logger.info('Destination started', {
     sessionId: session.sessionId,
     phase: session.state.phase,
     clueLevelPoints: session.state.clueLevelPoints,
-    roundIndex: session.state.roundIndex,
+    contentPackId: session.state.contentPackId,
+    destinationIndex: session.state.destinationIndex,
+    totalDestinations: session.state.totalDestinations,
   });
 
   return {
@@ -84,6 +150,28 @@ export function startGame(session: Session): {
     clueLevelPoints: firstClue.points,
     clueIndex: 0,
   };
+}
+
+/**
+ * Starts the game - transitions from LOBBY to CLUE_LEVEL
+ * Backward compatible: uses hardcoded content by default
+ */
+export function startGame(session: Session): {
+  destination: Destination;
+  clueText: string;
+  clueLevelPoints: 10 | 8 | 6 | 4 | 2;
+  clueIndex: number;
+} {
+  validateInLobby(session);
+
+  // Initialize roundIndex if not set
+  session.state.phase = 'CLUE_LEVEL';
+  session.state.roundIndex = 0;
+
+  // Use contentPackId from session state if set (via HOST_SELECT_CONTENT_PACK)
+  const contentPackId = session.state.contentPackId || undefined;
+
+  return startNewDestination(session, contentPackId);
 }
 
 /**
@@ -129,6 +217,7 @@ export function nextClue(session: Session): {
     session.state.phase = 'REVEAL_DESTINATION';
     session.state.clueLevelPoints = null;
     session.state.clueText = null;
+    session.state.clueTimerEnd = null;
 
     // Mark destination as revealed
     if (session.state.destination) {
@@ -174,6 +263,33 @@ export function nextClue(session: Session): {
 }
 
 /**
+ * Calculates speed bonus based on answer timing
+ */
+function calculateSpeedBonus(
+  answerTimestamp: number,
+  clueStartTime: number | undefined,
+  clueTimerEnd: number | null | undefined
+): number {
+  // Only calculate speed bonus if we have both timestamps
+  if (!clueStartTime || !clueTimerEnd) {
+    return 0;
+  }
+
+  const timerDuration = clueTimerEnd - clueStartTime;
+  const timeElapsed = answerTimestamp - clueStartTime;
+  const timeRemaining = timerDuration - timeElapsed;
+
+  // Award bonus based on remaining time
+  if (timeRemaining > (2 / 3) * timerDuration) {
+    return 2; // Very fast - answered in first third
+  }
+  if (timeRemaining > (1 / 3) * timerDuration) {
+    return 1; // Fast - answered in second third
+  }
+  return 0; // No bonus - answered in last third or after timer
+}
+
+/**
  * Scores all locked answers after destination is revealed
  */
 function scoreLockedAnswers(session: Session, destination: Destination): void {
@@ -181,11 +297,23 @@ function scoreLockedAnswers(session: Session, destination: Destination): void {
 
   lockedAnswers.forEach((answer) => {
     const isCorrect = isAnswerCorrect(answer.answerText, destination);
-    const pointsAwarded = isCorrect ? answer.lockedAtLevelPoints : 0;
+    const basePoints = isCorrect ? answer.lockedAtLevelPoints : 0;
+
+    // Calculate speed bonus only for correct answers
+    const speedBonus = isCorrect
+      ? calculateSpeedBonus(
+          answer.lockedAtMs,
+          (session as any)._clueStartTime,
+          session.state.clueTimerEnd
+        )
+      : 0;
+
+    const pointsAwarded = basePoints + speedBonus;
 
     // Update answer with scoring info
     answer.isCorrect = isCorrect;
     answer.pointsAwarded = pointsAwarded;
+    answer.speedBonus = speedBonus;
 
     // Update player score
     const player = players.find((p) => p.playerId === answer.playerId);
@@ -197,6 +325,8 @@ function scoreLockedAnswers(session: Session, destination: Destination): void {
     const scoreEntry = scoreboard.find((s) => s.playerId === answer.playerId);
     if (scoreEntry) {
       scoreEntry.score += pointsAwarded;
+      // Store cumulative speed bonus for this player
+      scoreEntry.speedBonus = (scoreEntry.speedBonus || 0) + speedBonus;
     }
 
     logger.info('Scored answer', {
@@ -204,6 +334,8 @@ function scoreLockedAnswers(session: Session, destination: Destination): void {
       playerId: answer.playerId,
       answerText: answer.answerText,
       isCorrect,
+      basePoints,
+      speedBonus,
       pointsAwarded,
       lockedAtLevel: answer.lockedAtLevelPoints,
     });
@@ -644,6 +776,24 @@ export function scoreFollowupQuestion(session: Session): {
     // Sequence complete — clear and move to SCOREBOARD
     session.state.followupQuestion = null;
     session.state.phase = 'SCOREBOARD';
+
+    // Check if there are more destinations in the game plan
+    const hasMore = hasMoreDestinations(session);
+    session.state.nextDestinationAvailable = hasMore;
+
+    // Update destination tracking
+    const destInfo = getCurrentDestinationInfo(session);
+    if (destInfo) {
+      session.state.destinationIndex = destInfo.index;
+      session.state.totalDestinations = destInfo.total;
+    }
+
+    logger.info('Transitioning to scoreboard', {
+      sessionId: session.sessionId,
+      nextDestinationAvailable: hasMore,
+      destinationIndex: session.state.destinationIndex,
+      totalDestinations: session.state.totalDestinations,
+    });
   }
 
   logger.info('Follow-up question scored', {
@@ -658,5 +808,92 @@ export function scoreFollowupQuestion(session: Session): {
     correctAnswer: question.correctAnswer,
     currentQuestionIndex: fq.currentQuestionIndex,
     nextQuestionIndex: hasNext ? nextIdx : null,
+  };
+}
+
+/**
+ * Multi-Destination Game Support
+ */
+
+/**
+ * Checks if there are more destinations to play in the game plan
+ */
+export function hasMoreDestinations(session: Session): boolean {
+  if (!session.gamePlan) {
+    return false;
+  }
+
+  const { destinations, currentIndex } = session.gamePlan;
+  return currentIndex + 1 < destinations.length;
+}
+
+/**
+ * Advances to the next destination in the game plan
+ * Returns true if successfully advanced, false if no more destinations
+ */
+export function advanceToNextDestination(session: Session): boolean {
+  if (!session.gamePlan) {
+    logger.warn('Cannot advance destination: no game plan exists', {
+      sessionId: session.sessionId,
+    });
+    return false;
+  }
+
+  const { destinations, currentIndex } = session.gamePlan;
+
+  // Check if there are more destinations
+  if (currentIndex + 1 >= destinations.length) {
+    logger.info('No more destinations in game plan', {
+      sessionId: session.sessionId,
+      currentIndex,
+      totalDestinations: destinations.length,
+    });
+    return false;
+  }
+
+  // Advance to next destination
+  session.gamePlan.currentIndex++;
+  const nextDestination = destinations[session.gamePlan.currentIndex];
+
+  logger.info('Advancing to next destination', {
+    sessionId: session.sessionId,
+    newIndex: session.gamePlan.currentIndex,
+    totalDestinations: destinations.length,
+    contentPackId: nextDestination.contentPackId,
+  });
+
+  // Load next destination
+  try {
+    startNewDestination(session, nextDestination.contentPackId);
+    return true;
+  } catch (error) {
+    logger.error('Failed to load next destination', {
+      sessionId: session.sessionId,
+      contentPackId: nextDestination.contentPackId,
+      error: (error as Error).message,
+    });
+    return false;
+  }
+}
+
+/**
+ * Gets the current destination info from the game plan
+ */
+export function getCurrentDestinationInfo(session: Session): {
+  index: number;
+  total: number;
+  contentPackId: string;
+} | null {
+  if (!session.gamePlan) {
+    return null;
+  }
+
+  const { destinations, currentIndex } = session.gamePlan;
+  const currentDest = destinations[currentIndex];
+
+  return {
+    index: currentIndex + 1, // 1-based for display
+    total: destinations.length,
+    contentPackId: currentDest.contentPackId,
   };
 }

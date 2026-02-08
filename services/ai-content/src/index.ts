@@ -1,12 +1,20 @@
 import 'dotenv/config';
 import express from 'express';
 import { CACHE_DIR, PUBLIC_URL, generateOrFetch } from './tts-client';
+import { validateConfig } from './config';
+import generateRoutes from './routes/generate';
+
+// Validate configuration on startup
+validateConfig();
 
 const app = express();
 app.use(express.json());
 
 // serve cached audio clips as static files
 app.use('/cache', express.static(CACHE_DIR));
+
+// Content generation routes
+app.use('/generate', generateRoutes);
 
 app.post('/tts/batch', async (req, res) => {
     const roundId   = req.body?.roundId as string | undefined;
@@ -90,5 +98,7 @@ app.get('/health', (_req, res) => res.json({ ok: true }));
 
 const PORT = Number(process.env.PORT ?? 3001);
 app.listen(PORT, () => {
-    console.log(`[ai-content] TTS on :${PORT}  mode=${process.env.ELEVENLABS_API_KEY ? 'live' : 'mock'}`);
+    console.log(`[ai-content] Service running on :${PORT}`);
+    console.log(`[ai-content] TTS mode: ${process.env.ELEVENLABS_API_KEY ? 'live' : 'mock'}`);
+    console.log(`[ai-content] AI generation: ${process.env.ANTHROPIC_API_KEY ? 'enabled' : 'disabled (no API key)'}`);
 });

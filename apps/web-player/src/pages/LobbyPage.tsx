@@ -37,7 +37,9 @@ export const LobbyPage: React.FC = () => {
 
   // Navigate to game when phase changes
   useEffect(() => {
-    if (gameState?.phase === 'CLUE_LEVEL') {
+    if (gameState?.phase === 'ROUND_INTRO') {
+      navigate('/next-destination');
+    } else if (gameState?.phase === 'CLUE_LEVEL') {
       navigate('/game');
     } else if (gameState?.phase === 'REVEAL_DESTINATION') {
       navigate('/reveal');

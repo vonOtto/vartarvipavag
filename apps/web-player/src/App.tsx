@@ -5,6 +5,7 @@ import { LobbyPage } from './pages/LobbyPage';
 import { GamePage } from './pages/GamePage';
 import { RevealPage } from './pages/RevealPage';
 import { LandingPage } from './pages/LandingPage';
+import { NextDestinationPage } from './pages/NextDestinationPage';
 import { LeaveButton } from './components/LeaveButton';
 import { hasSession, loadSession } from './services/storage';
 import { useWebSocket } from './hooks/useWebSocket';
@@ -29,8 +30,10 @@ function ResumeRoute() {
     switch (gameState.phase) {
       case 'LOBBY':
       case 'PREPARING_ROUND':
-      case 'ROUND_INTRO':
         navigate('/lobby');
+        break;
+      case 'ROUND_INTRO':
+        navigate('/next-destination');
         break;
       case 'CLUE_LEVEL':
       case 'PAUSED_FOR_BRAKE':
@@ -88,6 +91,14 @@ function App() {
           element={
             <ProtectedRoute>
               <LobbyPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/next-destination"
+          element={
+            <ProtectedRoute>
+              <NextDestinationPage />
             </ProtectedRoute>
           }
         />

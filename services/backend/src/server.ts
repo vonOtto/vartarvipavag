@@ -27,11 +27,18 @@ import {
   buildFollowupResultsEvent,
   buildAudioPlayEvent,
   buildVoiceLineEvent,
+  buildContentPackSelectedEvent,
+  buildNextDestinationEvent,
+  buildGameEndedEvent,
+  buildAnswerCountUpdateEvent,
 } from './utils/event-builder';
 import { projectState } from './utils/state-projection';
 import { buildLobbyUpdatedEvent } from './utils/lobby-events';
 import sessionRoutes from './routes/sessions';
-import { startGame, nextClue, pullBrake, submitAnswer, releaseBrake, startFollowupSequence, submitFollowupAnswer, lockFollowupAnswers, scoreFollowupQuestion } from './game/state-machine';
+import contentRoutes from './routes/content';
+import gamePlanRoutes from './routes/game-plan';
+import { startGame, nextClue, pullBrake, submitAnswer, releaseBrake, startFollowupSequence, submitFollowupAnswer, lockFollowupAnswers, scoreFollowupQuestion, hasMoreDestinations, advanceToNextDestination, getCurrentDestinationInfo } from './game/state-machine';
+import { contentPackExists, loadContentPack } from './game/content-pack-loader';
 import {
   onRoundIntro,
   onGameStart,
@@ -82,12 +89,22 @@ export function createServer() {
         join: 'POST /v1/sessions/:id/join',
         tvJoin: 'POST /v1/sessions/:id/tv',
         byCode: 'GET /v1/sessions/by-code/:joinCode',
+        contentPacks: 'GET /v1/content/packs',
+        contentPack: 'GET /v1/content/packs/:id',
+        generateContent: 'POST /v1/content/generate',
+        generationStatus: 'GET /v1/content/generate/:id/status',
+        gamePlanGenerateAi: 'POST /v1/sessions/:id/game-plan/generate-ai',
+        gamePlanImport: 'POST /v1/sessions/:id/game-plan/import',
+        gamePlanHybrid: 'POST /v1/sessions/:id/game-plan/hybrid',
+        gamePlan: 'GET /v1/sessions/:id/game-plan',
       },
     });
   });
 
   // API Routes
   app.use(sessionRoutes);
+  app.use(contentRoutes);
+  app.use(gamePlanRoutes);
 
   return app;
 }
@@ -393,6 +410,18 @@ function handleClientMessage(
       handleFollowupAnswerSubmit(ws, sessionId, playerId, role, payload);
       break;
 
+    case 'HOST_SELECT_CONTENT_PACK':
+      handleHostSelectContentPack(ws, sessionId, playerId, role, payload);
+      break;
+
+    case 'NEXT_DESTINATION':
+      handleNextDestination(ws, sessionId, playerId, role);
+      break;
+
+    case 'END_GAME':
+      handleEndGame(ws, sessionId, playerId, role);
+      break;
+
     default:
       logger.warn('Unknown message type', { type, sessionId, playerId });
       const unknownEvent = buildErrorEvent(
@@ -623,6 +652,10 @@ async function handleHostStartGame(
         // Advance phase before snapshot so clients see CLUE_LEVEL
         sess.state.phase = 'CLUE_LEVEL';
 
+        // Initialize answer count tracking
+        sess.state.answeredCount = 0;
+        sess.state.totalPlayers = sess.state.players.filter(p => p.role === 'player').length;
+
         // Audio: mutate audioState first so STATE_SNAPSHOT includes it
         const audioEvents = onGameStart(sess, gameData.clueLevelPoints, gameData.clueText);
 
@@ -636,19 +669,21 @@ async function handleHostStartGame(
         const clueClipId = `voice_clue_${gameData.clueLevelPoints}`;
         const clueClip = (sess as any)._ttsManifest?.find((c: any) => c.clipId === clueClipId);
 
-        // Broadcast CLUE_PRESENT event
+        // Start auto-advance timer for the first clue (sets clueTimerEnd in state)
+        scheduleClueTimer(sessionId);
+
+        // Broadcast CLUE_PRESENT event (includes timer info from state)
         const clueEvent = buildCluePresentEvent(
           sessionId,
           gameData.clueText,
           gameData.clueLevelPoints,
           sess.state.roundIndex || 0,
           gameData.clueIndex,
-          clueClip?.durationMs ?? 0
+          clueClip?.durationMs ?? 0,
+          getClueTimerDuration(gameData.clueLevelPoints),
+          sess.state.clueTimerEnd ?? undefined
         );
         sessionStore.broadcastEventToSession(sessionId, clueEvent);
-
-        // Start auto-advance timer for the first clue
-        scheduleClueTimer(sessionId);
 
         logger.info('Broadcasted CLUE_PRESENT event (after ROUND_INTRO)', {
           sessionId,
@@ -731,9 +766,10 @@ async function handleHostNextClue(
 
   try {
     // Clear any pending auto-advance timer — manual override takes priority
-    if ((session as any)._clueTimer) {
-      clearTimeout((session as any)._clueTimer);
-      (session as any)._clueTimer = null;
+    if (session._clueTimer) {
+      clearTimeout(session._clueTimer);
+      session._clueTimer = undefined;
+      session.state.clueTimerEnd = null;
       logger.info('HOST_NEXT_CLUE: Cleared pending clue auto-advance timer', { sessionId });
     }
 
@@ -755,6 +791,11 @@ async function handleHostNextClue(
         sessionId,
         destinationName: result.destinationName,
       });
+
+      // Set answer count to total players (all are implicitly locked at reveal)
+      const totalPlayers = session.state.players.filter(p => p.role === 'player').length;
+      session.state.answeredCount = totalPlayers;
+      session.state.totalPlayers = totalPlayers;
 
       // Audio: stop music + banter before reveal
       onRevealStart(session).forEach((e) =>
@@ -804,6 +845,7 @@ async function handleHostNextClue(
           isCorrect: answer.isCorrect || false,
           pointsAwarded: answer.pointsAwarded || 0,
           lockedAtLevelPoints: answer.lockedAtLevelPoints,
+          speedBonus: answer.speedBonus || 0,
         };
       });
 
@@ -891,6 +933,9 @@ async function handleHostNextClue(
           false
         );
         sessionStore.broadcastEventToSession(sessionId, scoreboardEvent);
+
+        // Schedule auto-advance timer if next destination is available
+        scheduleScoreboardTimer(sessionId);
       }
 
       logger.info('Broadcasted destination reveal and results', {
@@ -904,6 +949,10 @@ async function handleHostNextClue(
         clueLevelPoints: result.clueLevelPoints,
       });
 
+      // Reset answer count tracking for new clue
+      session.state.answeredCount = 0;
+      session.state.totalPlayers = session.state.players.filter(p => p.role === 'player').length;
+
       // On-demand: generate clue voice BEFORE audio-director searches manifest
       await generateClueVoice(session, result.clueLevelPoints!, result.clueText!);
 
@@ -914,14 +963,19 @@ async function handleHostNextClue(
       // Broadcast STATE_SNAPSHOT to all clients
       broadcastStateSnapshot(sessionId);
 
-      // Broadcast CLUE_PRESENT event
+      // Start auto-advance timer for this clue (sets clueTimerEnd in state)
+      scheduleClueTimer(sessionId);
+
+      // Broadcast CLUE_PRESENT event (includes timer info from state)
       const clueEvent = buildCluePresentEvent(
         sessionId,
         result.clueText!,
         result.clueLevelPoints!,
         session.state.roundIndex || 0,
         result.clueIndex!,
-        clueClip?.durationMs ?? 0
+        clueClip?.durationMs ?? 0,
+        getClueTimerDuration(result.clueLevelPoints!),
+        session.state.clueTimerEnd ?? undefined
       );
       sessionStore.broadcastEventToSession(sessionId, clueEvent);
 
@@ -929,9 +983,6 @@ async function handleHostNextClue(
       onClueAdvance(session, result.clueLevelPoints!, result.clueText!).forEach((e) =>
         sessionStore.broadcastEventToSession(sessionId, e)
       );
-
-      // Start auto-advance timer for this clue (uses manifest durationMs)
-      scheduleClueTimer(sessionId);
 
       logger.info('Broadcasted CLUE_PRESENT event', {
         sessionId,
@@ -1023,9 +1074,10 @@ function handleBrakePull(
       );
 
       // Clear clue auto-advance timer — game is paused for brake
-      if ((session as any)._clueTimer) {
-        clearTimeout((session as any)._clueTimer);
-        (session as any)._clueTimer = null;
+      if (session._clueTimer) {
+        clearTimeout(session._clueTimer);
+        session._clueTimer = undefined;
+        session.state.clueTimerEnd = null;
         logger.info('BRAKE_PULL: Cleared pending clue auto-advance timer', { sessionId });
       }
 
@@ -1119,8 +1171,18 @@ function handleBrakeAnswerSubmit(
       remainingClues,
     });
 
+    // Update answer count tracking
+    const answeredCount = session.state.lockedAnswers.length;
+    const totalPlayers = session.state.players.filter(p => p.role === 'player').length;
+    session.state.answeredCount = answeredCount;
+    session.state.totalPlayers = totalPlayers;
+
     // Broadcast STATE_SNAPSHOT (phase now back to CLUE_LEVEL)
     broadcastStateSnapshot(sessionId);
+
+    // Broadcast ANSWER_COUNT_UPDATE to all clients
+    const countUpdateEvent = buildAnswerCountUpdateEvent(sessionId, answeredCount, totalPlayers);
+    sessionStore.broadcastEventToSession(sessionId, countUpdateEvent);
 
     // Broadcast BRAKE_ANSWER_LOCKED per-connection with role-based projection:
     // HOST gets answerText, PLAYER and TV do not
@@ -1145,6 +1207,583 @@ function handleBrakeAnswerSubmit(
   } catch (error: any) {
     logger.error('BRAKE_ANSWER_SUBMIT: Failed', { sessionId, playerId, error: error.message });
     ws.send(JSON.stringify(buildErrorEvent(sessionId, 'INTERNAL_ERROR', error.message)));
+  }
+}
+
+/**
+ * Handles HOST_SELECT_CONTENT_PACK event
+ * Host selects which content pack to use for the next destination
+ */
+function handleHostSelectContentPack(
+  ws: WebSocket,
+  sessionId: string,
+  playerId: string,
+  role: string,
+  payload: any
+): void {
+  // Only host can select content pack
+  if (role !== 'host') {
+    logger.warn('HOST_SELECT_CONTENT_PACK: Non-host attempted to select content pack', {
+      sessionId,
+      playerId,
+      role,
+    });
+    const errorEvent = buildErrorEvent(
+      sessionId,
+      'UNAUTHORIZED',
+      'Only host can select content pack'
+    );
+    ws.send(JSON.stringify(errorEvent));
+    return;
+  }
+
+  // Get session
+  const session = sessionStore.getSession(sessionId);
+  if (!session) {
+    logger.error('HOST_SELECT_CONTENT_PACK: Session not found', { sessionId, playerId });
+    const errorEvent = buildErrorEvent(
+      sessionId,
+      'INVALID_SESSION',
+      'Session not found'
+    );
+    ws.send(JSON.stringify(errorEvent));
+    return;
+  }
+
+  // Can only select content pack during LOBBY phase
+  if (session.state.phase !== 'LOBBY') {
+    logger.warn('HOST_SELECT_CONTENT_PACK: Cannot select content pack during active game', {
+      sessionId,
+      phase: session.state.phase,
+    });
+    const errorEvent = buildErrorEvent(
+      sessionId,
+      'INVALID_PHASE',
+      'Cannot select content pack during active game'
+    );
+    ws.send(JSON.stringify(errorEvent));
+    return;
+  }
+
+  const contentPackId = payload?.contentPackId;
+
+  // Validate contentPackId (can be null to clear selection)
+  if (contentPackId !== null && typeof contentPackId !== 'string') {
+    logger.warn('HOST_SELECT_CONTENT_PACK: Invalid contentPackId', {
+      sessionId,
+      contentPackId,
+    });
+    const errorEvent = buildErrorEvent(
+      sessionId,
+      'VALIDATION_ERROR',
+      'contentPackId must be a string or null'
+    );
+    ws.send(JSON.stringify(errorEvent));
+    return;
+  }
+
+  // If contentPackId is provided (not null), validate it exists
+  let destinationName: string | undefined;
+  if (contentPackId) {
+    if (!contentPackExists(contentPackId)) {
+      logger.warn('HOST_SELECT_CONTENT_PACK: Content pack not found', {
+        sessionId,
+        contentPackId,
+      });
+      const errorEvent = buildErrorEvent(
+        sessionId,
+        'INVALID_CONTENT_PACK',
+        `Content pack not found: ${contentPackId}`
+      );
+      ws.send(JSON.stringify(errorEvent));
+      return;
+    }
+
+    // Load pack to get destination name for confirmation event
+    try {
+      const pack = loadContentPack(contentPackId);
+      destinationName = pack.name;
+    } catch (error: any) {
+      logger.error('HOST_SELECT_CONTENT_PACK: Failed to load content pack', {
+        sessionId,
+        contentPackId,
+        error: error.message,
+      });
+      const errorEvent = buildErrorEvent(
+        sessionId,
+        'INTERNAL_ERROR',
+        `Failed to load content pack: ${error.message}`
+      );
+      ws.send(JSON.stringify(errorEvent));
+      return;
+    }
+  }
+
+  // Update session state
+  session.state.contentPackId = contentPackId;
+
+  logger.info('Content pack selected', {
+    sessionId,
+    contentPackId,
+    destinationName,
+  });
+
+  // Broadcast CONTENT_PACK_SELECTED to all clients
+  const event = buildContentPackSelectedEvent(
+    sessionId,
+    contentPackId,
+    destinationName
+  );
+  sessionStore.broadcastEventToSession(sessionId, event);
+
+  logger.info('Broadcasted CONTENT_PACK_SELECTED event', {
+    sessionId,
+    contentPackId,
+  });
+}
+
+/**
+ * Handles NEXT_DESTINATION command
+ * Host advances to the next destination in the game plan
+ */
+async function handleNextDestination(
+  ws: WebSocket,
+  sessionId: string,
+  playerId: string,
+  role: string
+): Promise<void> {
+  // Only host can advance to next destination
+  if (role !== 'host') {
+    logger.warn('NEXT_DESTINATION: Non-host attempted to advance destination', {
+      sessionId,
+      playerId,
+      role,
+    });
+    const errorEvent = buildErrorEvent(
+      sessionId,
+      'UNAUTHORIZED',
+      'Only host can advance to next destination'
+    );
+    ws.send(JSON.stringify(errorEvent));
+    return;
+  }
+
+  // Get session
+  const session = sessionStore.getSession(sessionId);
+  if (!session) {
+    logger.error('NEXT_DESTINATION: Session not found', { sessionId, playerId });
+    const errorEvent = buildErrorEvent(
+      sessionId,
+      'INVALID_SESSION',
+      'Session not found'
+    );
+    ws.send(JSON.stringify(errorEvent));
+    return;
+  }
+
+  // Validate that session has a GamePlan
+  if (!session.gamePlan) {
+    logger.warn('NEXT_DESTINATION: No game plan exists', {
+      sessionId,
+    });
+    const errorEvent = buildErrorEvent(
+      sessionId,
+      'INVALID_OPERATION',
+      'No game plan exists for this session'
+    );
+    ws.send(JSON.stringify(errorEvent));
+    return;
+  }
+
+  // Must be in SCOREBOARD phase
+  if (session.state.phase !== 'SCOREBOARD') {
+    logger.warn('NEXT_DESTINATION: Not in SCOREBOARD phase', {
+      sessionId,
+      phase: session.state.phase,
+    });
+    const errorEvent = buildErrorEvent(
+      sessionId,
+      'INVALID_PHASE',
+      `Cannot advance destination from phase: ${session.state.phase}`
+    );
+    ws.send(JSON.stringify(errorEvent));
+    return;
+  }
+
+  // Check if there are more destinations
+  if (!hasMoreDestinations(session)) {
+    logger.warn('NEXT_DESTINATION: No more destinations available', {
+      sessionId,
+      currentIndex: session.gamePlan.currentIndex,
+      totalDestinations: session.gamePlan.destinations.length,
+    });
+    const errorEvent = buildErrorEvent(
+      sessionId,
+      'INVALID_OPERATION',
+      'No more destinations available'
+    );
+    ws.send(JSON.stringify(errorEvent));
+    return;
+  }
+
+  try {
+    // Clear scoreboard auto-advance timer if host manually triggers
+    if (session._scoreboardTimer) {
+      clearTimeout(session._scoreboardTimer);
+      session._scoreboardTimer = undefined;
+      logger.info('NEXT_DESTINATION: Cleared scoreboard auto-advance timer', { sessionId });
+    }
+    // Clear locked answers from previous destination
+    session.state.lockedAnswers = [];
+
+    // Advance to next destination
+    const success = advanceToNextDestination(session);
+
+    if (!success) {
+      logger.error('NEXT_DESTINATION: Failed to advance destination', {
+        sessionId,
+      });
+      const errorEvent = buildErrorEvent(
+        sessionId,
+        'INTERNAL_ERROR',
+        'Failed to load next destination'
+      );
+      ws.send(JSON.stringify(errorEvent));
+      return;
+    }
+
+    // Get new destination info
+    const destInfo = getCurrentDestinationInfo(session);
+    if (!destInfo) {
+      logger.error('NEXT_DESTINATION: Failed to get destination info', {
+        sessionId,
+      });
+      const errorEvent = buildErrorEvent(
+        sessionId,
+        'INTERNAL_ERROR',
+        'Failed to get destination info'
+      );
+      ws.send(JSON.stringify(errorEvent));
+      return;
+    }
+
+    // Get destination details
+    const currentDest = session.state.destination;
+    if (!currentDest) {
+      logger.error('NEXT_DESTINATION: No current destination in state', {
+        sessionId,
+      });
+      const errorEvent = buildErrorEvent(
+        sessionId,
+        'INTERNAL_ERROR',
+        'No destination loaded'
+      );
+      ws.send(JSON.stringify(errorEvent));
+      return;
+    }
+
+    logger.info('Advanced to next destination', {
+      sessionId,
+      destinationIndex: destInfo.index,
+      totalDestinations: destInfo.total,
+      destinationName: currentDest.name,
+    });
+
+    // Pre-generate TTS clips for the new destination
+    await prefetchRoundTts(session);
+
+    // Broadcast NEXT_DESTINATION_EVENT
+    const nextDestEvent = buildNextDestinationEvent(
+      sessionId,
+      destInfo.index,
+      destInfo.total,
+      currentDest.name || 'Unknown',
+      currentDest.country || 'Unknown'
+    );
+    sessionStore.broadcastEventToSession(sessionId, nextDestEvent);
+
+    // Check if we should skip ROUND_INTRO (destination 2+)
+    const shouldSkipIntro = destInfo.index > 1;
+
+    if (shouldSkipIntro) {
+      // Skip ROUND_INTRO, go directly to CLUE_LEVEL
+      logger.info('NEXT_DESTINATION: Skipping ROUND_INTRO for destination 2+', {
+        sessionId,
+        destinationIndex: destInfo.index,
+      });
+
+      // Get first clue info
+      const firstCluePoints = session.state.clueLevelPoints;
+      const firstClueText = session.state.clueText;
+
+      if (!firstCluePoints || !firstClueText) {
+        logger.error('NEXT_DESTINATION: No clue data in state', { sessionId });
+        throw new Error('No clue data in state');
+      }
+
+      // Generate the first clue voice line
+      await generateClueVoice(session, firstCluePoints, firstClueText);
+
+      // Set phase directly to CLUE_LEVEL
+      session.state.phase = 'CLUE_LEVEL';
+
+      // Initialize answer count tracking
+      session.state.answeredCount = 0;
+      session.state.totalPlayers = session.state.players.filter(p => p.role === 'player').length;
+
+      // Audio: mutate audioState
+      const audioEvents = onGameStart(session, firstCluePoints, firstClueText);
+
+      // Broadcast STATE_SNAPSHOT
+      broadcastStateSnapshot(sessionId);
+
+      // Broadcast audio events
+      audioEvents.forEach((e) => sessionStore.broadcastEventToSession(sessionId, e));
+
+      // Resolve TTS clip duration
+      const clueClipId = `voice_clue_${firstCluePoints}`;
+      const clueClip = (session as any)._ttsManifest?.find((c: any) => c.clipId === clueClipId);
+
+      // Start auto-advance timer (sets clueTimerEnd in state)
+      scheduleClueTimer(sessionId);
+
+      // Broadcast CLUE_PRESENT event (includes timer info from state)
+      const clueEvent = buildCluePresentEvent(
+        sessionId,
+        firstClueText,
+        firstCluePoints,
+        session.state.roundIndex || 0,
+        0, // clueIndex
+        clueClip?.durationMs ?? 0,
+        getClueTimerDuration(firstCluePoints),
+        session.state.clueTimerEnd ?? undefined
+      );
+      sessionStore.broadcastEventToSession(sessionId, clueEvent);
+
+      logger.info('Broadcasted CLUE_PRESENT for next destination (skipped intro)', {
+        sessionId,
+        clueLevelPoints: firstCluePoints,
+      });
+    } else {
+      // First destination: show ROUND_INTRO as normal
+      logger.info('NEXT_DESTINATION: Showing ROUND_INTRO for first destination', {
+        sessionId,
+        destinationIndex: destInfo.index,
+      });
+
+      // Transition to ROUND_INTRO before the first clue
+      session.state.phase = 'ROUND_INTRO';
+
+      // Audio: mutate audioState + collect intro events
+      const introEvents = onRoundIntro(session);
+
+      // Broadcast STATE_SNAPSHOT with phase = ROUND_INTRO
+      broadcastStateSnapshot(sessionId);
+
+      // Broadcast intro audio events
+      introEvents.forEach((e) => sessionStore.broadcastEventToSession(sessionId, e));
+
+      // Derive delay from the AUDIO_PLAY event if one was emitted; fall back to 3000 ms
+      const introAudioPlay = introEvents.find((e) => e.type === 'AUDIO_PLAY');
+      const introDurationMs: number = introAudioPlay ? (introAudioPlay.payload as any).durationMs : 0;
+      const BREATHING_WINDOW_MS = 1500;
+      const introDelayMs = introDurationMs > 0 ? introDurationMs + BREATHING_WINDOW_MS : 3000;
+
+      logger.info('ROUND_INTRO scheduled for next destination', {
+        sessionId,
+        introDurationMs,
+        introDelayMs,
+      });
+
+      // Delayed transition: ROUND_INTRO → CLUE_LEVEL
+      setTimeout(async () => {
+        const sess = sessionStore.getSession(sessionId);
+        if (!sess || sess.state.phase !== 'ROUND_INTRO') {
+          logger.debug('NEXT_DESTINATION: ROUND_INTRO timer fired but phase changed, ignoring', { sessionId });
+          return;
+        }
+
+        try {
+          // Get first clue info
+          const firstCluePoints = sess.state.clueLevelPoints;
+          const firstClueText = sess.state.clueText;
+
+          if (!firstCluePoints || !firstClueText) {
+            logger.error('NEXT_DESTINATION: No clue data in state', { sessionId });
+            return;
+          }
+
+          // Generate the first clue voice line
+          await generateClueVoice(sess, firstCluePoints, firstClueText);
+
+          // Advance phase
+          sess.state.phase = 'CLUE_LEVEL';
+
+          // Initialize answer count tracking
+          sess.state.answeredCount = 0;
+          sess.state.totalPlayers = sess.state.players.filter(p => p.role === 'player').length;
+
+          // Audio: mutate audioState
+          const audioEvents = onGameStart(sess, firstCluePoints, firstClueText);
+
+          // Broadcast STATE_SNAPSHOT
+          broadcastStateSnapshot(sessionId);
+
+          // Broadcast audio events
+          audioEvents.forEach((e) => sessionStore.broadcastEventToSession(sessionId, e));
+
+          // Resolve TTS clip duration
+          const clueClipId = `voice_clue_${firstCluePoints}`;
+          const clueClip = (sess as any)._ttsManifest?.find((c: any) => c.clipId === clueClipId);
+
+          // Start auto-advance timer (sets clueTimerEnd in state)
+          scheduleClueTimer(sessionId);
+
+          // Broadcast CLUE_PRESENT event (includes timer info from state)
+          const clueEvent = buildCluePresentEvent(
+            sessionId,
+            firstClueText,
+            firstCluePoints,
+            sess.state.roundIndex || 0,
+            0, // clueIndex
+            clueClip?.durationMs ?? 0,
+            getClueTimerDuration(firstCluePoints),
+            sess.state.clueTimerEnd ?? undefined
+          );
+          sessionStore.broadcastEventToSession(sessionId, clueEvent);
+
+          logger.info('Broadcasted CLUE_PRESENT for next destination', {
+            sessionId,
+            clueLevelPoints: firstCluePoints,
+          });
+        } catch (innerError: any) {
+          logger.error('NEXT_DESTINATION: Failed during ROUND_INTRO → CLUE_LEVEL transition', {
+            sessionId,
+            error: innerError.message,
+          });
+        }
+      }, introDelayMs);
+    }
+
+  } catch (error: any) {
+    logger.error('NEXT_DESTINATION: Failed to advance destination', {
+      sessionId,
+      error: error.message,
+    });
+    const errorEvent = buildErrorEvent(
+      sessionId,
+      'INTERNAL_ERROR',
+      `Failed to advance destination: ${error.message}`
+    );
+    ws.send(JSON.stringify(errorEvent));
+  }
+}
+
+/**
+ * Handles END_GAME command
+ * Host ends the game and skips to FINAL_RESULTS
+ */
+function handleEndGame(
+  ws: WebSocket,
+  sessionId: string,
+  playerId: string,
+  role: string
+): void {
+  // Only host can end game
+  if (role !== 'host') {
+    logger.warn('END_GAME: Non-host attempted to end game', {
+      sessionId,
+      playerId,
+      role,
+    });
+    const errorEvent = buildErrorEvent(
+      sessionId,
+      'UNAUTHORIZED',
+      'Only host can end game'
+    );
+    ws.send(JSON.stringify(errorEvent));
+    return;
+  }
+
+  // Get session
+  const session = sessionStore.getSession(sessionId);
+  if (!session) {
+    logger.error('END_GAME: Session not found', { sessionId, playerId });
+    const errorEvent = buildErrorEvent(
+      sessionId,
+      'INVALID_SESSION',
+      'Session not found'
+    );
+    ws.send(JSON.stringify(errorEvent));
+    return;
+  }
+
+  // Must be in SCOREBOARD phase
+  if (session.state.phase !== 'SCOREBOARD') {
+    logger.warn('END_GAME: Not in SCOREBOARD phase', {
+      sessionId,
+      phase: session.state.phase,
+    });
+    const errorEvent = buildErrorEvent(
+      sessionId,
+      'INVALID_PHASE',
+      `Cannot end game from phase: ${session.state.phase}`
+    );
+    ws.send(JSON.stringify(errorEvent));
+    return;
+  }
+
+  try {
+    // Clear scoreboard auto-advance timer if host manually ends game
+    if (session._scoreboardTimer) {
+      clearTimeout(session._scoreboardTimer);
+      session._scoreboardTimer = undefined;
+      logger.info('END_GAME: Cleared scoreboard auto-advance timer', { sessionId });
+    }
+    // Calculate destinations completed
+    const destInfo = getCurrentDestinationInfo(session);
+    const destinationsCompleted = destInfo ? destInfo.index : 1;
+
+    // Build final scores
+    const finalScores = session.state.scoreboard.map((entry) => ({
+      playerId: entry.playerId,
+      name: entry.name,
+      totalScore: entry.score,
+    }));
+
+    logger.info('Host ending game', {
+      sessionId,
+      destinationsCompleted,
+      totalDestinations: destInfo?.total,
+    });
+
+    // Broadcast GAME_ENDED_EVENT
+    const gameEndedEvent = buildGameEndedEvent(
+      sessionId,
+      finalScores,
+      destinationsCompleted,
+      'host_ended'
+    );
+    sessionStore.broadcastEventToSession(sessionId, gameEndedEvent);
+
+    // Transition to FINAL_RESULTS
+    transitionToFinalResults(sessionId);
+
+    logger.info('Game ended by host', {
+      sessionId,
+      destinationsCompleted,
+    });
+  } catch (error: any) {
+    logger.error('END_GAME: Failed to end game', {
+      sessionId,
+      error: error.message,
+    });
+    const errorEvent = buildErrorEvent(
+      sessionId,
+      'INTERNAL_ERROR',
+      `Failed to end game: ${error.message}`
+    );
+    ws.send(JSON.stringify(errorEvent));
   }
 }
 
@@ -1330,14 +1969,21 @@ function broadcastFollowupAnswersLocked(sessionId: string, currentQuestionIndex:
 // CLUE AUTO-ADVANCE TIMER
 // ============================================================================
 
-/** Graduated discussion windows per clue level (pacing-spec.md section 3) */
+/** Graduated discussion windows per clue level (game design review) */
 const DISCUSSION_DELAY_BY_LEVEL: Record<number, number> = {
-  10: 14_000,
-  8: 12_000,
-  6: 9_000,
-  4: 7_000,
-  2: 5_000,
+  10: 14_000, // 14 seconds
+  8: 12_000,  // 12 seconds
+  6: 10_000,  // 10 seconds (updated from 9s)
+  4: 8_000,   // 8 seconds (updated from 7s)
+  2: 5_000,   // 5 seconds
 };
+
+/**
+ * Gets the discussion window duration for a clue level
+ */
+function getClueTimerDuration(clueLevel: 10 | 8 | 6 | 4 | 2): number {
+  return DISCUSSION_DELAY_BY_LEVEL[clueLevel] || 10_000;
+}
 
 /** Fallback total delay when no TTS clip is available for the current clue. */
 const CLUE_FALLBACK_DURATION_MS = 30_000;
@@ -1353,9 +1999,9 @@ function scheduleClueTimer(sessionId: string): void {
   if (!session) return;
 
   // Clear any existing timer so we never have two racing
-  if ((session as any)._clueTimer) {
-    clearTimeout((session as any)._clueTimer);
-    (session as any)._clueTimer = null;
+  if (session._clueTimer) {
+    clearTimeout(session._clueTimer);
+    session._clueTimer = undefined;
   }
 
   // Look up TTS duration from the round manifest
@@ -1368,7 +2014,14 @@ function scheduleClueTimer(sessionId: string): void {
     ? ttsDuration + discussionDelayMs
     : CLUE_FALLBACK_DURATION_MS;
 
-  logger.info('Clue timer scheduled', { sessionId, currentLevel, ttsDuration, discussionDelayMs, totalDelay });
+  // Set clueTimerEnd in state so clients can display countdown
+  const now = getServerTimeMs();
+  session.state.clueTimerEnd = now + totalDelay;
+
+  // Track clue start time for speed bonus calculation
+  (session as any)._clueStartTime = now;
+
+  logger.info('Clue timer scheduled', { sessionId, currentLevel, ttsDuration, discussionDelayMs, totalDelay, timerEnd: session.state.clueTimerEnd });
 
   const timeoutId = setTimeout(() => {
     // Guard: session must still exist and be in CLUE_LEVEL
@@ -1381,7 +2034,7 @@ function scheduleClueTimer(sessionId: string): void {
     autoAdvanceClue(sessionId);
   }, totalDelay);
 
-  (session as any)._clueTimer = timeoutId;
+  session._clueTimer = timeoutId;
 }
 
 /**
@@ -1428,6 +2081,11 @@ async function autoAdvanceClue(sessionId: string): Promise<void> {
         sessionId,
         destinationName: result.destinationName,
       });
+
+      // Set answer count to total players (all are implicitly locked at reveal)
+      const totalPlayers = session.state.players.filter(p => p.role === 'player').length;
+      session.state.answeredCount = totalPlayers;
+      session.state.totalPlayers = totalPlayers;
 
       // Audio: stop music + banter before reveal
       onRevealStart(session).forEach((e) =>
@@ -1477,6 +2135,7 @@ async function autoAdvanceClue(sessionId: string): Promise<void> {
           isCorrect: answer.isCorrect || false,
           pointsAwarded: answer.pointsAwarded || 0,
           lockedAtLevelPoints: answer.lockedAtLevelPoints,
+          speedBonus: answer.speedBonus || 0,
         };
       });
 
@@ -1564,6 +2223,9 @@ async function autoAdvanceClue(sessionId: string): Promise<void> {
           false
         );
         sessionStore.broadcastEventToSession(sessionId, scoreboardEvent);
+
+        // Schedule auto-advance timer if next destination is available
+        scheduleScoreboardTimer(sessionId);
       }
 
       logger.info('autoAdvanceClue: Broadcasted destination reveal and results', {
@@ -1577,6 +2239,10 @@ async function autoAdvanceClue(sessionId: string): Promise<void> {
         clueLevelPoints: result.clueLevelPoints,
       });
 
+      // Reset answer count tracking for new clue
+      session.state.answeredCount = 0;
+      session.state.totalPlayers = session.state.players.filter(p => p.role === 'player').length;
+
       // On-demand: generate clue voice BEFORE audio-director searches manifest
       await generateClueVoice(session, result.clueLevelPoints!, result.clueText!);
 
@@ -1587,14 +2253,19 @@ async function autoAdvanceClue(sessionId: string): Promise<void> {
       // Broadcast STATE_SNAPSHOT to all clients
       broadcastStateSnapshot(sessionId);
 
-      // Broadcast CLUE_PRESENT event
+      // Schedule timer for the new clue level (sets clueTimerEnd in state)
+      scheduleClueTimer(sessionId);
+
+      // Broadcast CLUE_PRESENT event (includes timer info from state)
       const clueEvent = buildCluePresentEvent(
         sessionId,
         result.clueText!,
         result.clueLevelPoints!,
         session.state.roundIndex || 0,
         result.clueIndex!,
-        clueClip?.durationMs ?? 0
+        clueClip?.durationMs ?? 0,
+        getClueTimerDuration(result.clueLevelPoints!),
+        session.state.clueTimerEnd ?? undefined
       );
       sessionStore.broadcastEventToSession(sessionId, clueEvent);
 
@@ -1630,9 +2301,6 @@ async function autoAdvanceClue(sessionId: string): Promise<void> {
           },
         });
       }
-
-      // Schedule timer for the new clue level
-      scheduleClueTimer(sessionId);
 
       logger.info('autoAdvanceClue: Broadcasted CLUE_PRESENT event', {
         sessionId,
@@ -1728,15 +2396,21 @@ function scheduleFollowupTimer(sessionId: string, durationMs: number): void {
       const scoreboardEvent = buildScoreboardUpdateEvent(sessionId, sess.state.scoreboard, false);
       sessionStore.broadcastEventToSession(sessionId, scoreboardEvent);
 
-      // NEW: Schedule transition to FINAL_RESULTS after 4 s scoreboard hold (pacing-spec section 10)
-      setTimeout(() => {
-        const session = sessionStore.getSession(sessionId);
-        if (!session || session.state.phase !== 'SCOREBOARD') {
-          logger.debug('SCOREBOARD hold expired but phase changed, ignoring', { sessionId });
-          return;
-        }
-        transitionToFinalResults(sessionId);
-      }, 4000);
+      // Schedule auto-advance timer if next destination is available
+      // Otherwise, schedule transition to FINAL_RESULTS after 4 s scoreboard hold
+      if (sess.state.nextDestinationAvailable && sess.gamePlan) {
+        scheduleScoreboardTimer(sessionId);
+      } else {
+        // No more destinations - transition to FINAL_RESULTS after 4 s hold (pacing-spec section 10)
+        setTimeout(() => {
+          const session = sessionStore.getSession(sessionId);
+          if (!session || session.state.phase !== 'SCOREBOARD') {
+            logger.debug('SCOREBOARD hold expired but phase changed, ignoring', { sessionId });
+            return;
+          }
+          transitionToFinalResults(sessionId);
+        }, 4000);
+      }
     }
   }, durationMs);
 
@@ -1744,6 +2418,269 @@ function scheduleFollowupTimer(sessionId: string, durationMs: number): void {
   (sessionStore.getSession(sessionId) as any)._followupTimer = timeoutId;
 
   logger.info('Followup timer scheduled', { sessionId, durationMs });
+}
+
+/**
+ * Schedules the scoreboard auto-advance timer for multi-destination games.
+ * If nextDestinationAvailable is true, automatically advances to next destination after 8 seconds.
+ */
+function scheduleScoreboardTimer(sessionId: string): void {
+  const session = sessionStore.getSession(sessionId);
+  if (!session) return;
+
+  // Only auto-advance if there's a next destination available
+  if (!session.state.nextDestinationAvailable || !session.gamePlan) {
+    logger.debug('Scoreboard timer not scheduled - no next destination available', {
+      sessionId,
+      nextDestinationAvailable: session.state.nextDestinationAvailable,
+      hasGamePlan: !!session.gamePlan,
+    });
+    return;
+  }
+
+  // Clear any existing timer
+  if (session._scoreboardTimer) {
+    clearTimeout(session._scoreboardTimer);
+  }
+
+  const SCOREBOARD_AUTO_ADVANCE_MS = 8000; // 8 seconds
+
+  logger.info('Scoreboard auto-advance timer scheduled', {
+    sessionId,
+    delayMs: SCOREBOARD_AUTO_ADVANCE_MS,
+  });
+
+  const timeoutId = setTimeout(async () => {
+    const sess = sessionStore.getSession(sessionId);
+    if (!sess || sess.state.phase !== 'SCOREBOARD') {
+      logger.debug('Scoreboard timer fired but phase is not SCOREBOARD, ignoring', { sessionId });
+      return;
+    }
+
+    logger.info('Scoreboard timer fired - auto-advancing to next destination', {
+      sessionId,
+      currentIndex: sess.gamePlan?.currentIndex,
+    });
+
+    // Execute the same logic as handleNextDestination (without auth checks)
+    try {
+      // Clear locked answers from previous destination
+      sess.state.lockedAnswers = [];
+
+      // Advance to next destination
+      const success = advanceToNextDestination(sess);
+
+      if (!success) {
+        logger.error('Scoreboard auto-advance: Failed to advance destination', { sessionId });
+        return;
+      }
+
+      // Get new destination info
+      const destInfo = getCurrentDestinationInfo(sess);
+      if (!destInfo) {
+        logger.error('Scoreboard auto-advance: Failed to get destination info', { sessionId });
+        return;
+      }
+
+      // Get destination details
+      const currentDest = sess.state.destination;
+      if (!currentDest) {
+        logger.error('Scoreboard auto-advance: No current destination in state', { sessionId });
+        return;
+      }
+
+      logger.info('Scoreboard auto-advance: Advanced to next destination', {
+        sessionId,
+        destinationIndex: destInfo.index,
+        totalDestinations: destInfo.total,
+        destinationName: currentDest.name,
+      });
+
+      // Pre-generate TTS clips for the new destination
+      await prefetchRoundTts(sess);
+
+      // Broadcast NEXT_DESTINATION_EVENT
+      const nextDestEvent = buildNextDestinationEvent(
+        sessionId,
+        destInfo.index,
+        destInfo.total,
+        currentDest.name || 'Unknown',
+        currentDest.country || 'Unknown'
+      );
+      sessionStore.broadcastEventToSession(sessionId, nextDestEvent);
+
+      // Check if we should skip ROUND_INTRO (destination 2+)
+      const shouldSkipIntro = destInfo.index > 1;
+
+      if (shouldSkipIntro) {
+        // Skip ROUND_INTRO, go directly to CLUE_LEVEL
+        logger.info('Scoreboard auto-advance: Skipping ROUND_INTRO for destination 2+', {
+          sessionId,
+          destinationIndex: destInfo.index,
+        });
+
+        // Get first clue info
+        const firstCluePoints = sess.state.clueLevelPoints;
+        const firstClueText = sess.state.clueText;
+
+        if (!firstCluePoints || !firstClueText) {
+          logger.error('Scoreboard auto-advance: No clue data in state', { sessionId });
+          return;
+        }
+
+        // Generate the first clue voice line
+        await generateClueVoice(sess, firstCluePoints, firstClueText);
+
+        // Set phase directly to CLUE_LEVEL
+        sess.state.phase = 'CLUE_LEVEL';
+
+        // Initialize answer count tracking
+        sess.state.answeredCount = 0;
+        sess.state.totalPlayers = sess.state.players.filter(p => p.role === 'player').length;
+
+        // Audio: mutate audioState
+        const audioEvents = onGameStart(sess, firstCluePoints, firstClueText);
+
+        // Broadcast STATE_SNAPSHOT
+        broadcastStateSnapshot(sessionId);
+
+        // Broadcast audio events
+        audioEvents.forEach((e) => sessionStore.broadcastEventToSession(sessionId, e));
+
+        // Resolve TTS clip duration
+        const clueClipId = `voice_clue_${firstCluePoints}`;
+        const clueClip = (sess as any)._ttsManifest?.find((c: any) => c.clipId === clueClipId);
+
+        // Start auto-advance timer (sets clueTimerEnd in state)
+        scheduleClueTimer(sessionId);
+
+        // Broadcast CLUE_PRESENT event (includes timer info from state)
+        const clueEvent = buildCluePresentEvent(
+          sessionId,
+          firstClueText,
+          firstCluePoints,
+          sess.state.roundIndex || 0,
+          0, // clueIndex
+          clueClip?.durationMs ?? 0,
+          getClueTimerDuration(firstCluePoints),
+          sess.state.clueTimerEnd ?? undefined
+        );
+        sessionStore.broadcastEventToSession(sessionId, clueEvent);
+
+        logger.info('Scoreboard auto-advance: Broadcasted CLUE_PRESENT for next destination (skipped intro)', {
+          sessionId,
+          clueLevelPoints: firstCluePoints,
+        });
+      } else {
+        // First destination: show ROUND_INTRO as normal
+        logger.info('Scoreboard auto-advance: Showing ROUND_INTRO for first destination', {
+          sessionId,
+          destinationIndex: destInfo.index,
+        });
+
+        // Transition to ROUND_INTRO before the first clue
+        sess.state.phase = 'ROUND_INTRO';
+
+        // Audio: mutate audioState + collect intro events
+        const introEvents = onRoundIntro(sess);
+
+        // Broadcast STATE_SNAPSHOT with phase = ROUND_INTRO
+        broadcastStateSnapshot(sessionId);
+
+        // Broadcast intro audio events
+        introEvents.forEach((e) => sessionStore.broadcastEventToSession(sessionId, e));
+
+        // Derive delay from the AUDIO_PLAY event if one was emitted; fall back to 3000 ms
+        const introAudioPlay = introEvents.find((e) => e.type === 'AUDIO_PLAY');
+        const introDurationMs: number = introAudioPlay ? (introAudioPlay.payload as any).durationMs : 0;
+        const BREATHING_WINDOW_MS = 1500;
+        const introDelayMs = introDurationMs > 0 ? introDurationMs + BREATHING_WINDOW_MS : 3000;
+
+        logger.info('Scoreboard auto-advance: ROUND_INTRO scheduled', {
+          sessionId,
+          introDurationMs,
+          introDelayMs,
+        });
+
+        // Delayed transition: ROUND_INTRO → CLUE_LEVEL
+        setTimeout(async () => {
+          const s = sessionStore.getSession(sessionId);
+          if (!s || s.state.phase !== 'ROUND_INTRO') {
+            logger.debug('Scoreboard auto-advance: ROUND_INTRO timer fired but phase changed, ignoring', { sessionId });
+            return;
+          }
+
+          try {
+            // Get first clue info
+            const firstCluePoints = s.state.clueLevelPoints;
+            const firstClueText = s.state.clueText;
+
+            if (!firstCluePoints || !firstClueText) {
+              logger.error('Scoreboard auto-advance: No clue data in state', { sessionId });
+              return;
+            }
+
+            // Generate the first clue voice line
+            await generateClueVoice(s, firstCluePoints, firstClueText);
+
+            // Advance phase
+            s.state.phase = 'CLUE_LEVEL';
+
+            // Initialize answer count tracking
+            s.state.answeredCount = 0;
+            s.state.totalPlayers = s.state.players.filter(p => p.role === 'player').length;
+
+            // Audio: mutate audioState
+            const audioEvents = onGameStart(s, firstCluePoints, firstClueText);
+
+            // Broadcast STATE_SNAPSHOT
+            broadcastStateSnapshot(sessionId);
+
+            // Broadcast audio events
+            audioEvents.forEach((e) => sessionStore.broadcastEventToSession(sessionId, e));
+
+            // Resolve TTS clip duration
+            const clueClipId = `voice_clue_${firstCluePoints}`;
+            const clueClip = (s as any)._ttsManifest?.find((c: any) => c.clipId === clueClipId);
+
+            // Start auto-advance timer (sets clueTimerEnd in state)
+            scheduleClueTimer(sessionId);
+
+            // Broadcast CLUE_PRESENT event (includes timer info from state)
+            const clueEvent = buildCluePresentEvent(
+              sessionId,
+              firstClueText,
+              firstCluePoints,
+              s.state.roundIndex || 0,
+              0, // clueIndex
+              clueClip?.durationMs ?? 0,
+              getClueTimerDuration(firstCluePoints),
+              s.state.clueTimerEnd ?? undefined
+            );
+            sessionStore.broadcastEventToSession(sessionId, clueEvent);
+
+            logger.info('Scoreboard auto-advance: Broadcasted CLUE_PRESENT for next destination', {
+              sessionId,
+              clueLevelPoints: firstCluePoints,
+            });
+          } catch (innerError: any) {
+            logger.error('Scoreboard auto-advance: Failed during ROUND_INTRO → CLUE_LEVEL transition', {
+              sessionId,
+              error: innerError.message,
+            });
+          }
+        }, introDelayMs);
+      }
+
+    } catch (error: any) {
+      logger.error('Scoreboard auto-advance: Failed to advance destination', {
+        sessionId,
+        error: error.message,
+      });
+    }
+  }, SCOREBOARD_AUTO_ADVANCE_MS);
+
+  session._scoreboardTimer = timeoutId;
 }
 
 /**

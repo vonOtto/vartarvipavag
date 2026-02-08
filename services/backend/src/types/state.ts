@@ -38,6 +38,7 @@ export interface LockedAnswer {
   lockedAtMs: number;
   isCorrect?: boolean;
   pointsAwarded?: number;
+  speedBonus?: number;
 }
 
 export interface ScoreboardEntry {
@@ -45,6 +46,7 @@ export interface ScoreboardEntry {
   name: string;
   score: number;
   rank?: number;
+  speedBonus?: number;
 }
 
 export interface Timer {
@@ -108,10 +110,19 @@ export interface GameState {
   destination?: Destination;
   clueLevelPoints: 10 | 8 | 6 | 4 | 2 | null;
   clueText: string | null;
+  clueTimerEnd?: number | null; // Timestamp when clue timer expires (for client countdown)
   brakeOwnerPlayerId: string | null;
   lockedAnswers: LockedAnswer[];
   followupQuestion: FollowupQuestionState | null;
   scoreboard: ScoreboardEntry[];
   timer?: Timer | null;
   audioState?: AudioState;
+  contentPackId?: string | null; // ID of active AI-generated content pack (optional)
+  // Multi-destination game tracking
+  destinationIndex?: number; // Current destination index (1-based) in multi-destination game
+  totalDestinations?: number; // Total number of destinations in multi-destination game
+  nextDestinationAvailable?: boolean; // True if there's another destination to play
+  // Answer count tracking during clue phase
+  answeredCount?: number; // Number of players who have locked their answer
+  totalPlayers?: number; // Total number of active players
 }

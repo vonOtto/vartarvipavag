@@ -36,6 +36,8 @@ export const RevealPage: React.FC = () => {
   useEffect(() => {
     if (gameState?.phase === 'LOBBY') {
       navigate('/lobby');
+    } else if (gameState?.phase === 'ROUND_INTRO') {
+      navigate('/next-destination');
     } else if (gameState?.phase === 'CLUE_LEVEL' || gameState?.phase === 'FOLLOWUP_QUESTION') {
       navigate('/game');
     }
@@ -112,6 +114,19 @@ export const RevealPage: React.FC = () => {
           )}
         </div>
 
+        {/* Multi-destination progress indicator */}
+        {gameState?.destinationIndex && gameState?.totalDestinations && gameState.totalDestinations > 1 && (
+          <div className="destination-progress-header">
+            <span className="progress-icon">🗺️</span>
+            <span className="progress-text">
+              Destination {gameState.destinationIndex} / {gameState.totalDestinations}
+            </span>
+            {gameState.nextDestinationAvailable && (
+              <span className="progress-next">→</span>
+            )}
+          </div>
+        )}
+
         {destination ? (
           <div className="destination-reveal">
             <h2>Det var...</h2>
@@ -137,10 +152,19 @@ export const RevealPage: React.FC = () => {
           <Scoreboard entries={scoreboard} myPlayerId={session.playerId} />
         )}
 
+        {/* Next destination banner */}
+        {gameState?.nextDestinationAvailable && gameState?.phase === 'SCOREBOARD' && (
+          <div className="next-destination-banner">
+            <span className="banner-icon">✈️</span>
+            <span className="banner-text">Nästa destination kommer snart!</span>
+            <span className="banner-icon">🛬</span>
+          </div>
+        )}
+
         {/* Followup-incoming nudge — shown during the SCOREBOARD pause before
             the first followup question arrives.  Condition is narrow on purpose:
             only fires when destination is revealed and phase is exactly SCOREBOARD. */}
-        {gameState?.phase === 'SCOREBOARD' && destination && gameState?.followupQuestion != null && (
+        {gameState?.phase === 'SCOREBOARD' && destination && gameState?.followupQuestion != null && !gameState?.nextDestinationAvailable && (
           <div className="followup-incoming">
             Frågor om {destination.name} väntar...
           </div>

@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 import fs     from 'node:fs';
 import path   from 'node:path';
+import { costTracker } from './metrics/cost-tracker';
 
 // ── env ─────────────────────────────────────────────────────────────────────
 export const CACHE_DIR  = process.env.TTS_CACHE_DIR        ?? '/tmp/pa-sparet-tts-cache';
@@ -30,9 +31,13 @@ export async function generateOrFetch(text: string, voiceId: string): Promise<Tt
 
     if (fs.existsSync(mp3File)) {
         const size = fs.statSync(mp3File).size;
+        // Track cache hit
+        costTracker.trackTTS(text.length, true);
         return { assetId, durationMs: mp3DurationMs(size), ext: 'mp3' };
     }
     if (fs.existsSync(wavFile)) {
+        // Track cache hit
+        costTracker.trackTTS(text.length, true);
         return { assetId, durationMs: wavDurationMs(fs.readFileSync(wavFile)), ext: 'wav' };
     }
 
@@ -42,6 +47,8 @@ export async function generateOrFetch(text: string, voiceId: string): Promise<Tt
         // mock mode – write silent WAV
         const wav = mockWav(600);
         fs.writeFileSync(wavFile, wav);
+        // Track cache miss (mock generation)
+        costTracker.trackTTS(text.length, false);
         return { assetId, durationMs: wavDurationMs(wav), ext: 'wav' };
     }
 
@@ -51,9 +58,13 @@ export async function generateOrFetch(text: string, voiceId: string): Promise<Tt
         // ElevenLabs failed – write mock WAV as fallback
         const wav = mockWav(600);
         fs.writeFileSync(wavFile, wav);
+        // Track cache miss (fallback)
+        costTracker.trackTTS(text.length, false);
         return { assetId, durationMs: wavDurationMs(wav), ext: 'wav' };
     }
     fs.writeFileSync(mp3File, mp3);
+    // Track cache miss (actual TTS generation)
+    costTracker.trackTTS(text.length, false);
     return { assetId, durationMs: mp3DurationMs(mp3.length), ext: 'mp3' };
 }
 

@@ -23,6 +23,14 @@ class AppState: ObservableObject {
     @Published var showConfetti      : Bool = false
     @Published var voiceOverlayText  : String? = nil
     @Published var hostName          : String? = nil
+    @Published var clueTimerEnd      : Int? = nil  // Unix timestamp when clue timer expires
+    @Published var answeredCount     : Int = 0
+    @Published var totalPlayers      : Int = 0
+
+    // MARK: – multi-destination tracking
+    @Published var destinationIndex          : Int?  // 1-based (1, 2, 3...)
+    @Published var totalDestinations         : Int?  // total number of destinations
+    @Published var nextDestinationAvailable  : Bool = false
 
     // MARK: – connection status
     /// True once the server has sent WELCOME on the current socket.
@@ -146,8 +154,11 @@ class AppState: ObservableObject {
                 }
             }
             if let p = payload["clueLevelPoints"] as? Int    { levelPoints = p }
+            clueTimerEnd   = payload["timerEnd"] as? Int    // Unix timestamp
             phase          = "CLUE_LEVEL"
             brakeOwnerName = nil
+            // Reset answer count when new clue is presented
+            answeredCount  = 0
 
         case "LOBBY_UPDATED":
             guard let payload = json["payload"]  as? [String: Any],
@@ -184,6 +195,7 @@ class AppState: ObservableObject {
             guard let payload = json["payload"] as? [String: Any] else { break }
             destinationName    = payload["destinationName"] as? String
             destinationCountry = payload["country"]         as? String
+            clueTimerEnd       = nil                        // clear timer when leaving clue phase
             phase              = "REVEAL_DESTINATION"
 
         case "DESTINATION_RESULTS":
@@ -338,6 +350,14 @@ class AppState: ObservableObject {
                 showConfetti = true
             }
 
+        case "NEXT_DESTINATION_EVENT":
+            guard let payload = json["payload"] as? [String: Any] else { break }
+            handleNextDestinationEvent(payload)
+
+        case "ANSWER_COUNT_UPDATE":
+            guard let payload = json["payload"] as? [String: Any] else { break }
+            handleAnswerCountUpdate(payload)
+
         default:
             break
         }
@@ -383,6 +403,11 @@ class AppState: ObservableObject {
         followupQuestion    = state.followupQuestion
         if state.phase != "FOLLOWUP_QUESTION" { followupResults = nil }
 
+        // Multi-destination tracking
+        destinationIndex          = state.destinationIndex
+        totalDestinations         = state.totalDestinations
+        nextDestinationAvailable  = state.nextDestinationAvailable ?? false
+
         // Fallback: fanfare + confetti on FINAL_RESULTS entry.
         // Covers reconnect mid-finale when the SFX event sequence is missed.
         if enteringFinale && !showConfetti {
@@ -395,6 +420,39 @@ class AppState: ObservableObject {
             audio.playMusic(trackId: "music_followup_loop", fadeInMs: 300, loop: true, gainDb: 0)
         } else if enteringClueLevel {
             audio.playMusic(trackId: "music_travel_loop",   fadeInMs: 300, loop: true, gainDb: 0)
+        }
+    }
+
+    /// Handles NEXT_DESTINATION_EVENT — shows transition screen and updates destination info.
+    private func handleNextDestinationEvent(_ payload: [String: Any]) {
+        // Update destination tracking
+        if let index = payload["destinationIndex"] as? Int {
+            destinationIndex = index
+        }
+        if let total = payload["totalDestinations"] as? Int {
+            totalDestinations = total
+        }
+        if let name = payload["destinationName"] as? String {
+            destinationName = name
+        }
+        if let country = payload["destinationCountry"] as? String {
+            destinationCountry = country
+        }
+
+        // Show transition screen (special phase)
+        phase = "NEXT_DESTINATION"
+
+        // Backend will send ROUND_INTRO → CLUE_LEVEL via STATE_SNAPSHOT after a delay.
+        // No auto-advance needed here; just wait for the next state update.
+    }
+
+    /// Handles ANSWER_COUNT_UPDATE — updates how many players have submitted answers.
+    private func handleAnswerCountUpdate(_ payload: [String: Any]) {
+        if let answered = payload["answeredCount"] as? Int {
+            self.answeredCount = answered
+        }
+        if let total = payload["totalPlayers"] as? Int {
+            self.totalPlayers = total
         }
     }
 
@@ -442,6 +500,7 @@ class AppState: ObservableObject {
         joinCode          = nil
         clueText          = nil
         levelPoints       = nil
+        clueTimerEnd      = nil
         scoreboard        = []
         lockedAnswersCount = 0
         brakeOwnerName    = nil
@@ -453,6 +512,11 @@ class AppState: ObservableObject {
         showConfetti      = false
         voiceOverlayText  = nil
         hostName          = nil
+        destinationIndex  = nil
+        totalDestinations = nil
+        nextDestinationAvailable = false
+        answeredCount     = 0
+        totalPlayers      = 0
 
         // 5. Stop any audio that is still playing
         audio.stopMusic(fadeOutMs: 0)

@@ -1,0 +1,85 @@
+services/ai-content/
+├── package.json                                  [MODIFIED - added scripts]
+├── .env.example
+├── tsconfig.json
+│
+├── src/
+│   ├── index.ts                                  [existing]
+│   ├── config.ts                                 [existing]
+│   │
+│   ├── claude-client.ts                          [MODIFIED - + model selection + cost tracking]
+│   ├── tts-client.ts                             [MODIFIED - + cost tracking]
+│   ├── common-phrases.ts                         [NEW - 153 phrases]
+│   ├── followup-pool.ts                          [NEW - 33 generic questions]
+│   │
+│   ├── types/
+│   │   └── content-pack.ts                       [existing]
+│   │
+│   ├── generators/
+│   │   ├── destination-generator.ts              [MODIFIED - + model selection]
+│   │   ├── clue-generator.ts                     [MODIFIED - + model selection]
+│   │   ├── followup-generator.ts                 [MODIFIED - + model selection]
+│   │   └── round-generator.ts                    [MODIFIED - + cost tracking]
+│   │
+│   ├── verification/
+│   │   ├── fact-checker.ts                       [MODIFIED - + Haiku model]
+│   │   └── anti-leak-checker.ts                  [MODIFIED - + Haiku model]
+│   │
+│   ├── metrics/                                   [NEW DIRECTORY]
+│   │   └── cost-tracker.ts                       [NEW - cost tracking system]
+│   │
+│   ├── routes/
+│   │   └── generate.ts                           [existing]
+│   │
+│   └── scripts/
+│       ├── generate-test-packs.ts                [existing]
+│       ├── generate-content-pool.ts              [NEW - batch generation]
+│       ├── pregen-common-phrases.ts              [NEW - TTS pre-generation]
+│       └── show-metrics.ts                       [NEW - metrics dashboard]
+│
+├── docs/                                          [existing]
+│   ├── architecture.md
+│   ├── integration.md
+│   └── testing.md
+│
+├── test-packs/                                    [existing]
+│   ├── README.md
+│   └── example-stockholm.json
+│
+├── README.md                                      [existing]
+├── IMPLEMENTATION_SUMMARY.md                      [existing]
+├── COST_OPTIMIZATION.md                           [NEW - detailed docs]
+└── COST_OPTIMIZATION_SUMMARY.md                   [NEW - this summary]
+
+SUMMARY
+=======
+NEW FILES:        8 files
+MODIFIED FILES:   9 files
+NEW DIRECTORIES:  1 (metrics/)
+TOTAL LINES:      ~2,500 lines of new/modified code
+
+NEW FEATURES
+============
+✅ Common phrases library (153 phrases)
+✅ Generic followup pool (33 questions)
+✅ Cost tracking system
+✅ Model optimization (Haiku/Sonnet)
+✅ Batch content generation
+✅ TTS pre-generation script
+✅ Metrics dashboard
+✅ Comprehensive documentation
+
+COST SAVINGS
+============
+Before:  $0.105 per round
+After:   $0.045 per round (-57%)
+At scale: $0.010 per game (-90%)
+
+NPM SCRIPTS
+===========
+npm run pregen-phrases              # Pre-generate common phrases TTS
+npm run generate-pool               # Batch generate content packs
+npm run metrics                     # Show cost metrics dashboard
+npm run generate-test-packs         # Generate test packs
+npm start                           # Start service
+npm run dev                         # Start with watch mode

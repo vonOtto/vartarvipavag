@@ -14,6 +14,11 @@
 		AA000005 /* QRCodeView.swift in Sources */  = {isa = PBXBuildFile; fileRef = BB000005 /* QRCodeView.swift */; };
 		AA000006 /* DesignSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000006 /* DesignSystem.swift */; };
 		AA000007 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = BB000007 /* Assets.xcassets */; };
+		AA000008 /* ContentLibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000008 /* ContentLibraryView.swift */; };
+		AA000009 /* ContentPackDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000009 /* ContentPackDetailView.swift */; };
+		AA000010 /* GenerateContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000010 /* GenerateContentView.swift */; };
+		AA000011 /* ContentPackModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000011 /* ContentPackModels.swift */; };
+		AA000012 /* ContentAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000012 /* ContentAPI.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -24,6 +29,11 @@
 		BB000005 /* QRCodeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRCodeView.swift; sourceTree = "<group>"; };
 		BB000006 /* DesignSystem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignSystem.swift; sourceTree = "<group>"; };
 		BB000007 /* Assets.xcassets */  = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		BB000008 /* ContentLibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentLibraryView.swift; sourceTree = "<group>"; };
+		BB000009 /* ContentPackDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentPackDetailView.swift; sourceTree = "<group>"; };
+		BB000010 /* GenerateContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GenerateContentView.swift; sourceTree = "<group>"; };
+		BB000011 /* ContentPackModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentPackModels.swift; sourceTree = "<group>"; };
+		BB000012 /* ContentAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentAPI.swift; sourceTree = "<group>"; };
 		BB000099 /* Info.plist */       = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		BB0000F0 /* PaSparetHost.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PaSparetHost.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -43,13 +53,34 @@
 				BB000001 /* App.swift */,
 				BB000006 /* DesignSystem.swift */,
 				BB000002 /* HostAPI.swift */,
+				BB000012 /* ContentAPI.swift */,
 				BB000003 /* HostModels.swift */,
+				BB000011 /* ContentPackModels.swift */,
 				BB000004 /* HostState.swift */,
 				BB000005 /* QRCodeView.swift */,
+				BB0000AD /* Views */,
 				BB000007 /* Assets.xcassets */,
 				BB000099 /* Info.plist */,
 			);
 			path = Sources/PaSparetHost;
+			sourceTree = "<group>";
+		};
+		BB0000AD /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				BB0000AE /* Content */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		BB0000AE /* Content */ = {
+			isa = PBXGroup;
+			children = (
+				BB000008 /* ContentLibraryView.swift */,
+				BB000009 /* ContentPackDetailView.swift */,
+				BB000010 /* GenerateContentView.swift */,
+			);
+			path = Content;
 			sourceTree = "<group>";
 		};
 		BB0000AC /* Products */ = {
@@ -112,9 +143,14 @@
 				AA000001 /* App.swift in Sources */,
 				AA000006 /* DesignSystem.swift in Sources */,
 				AA000002 /* HostAPI.swift in Sources */,
+				AA000012 /* ContentAPI.swift in Sources */,
 				AA000003 /* HostModels.swift in Sources */,
+				AA000011 /* ContentPackModels.swift in Sources */,
 				AA000004 /* HostState.swift in Sources */,
 				AA000005 /* QRCodeView.swift in Sources */,
+				AA000008 /* ContentLibraryView.swift in Sources */,
+				AA000009 /* ContentPackDetailView.swift in Sources */,
+				AA000010 /* GenerateContentView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
