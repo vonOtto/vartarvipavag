@@ -46,6 +46,10 @@ class HostState: ObservableObject {
     private static let maxAttempts    = 10
     private static let maxDelay       = 10.0
 
+    // MARK: – Bonjour service
+    private let bonjourService = BonjourService()
+    @Published var isBroadcasting: Bool = false
+
     // MARK: – connect ──────────────────────────────────────────────────────────
 
     func connect() {
@@ -333,6 +337,9 @@ class HostState: ObservableObject {
         if let jc           = state.joinCode { joinCode = jc }
         followupQuestion    = state.followupQuestion
         if state.phase != "FOLLOWUP_QUESTION" { followupResults = nil }
+
+        // Start Bonjour broadcasting once we have session data
+        startBroadcastingIfNeeded()
     }
 
     private func scheduleReconnect() async {
@@ -352,25 +359,29 @@ class HostState: ObservableObject {
     /// Tear down the current session completely. RootView will show LaunchView
     /// (because sessionId becomes nil).
     func resetSession() {
-        // 1. Close WebSocket
+        // 1. Stop Bonjour broadcasting
+        bonjourService.stopBroadcasting()
+        isBroadcasting = false
+
+        // 2. Close WebSocket
         wsTask?.cancel(with: .normalClosure, reason: nil)
         wsTask = nil
 
-        // 2. Reset reconnect state
+        // 3. Reset reconnect state
         reconnectAttempt = 0
         isConnected = false
         hasEverConnected = false
         sessionReady = false
         error = nil
 
-        // 3. Clear session credentials
+        // 4. Clear session credentials
         sessionId = nil
         hostAuthToken = nil
         wsUrl = nil
         joinCode = nil
         joinURL = nil
 
-        // 4. Clear game state
+        // 5. Clear game state
         phase = "LOBBY"
         players = []
         clueText = nil
@@ -385,10 +396,23 @@ class HostState: ObservableObject {
         followupResults = nil
         selectedContentPackId = nil
 
-        // 5. Clear game plan state
+        // 6. Clear game plan state
         gamePlan = nil
         destinations = []
         isGeneratingPlan = false
+    }
+
+    /// Start Bonjour broadcasting if we have all required data and aren't already broadcasting.
+    private func startBroadcastingIfNeeded() {
+        guard !isBroadcasting,
+              let sid = sessionId,
+              let code = joinCode else {
+            return
+        }
+
+        let destCount = destinations.count
+        bonjourService.startBroadcasting(sessionId: sid, joinCode: code, destinationCount: destCount)
+        isBroadcasting = true
     }
 
     /// Fire-and-forget JSON send.

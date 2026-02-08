@@ -18,5 +18,11 @@
     <array>
         <integer>3</integer>
     </array>
+    <key>NSBonjourServices</key>
+    <array>
+        <string>_tripto._tcp.</string>
+    </array>
+    <key>NSLocalNetworkUsageDescription</key>
+    <string>Tripto söker efter aktiva spelsessioner på lokalt nätverk</string>
 </dict>
 </plist>

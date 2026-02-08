@@ -104,11 +104,13 @@ private struct VoiceOverlay: View {
 
 // MARK: – launch screen ──────────────────────────────────────────────────────
 
-/// First screen after app launch.  Offers two options:
+/// First screen after app launch.  Offers three options:
 /// 1) Create a new session (becomes TV, shows QR for players)
-/// 2) Join an existing session by entering a join code
+/// 2) Join a discovered session via Bonjour/mDNS (auto-discover on LAN)
+/// 3) Join an existing session by entering a join code manually
 struct LaunchView: View {
     @EnvironmentObject var appState: AppState
+    @StateObject private var bonjourDiscovery = BonjourDiscovery()
     @State private var joinCode: String = ""
     @State private var busy = false
     @State private var errorMessage: String?
@@ -180,6 +182,11 @@ struct LaunchView: View {
                 }
                 .padding(.vertical, Layout.space16)
 
+                // Discovered sessions section (Bonjour)
+                if !bonjourDiscovery.discoveredSessions.isEmpty {
+                    discoveredSessionsSection
+                }
+
                 // Join code input (secondary action)
                 VStack(spacing: Layout.space24) {
                     Text("Ange join-kod från värden")
@@ -219,6 +226,33 @@ struct LaunchView: View {
             }
             .padding(60)
         }
+        .onAppear {
+            bonjourDiscovery.startDiscovery()
+        }
+        .onDisappear {
+            bonjourDiscovery.stopDiscovery()
+        }
+    }
+
+    // MARK: – Discovered Sessions Section
+
+    @ViewBuilder
+    private var discoveredSessionsSection: some View {
+        VStack(spacing: Layout.space24) {
+            Text("Sessioner i närheten")
+                .font(.tvBody)  // 34pt
+                .foregroundColor(.txt1)
+
+            VStack(spacing: Layout.space16) {
+                ForEach(bonjourDiscovery.discoveredSessions) { session in
+                    DiscoveredSessionRow(session: session) {
+                        Task { await joinDiscoveredSession(session) }
+                    }
+                    .disabled(busy)
+                }
+            }
+        }
+        .transition(.opacity.combined(with: .scale))
     }
 
     // MARK: – Create Session
@@ -270,6 +304,91 @@ struct LaunchView: View {
             errorMessage = "Kunde inte ansluta: \(error.localizedDescription)"
             busy = false
         }
+    }
+
+    // MARK: – Join Discovered Session
+
+    private func joinDiscoveredSession(_ session: DiscoveredSession) async {
+        busy = true
+        errorMessage = nil
+
+        do {
+            // Step 1: Lookup session by code
+            let lookup = try await SessionAPI.lookupByCode(session.joinCode)
+
+            // Step 2: Join as TV
+            let joinResponse = try await SessionAPI.joinAsTV(sessionId: lookup.sessionId)
+
+            // Step 3: Set credentials and connect
+            appState.sessionId = lookup.sessionId
+            appState.joinCode  = lookup.joinCode
+            appState.token     = joinResponse.tvAuthToken
+            appState.wsUrl     = joinResponse.wsUrl
+            appState.connect()
+
+        } catch {
+            errorMessage = "Kunde inte ansluta till \(session.joinCode): \(error.localizedDescription)"
+            busy = false
+        }
+    }
+}
+
+// MARK: – Discovered Session Row
+
+/// Row displaying a discovered Bonjour session with join button.
+private struct DiscoveredSessionRow: View {
+    let session: DiscoveredSession
+    let onJoin: () -> Void
+
+    @Environment(\.isFocused) private var isFocused
+
+    var body: some View {
+        Button(action: onJoin) {
+            HStack(spacing: Layout.space24) {
+                // Session icon
+                Image(systemName: "antenna.radiowaves.left.and.right")
+                    .font(.system(size: 36, weight: .semibold))
+                    .foregroundColor(.accMint)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    // Join code
+                    Text(session.joinCode.uppercased())
+                        .font(.system(size: 42, weight: .bold, design: .monospaced))
+                        .foregroundColor(.txt1)
+
+                    // Session info
+                    if session.destinationCount > 0 {
+                        Text("\(session.destinationCount) destinationer")
+                            .font(.tvMeta)  // 28pt
+                            .foregroundColor(.txt2)
+                    }
+                }
+
+                Spacer()
+
+                // Join arrow
+                Image(systemName: "arrow.right.circle.fill")
+                    .font(.system(size: 32, weight: .bold))
+                    .foregroundColor(isFocused ? .accOrange : .txt3)
+            }
+            .padding(.horizontal, Layout.cardPadding)
+            .padding(.vertical, Layout.space24)
+            .background(
+                RoundedRectangle(cornerRadius: Layout.radiusM, style: .continuous)
+                    .fill(isFocused ? Color.bg1.opacity(0.9) : Color.bg1)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: Layout.radiusM, style: .continuous)
+                            .stroke(
+                                isFocused ? Color.accMint.opacity(0.5) : Color.clear,
+                                lineWidth: 2
+                            )
+                    )
+                    .shadow(color: isFocused ? Color.accMint.opacity(0.3) : .clear, radius: 12, x: 0, y: 0)
+            )
+            .scaleEffect(isFocused ? 1.05 : 1.0)
+        }
+        .buttonStyle(.plain)
+        .animation(.easeInOut(duration: 0.2), value: isFocused)
     }
 }
 

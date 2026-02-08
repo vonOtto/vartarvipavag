@@ -37,6 +37,12 @@ export const CONFIG = {
 
 export function validateConfig(): void {
   if (!CONFIG.ANTHROPIC_API_KEY) {
-    console.warn('[ai-content] Warning: ANTHROPIC_API_KEY not set. Using mock mode.');
+    console.warn('');
+    console.warn('⚠️  ANTHROPIC_API_KEY is not set. AI generation will fail with 503 errors.');
+    console.warn('   Get your key at: https://console.anthropic.com/');
+    console.warn('   Add to .env: ANTHROPIC_API_KEY=sk-ant-api03-your-key-here');
+    console.warn('');
+    console.warn('   Workaround: Use pre-generated content packs (npm run generate-test-packs)');
+    console.warn('');
   }
 }

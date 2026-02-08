@@ -17,19 +17,77 @@ AI-driven content generation pipeline för På Spåret-spelet.
 npm install
 ```
 
-## Konfiguration
+## Environment Setup
 
-Kopiera `.env.example` till `.env` och fyll i API-nycklar:
+### 1. Kopiera environment template
 
 ```bash
 cp .env.example .env
 ```
 
-Obligatoriska environment variables:
+### 2. Skaffa API-nycklar
 
-- `ANTHROPIC_API_KEY`: Claude API-nyckel (för content generation)
-- `ELEVENLABS_API_KEY`: ElevenLabs API-nyckel (för TTS, optional - mock mode utan)
-- `PORT`: Server port (default: 3001)
+#### Anthropic API Key (Obligatorisk för AI-generation)
+
+1. Gå till [Anthropic Console](https://console.anthropic.com/)
+2. Logga in eller skapa konto
+3. Navigera till "API Keys"
+4. Klicka "Create Key"
+5. Kopiera din nyckel (börjar med `sk-ant-api03-...`)
+6. Lägg till i `.env`:
+   ```
+   ANTHROPIC_API_KEY=sk-ant-api03-din-nyckel-här
+   ```
+
+**Viktigt:** Om ANTHROPIC_API_KEY saknas kommer AI-generering att returnera **503 Service Unavailable**. Du kan fortfarande använda pre-genererade content packs (se Workaround nedan).
+
+#### ElevenLabs API Key (Optional för TTS)
+
+1. Gå till [ElevenLabs](https://elevenlabs.io/)
+2. Skapa konto och gå till API-inställningar
+3. Kopiera din API-nyckel
+4. Lägg till i `.env`:
+   ```
+   ELEVENLABS_API_KEY=sk-din-elevenlabs-nyckel
+   ```
+
+Om ElevenLabs API-nyckel saknas körs TTS i **mock mode** (genererar tysta WAV-filer).
+
+### 3. Verifiera konfiguration
+
+Kör servern och kontrollera startup-loggen:
+
+```bash
+npm run dev
+```
+
+Du bör se:
+```
+[ai-content] Service running on :3001
+[ai-content] TTS mode: live (eller mock)
+[ai-content] AI generation: enabled (eller disabled (no API key))
+```
+
+### Environment Variables
+
+| Variabel | Obligatorisk | Default | Beskrivning |
+|----------|--------------|---------|-------------|
+| `ANTHROPIC_API_KEY` | Ja (för AI-gen) | - | Claude API-nyckel från console.anthropic.com |
+| `ELEVENLABS_API_KEY` | Nej | - | ElevenLabs för TTS. Mock mode utan. |
+| `ELEVENLABS_DEFAULT_VOICE_ID` | Nej | `21m00Tcbv0mMvdtTrqFLmxvi` | Voice ID (Rachel) |
+| `PORT` | Nej | `3001` | Server port |
+| `PUBLIC_BASE_URL` | Nej | `http://localhost:3001` | För TTS URLs. Sätt till LAN IP för tvOS. |
+| `TTS_CACHE_DIR` | Nej | `/tmp/pa-sparet-tts-cache` | Cache för TTS audio clips |
+
+### Workaround: Pre-genererade Content Packs
+
+Om du saknar Anthropic API-nyckel kan du använda pre-genererade packs:
+
+```bash
+npm run generate-test-packs
+```
+
+Detta skapar exempel-packs i `test-packs/` som backend kan ladda direkt utan att anropa AI-tjänsten.
 
 ## API Endpoints
 
@@ -158,17 +216,85 @@ Test content packs sparas i `test-packs/` och kan användas för:
 
 ## Troubleshooting
 
-**"ANTHROPIC_API_KEY not configured"**
-- Lägg till din Claude API key i `.env`
+### 503 Service Unavailable
 
-**Generation tar lång tid**
-- Normal generation time: 30-60 sekunder
-- Inkluderar flera API-anrop för verifiering
+**Symptom:** `/generate/round` returnerar 503 error
 
-**Många retries**
-- Anti-leak check kan triggera regeneration
-- Fact check kan avvisa felaktiga claims
+**Orsak:** `ANTHROPIC_API_KEY` saknas eller inte satt i `.env`
+
+**Lösning:**
+1. Kontrollera att `.env` finns i `services/ai-content/`
+2. Verifiera att `ANTHROPIC_API_KEY=sk-ant-api03-...` är korrekt ifylld
+3. Starta om servern: `npm run dev`
+4. Kontrollera startup-loggen: Ska visa "AI generation: enabled"
+
+**Workaround:** Använd pre-genererade content packs (se Environment Setup)
+
+### 401 Unauthorized
+
+**Symptom:** Generation startar men failar med 401
+
+**Orsak:** API-nyckeln är ogiltig eller utgången
+
+**Lösning:**
+1. Gå till [Anthropic Console](https://console.anthropic.com/)
+2. Verifiera att din API-nyckel är aktiv
+3. Generera ny nyckel om nödvändigt
+4. Uppdatera `.env` med den nya nyckeln
+5. Starta om servern
+
+### Timeout / Network Error
+
+**Symptom:** Generation tar mycket lång tid och timeout
+
+**Möjliga orsaker:**
+- Nätverksproblem
+- Anthropic API överbelastad
+- Firewall blockerar utgående requests
+
+**Lösning:**
+1. Kontrollera internet-uppkoppling
+2. Testa API manuellt: `curl https://api.anthropic.com/v1/messages -H "x-api-key: $ANTHROPIC_API_KEY"`
+3. Öka timeout i `src/config.ts` (TIMEOUT_MS)
+4. Försök igen senare om Anthropic API är överbelastad
+
+### Generation tar lång tid
+
+**Förväntad tid:** 30-60 sekunder per round
+
+**Orsak:** Inkluderar flera AI-anrop:
+- Destination generation
+- 5 clues generation
+- 2-3 followups generation
+- Fact verification
+- Anti-leak check
+- Potentiella retries (max 3)
+
+**Detta är normalt.** Progress visas via `/generate/round` response.
+
+### Många retries / "Max retries exceeded"
+
+**Orsak:**
+- Anti-leak check upptäcker läcka i tidiga ledtrådar
+- Fact check avvisar felaktiga claims
 - Max 3 försök per generation
+
+**Lösning:**
+- Normalt beteende - systemet försöker garantera kvalitet
+- Om det händer ofta: Kontrollera `src/config.ts` ANTI_LEAK_STRICT_MODE
+- Inaktivera strict mode för snabbare generation (mindre kvalitetskontroll)
+
+### TTS Mock Mode / "TTS mode: mock"
+
+**Symptom:** Startup visar "TTS mode: mock" istället för "live"
+
+**Orsak:** `ELEVENLABS_API_KEY` saknas
+
+**Effekt:** TTS genererar tysta WAV-filer istället för riktig röst
+
+**Lösning:** Lägg till ElevenLabs API-nyckel i `.env` (se Environment Setup)
+
+**Workaround:** Mock mode fungerar för development/testing utan röst
 
 ## Integration med Backend
 

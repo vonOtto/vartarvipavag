@@ -19,6 +19,7 @@
 		AA000010 /* GenerateContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000010 /* GenerateContentView.swift */; };
 		AA000011 /* ContentPackModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000011 /* ContentPackModels.swift */; };
 		AA000012 /* ContentAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000012 /* ContentAPI.swift */; };
+		AA000013 /* BonjourService.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000013 /* BonjourService.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -34,6 +35,7 @@
 		BB000010 /* GenerateContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GenerateContentView.swift; sourceTree = "<group>"; };
 		BB000011 /* ContentPackModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentPackModels.swift; sourceTree = "<group>"; };
 		BB000012 /* ContentAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentAPI.swift; sourceTree = "<group>"; };
+		BB000013 /* BonjourService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BonjourService.swift; sourceTree = "<group>"; };
 		BB000099 /* Info.plist */       = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		BB0000F0 /* PaSparetHost.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PaSparetHost.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -57,6 +59,7 @@
 				BB000003 /* HostModels.swift */,
 				BB000011 /* ContentPackModels.swift */,
 				BB000004 /* HostState.swift */,
+				BB000013 /* BonjourService.swift */,
 				BB000005 /* QRCodeView.swift */,
 				BB0000AD /* Views */,
 				BB000007 /* Assets.xcassets */,
@@ -147,6 +150,7 @@
 				AA000003 /* HostModels.swift in Sources */,
 				AA000011 /* ContentPackModels.swift in Sources */,
 				AA000004 /* HostState.swift in Sources */,
+				AA000013 /* BonjourService.swift in Sources */,
 				AA000005 /* QRCodeView.swift in Sources */,
 				AA000008 /* ContentLibraryView.swift in Sources */,
 				AA000009 /* ContentPackDetailView.swift in Sources */,

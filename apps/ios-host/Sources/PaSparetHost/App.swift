@@ -448,6 +448,19 @@ struct LobbyHostView: View {
                         Text("Skanna för att ansluta")
                             .font(.body)
                             .foregroundColor(.txt2)
+
+                        // Bonjour broadcast status
+                        if state.isBroadcasting {
+                            HStack(spacing: Layout.space1) {
+                                Image(systemName: "antenna.radiowaves.left.and.right")
+                                    .font(.system(size: 14, weight: .medium))
+                                    .foregroundColor(.stateOk)
+                                Text("Synlig på lokalt nätverk")
+                                    .font(.small)
+                                    .foregroundColor(.txt2)
+                            }
+                            .padding(.top, Layout.space1)
+                        }
                     }
                     .padding(.top, Layout.space4)
                     .padding(.bottom, Layout.space3)

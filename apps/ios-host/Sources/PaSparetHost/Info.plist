@@ -24,5 +24,11 @@
         <string>UIInterfaceOrientationLandscapeLeft</string>
         <string>UIInterfaceOrientationLandscapeRight</string>
     </array>
+    <key>NSBonjourServices</key>
+    <array>
+        <string>_tripto._tcp.</string>
+    </array>
+    <key>NSLocalNetworkUsageDescription</key>
+    <string>Tripto använder lokalt nätverk för att hitta Apple TV automatiskt</string>
 </dict>
 </plist>
