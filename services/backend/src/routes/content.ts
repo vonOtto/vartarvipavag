@@ -11,6 +11,8 @@ import {
   contentPackExists,
 } from '../game/content-pack-loader';
 import axios from 'axios';
+import * as fs from 'fs';
+import * as path from 'path';
 
 const router = Router();
 
@@ -23,22 +25,50 @@ function getAIContentServiceUrl(): string {
 
 /**
  * GET /v1/content/packs
- * Lists all available content packs
+ * Lists all available content packs with metadata
+ * Returns ContentPackInfo format expected by iOS Host
  */
 router.get('/v1/content/packs', (_req: Request, res: Response) => {
   try {
     const packIds = listContentPacks();
 
-    logger.info('Listed content packs', {
+    logger.info('Loading content packs with metadata', {
       count: packIds.length,
     });
 
+    // Load each pack to extract metadata
+    const packs = [];
+    const errors = [];
+
+    for (const id of packIds) {
+      try {
+        const pack = loadContentPack(id);
+        packs.push({
+          roundId: pack.id,
+          destinationName: pack.name,
+          destinationCountry: pack.country,
+          generatedAt: pack.metadata?.generatedAt || new Date().toISOString(),
+          verified: pack.metadata?.verified || false,
+          antiLeakChecked: pack.metadata?.antiLeakChecked || false,
+        });
+      } catch (error: any) {
+        logger.error('Failed to load content pack for listing', {
+          packId: id,
+          error: error.message,
+        });
+        errors.push({ packId: id, error: error.message });
+      }
+    }
+
+    logger.info('Listed content packs', {
+      successCount: packs.length,
+      errorCount: errors.length,
+    });
+
     return res.status(200).json({
-      packs: packIds.map((id) => ({
-        id,
-        available: true,
-      })),
-      count: packIds.length,
+      packs,
+      count: packs.length,
+      errors: errors.length > 0 ? errors : undefined,
     });
   } catch (error: any) {
     logger.error('Failed to list content packs', {
@@ -76,17 +106,14 @@ router.get('/v1/content/packs/:id', (req: Request, res: Response) => {
     });
 
     return res.status(200).json({
-      id: pack.id,
+      roundId: pack.id,
       destination: {
         name: pack.name,
         country: pack.country,
       },
-      clueCount: pack.clues.length,
-      followupCount: pack.followupQuestions.length,
-      metadata: pack.metadata,
-      // Full data for preview (not projected)
       clues: pack.clues,
-      followups: pack.followupQuestions,
+      followupQuestions: pack.followupQuestions,
+      metadata: pack.metadata,
     });
   } catch (error: any) {
     logger.error('Failed to retrieve content pack', {
@@ -223,5 +250,121 @@ router.get(
     }
   }
 );
+
+/**
+ * DELETE /v1/content/packs/:id
+ * Deletes a content pack from disk
+ */
+router.delete('/v1/content/packs/:id', (req: Request, res: Response) => {
+  try {
+    const packId = req.params.id;
+
+    // Check if pack exists
+    if (!contentPackExists(packId)) {
+      return res.status(404).json({
+        error: 'Not found',
+        message: `Content pack not found: ${packId}`,
+      });
+    }
+
+    // Delete the pack file
+    const contentPacksDir =
+      process.env.CONTENT_PACKS_DIR || '/tmp/pa-sparet-content-packs';
+    const packPath = path.join(contentPacksDir, `${packId}.json`);
+
+    fs.unlinkSync(packPath);
+
+    logger.info('Content pack deleted', { packId });
+
+    return res.status(204).send();
+  } catch (error: any) {
+    logger.error('Failed to delete content pack', {
+      packId: req.params.id,
+      error: error.message,
+    });
+    return res.status(500).json({
+      error: 'Internal server error',
+      message: `Failed to delete content pack: ${error.message}`,
+    });
+  }
+});
+
+/**
+ * POST /v1/content/packs/import
+ * Imports a content pack from JSON
+ * Body: ContentPack JSON structure
+ */
+router.post('/v1/content/packs/import', (req: Request, res: Response) => {
+  try {
+    const contentPack = req.body;
+
+    // Basic validation
+    if (!contentPack.roundId) {
+      return res.status(400).json({
+        error: 'Invalid content pack',
+        message: 'Missing roundId field',
+      });
+    }
+
+    if (!contentPack.destination?.name || !contentPack.destination?.country) {
+      return res.status(400).json({
+        error: 'Invalid content pack',
+        message: 'Missing or invalid destination field',
+      });
+    }
+
+    if (!Array.isArray(contentPack.clues) || contentPack.clues.length !== 5) {
+      return res.status(400).json({
+        error: 'Invalid content pack',
+        message: 'Must have exactly 5 clues',
+      });
+    }
+
+    if (!Array.isArray(contentPack.followups)) {
+      return res.status(400).json({
+        error: 'Invalid content pack',
+        message: 'Missing followups array',
+      });
+    }
+
+    // Check if pack already exists
+    if (contentPackExists(contentPack.roundId)) {
+      return res.status(409).json({
+        error: 'Conflict',
+        message: `Content pack already exists: ${contentPack.roundId}`,
+      });
+    }
+
+    // Save to disk
+    const contentPacksDir =
+      process.env.CONTENT_PACKS_DIR || '/tmp/pa-sparet-content-packs';
+
+    // Ensure directory exists
+    if (!fs.existsSync(contentPacksDir)) {
+      fs.mkdirSync(contentPacksDir, { recursive: true });
+    }
+
+    const packPath = path.join(contentPacksDir, `${contentPack.roundId}.json`);
+    fs.writeFileSync(packPath, JSON.stringify(contentPack, null, 2), 'utf-8');
+
+    logger.info('Content pack imported', {
+      packId: contentPack.roundId,
+      destination: contentPack.destination.name,
+    });
+
+    return res.status(201).json({
+      message: 'Content pack imported successfully',
+      roundId: contentPack.roundId,
+    });
+  } catch (error: any) {
+    logger.error('Failed to import content pack', {
+      error: error.message,
+    });
+    return res.status(500).json({
+      error: 'Internal server error',
+      message: `Failed to import content pack: ${error.message}`,
+    });
+  }
+});
 
 export default router;
