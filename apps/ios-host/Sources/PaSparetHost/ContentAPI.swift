@@ -97,10 +97,35 @@ enum ContentAPI {
 
         return try JSONDecoder().decode(GenerationStatus.self, from: data)
     }
+
+    /// POST /v1/content/packs/import → Import a content pack from JSON.
+    static func importContentPack(json: Data) async throws -> String {
+        guard let url = URL(string: "\(baseURL)/v1/content/packs/import") else {
+            throw APIError.invalidURL
+        }
+
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.httpBody = json
+
+        let (data, response) = try await URLSession.shared.data(for: req)
+
+        guard let http = response as? HTTPURLResponse, http.statusCode == 201 else {
+            throw APIError.http((response as? HTTPURLResponse)?.statusCode ?? 0)
+        }
+
+        let result = try JSONDecoder().decode(ImportResponse.self, from: data)
+        return result.roundId
+    }
 }
 
 // MARK: – Response Wrappers ────────────────────────────────────────────────────
 
 struct ContentPacksResponse: Decodable {
     let packs: [ContentPackInfo]
+}
+
+struct ImportResponse: Decodable {
+    let roundId: String
 }

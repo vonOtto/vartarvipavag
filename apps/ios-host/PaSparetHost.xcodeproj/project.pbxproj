@@ -21,6 +21,7 @@
 		AA000012 /* ContentAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000012 /* ContentAPI.swift */; };
 		AA000013 /* BonjourService.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000013 /* BonjourService.swift */; };
 		AA000014 /* GenerateGamePlanView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000014 /* GenerateGamePlanView.swift */; };
+		AA000015 /* ImportContentPackView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000015 /* ImportContentPackView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -38,6 +39,7 @@
 		BB000012 /* ContentAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentAPI.swift; sourceTree = "<group>"; };
 		BB000013 /* BonjourService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BonjourService.swift; sourceTree = "<group>"; };
 		BB000014 /* GenerateGamePlanView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GenerateGamePlanView.swift; sourceTree = "<group>"; };
+		BB000015 /* ImportContentPackView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportContentPackView.swift; sourceTree = "<group>"; };
 		BB000099 /* Info.plist */       = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		BB0000F0 /* PaSparetHost.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PaSparetHost.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -85,6 +87,7 @@
 				BB000008 /* ContentLibraryView.swift */,
 				BB000009 /* ContentPackDetailView.swift */,
 				BB000010 /* GenerateContentView.swift */,
+				BB000015 /* ImportContentPackView.swift */,
 			);
 			path = Content;
 			sourceTree = "<group>";
@@ -159,6 +162,7 @@
 				AA000008 /* ContentLibraryView.swift in Sources */,
 				AA000009 /* ContentPackDetailView.swift in Sources */,
 				AA000010 /* GenerateContentView.swift in Sources */,
+				AA000015 /* ImportContentPackView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -309,8 +309,9 @@ struct GenerateContentView: View {
                 #endif
                 // Wait a moment to show 100% before dismissing
                 try? await Task.sleep(nanoseconds: 1_000_000_000)
-                onComplete()
                 dismiss()
+                // Call onComplete after dismissing to refresh the content list
+                onComplete()
             } else if newStatus.status == "failed" {
                 stopPolling()
                 errorMessage = newStatus.error ?? "Unknown error"

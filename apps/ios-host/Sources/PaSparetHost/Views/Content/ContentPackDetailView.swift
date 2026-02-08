@@ -15,6 +15,8 @@ struct ContentPackDetailView: View {
     @State private var errorMessage: String?
     @State private var showDeleteConfirmation = false
     @State private var isDeleting = false
+    @State private var showShareSheet = false
+    @State private var exportedTemplateURL: URL?
 
     var body: some View {
         ZStack {
@@ -39,14 +41,25 @@ struct ContentPackDetailView: View {
                     .foregroundColor(.txt1)
             }
             ToolbarItem(placement: .navigationBarTrailing) {
-                Button {
-                    hapticImpact(.light)
-                    showDeleteConfirmation = true
-                } label: {
-                    Image(systemName: "trash")
-                        .foregroundColor(.stateBad)
+                HStack(spacing: Layout.space2) {
+                    Button {
+                        hapticImpact(.light)
+                        exportTemplate()
+                    } label: {
+                        Image(systemName: "square.and.arrow.up")
+                            .foregroundColor(.accBlue)
+                    }
+                    .disabled(isDeleting)
+
+                    Button {
+                        hapticImpact(.light)
+                        showDeleteConfirmation = true
+                    } label: {
+                        Image(systemName: "trash")
+                            .foregroundColor(.stateBad)
+                    }
+                    .disabled(isDeleting)
                 }
-                .disabled(isDeleting)
             }
             #endif
         }
@@ -57,6 +70,11 @@ struct ContentPackDetailView: View {
             }
         } message: {
             Text("Detta går inte att ångra.")
+        }
+        .sheet(isPresented: $showShareSheet) {
+            if let url = exportedTemplateURL {
+                ShareSheet(items: [url])
+            }
         }
         .task {
             await loadPack()
@@ -324,6 +342,80 @@ struct ContentPackDetailView: View {
         }
     }
 
+    private func exportTemplate() {
+        // Create a template JSON structure
+        let template: [String: Any] = [
+            "roundId": "example-destination-001",
+            "destination": [
+                "name": "Example Destination",
+                "country": "Example Country",
+                "aliases": ["example", "destination"]
+            ],
+            "clues": [
+                [
+                    "level": 10,
+                    "text": "This is the first clue (10 points)"
+                ],
+                [
+                    "level": 8,
+                    "text": "This is the second clue (8 points)"
+                ],
+                [
+                    "level": 6,
+                    "text": "This is the third clue (6 points)"
+                ],
+                [
+                    "level": 4,
+                    "text": "This is the fourth clue (4 points)"
+                ],
+                [
+                    "level": 2,
+                    "text": "This is the fifth clue (2 points)"
+                ]
+            ],
+            "followups": [
+                [
+                    "questionText": "Example multiple choice question?",
+                    "options": ["Option A", "Option B", "Option C", "Option D"],
+                    "correctAnswer": "Option A",
+                    "aliases": ["a", "option a"]
+                ],
+                [
+                    "questionText": "Example open-text question?",
+                    "options": NSNull(),
+                    "correctAnswer": "Example answer",
+                    "aliases": ["example"]
+                ]
+            ],
+            "metadata": [
+                "generatedAt": ISO8601DateFormatter().string(from: Date()),
+                "verified": true,
+                "antiLeakChecked": true
+            ]
+        ]
+
+        do {
+            let jsonData = try JSONSerialization.data(withJSONObject: template, options: [.prettyPrinted, .sortedKeys])
+
+            // Write to temporary file
+            let tempDir = FileManager.default.temporaryDirectory
+            let fileURL = tempDir.appendingPathComponent("content-pack-template.json")
+            try jsonData.write(to: fileURL)
+
+            exportedTemplateURL = fileURL
+            showShareSheet = true
+
+            #if os(iOS)
+            hapticNotification(.success)
+            #endif
+        } catch {
+            errorMessage = "Kunde inte exportera template: \(error.localizedDescription)"
+            #if os(iOS)
+            hapticNotification(.error)
+            #endif
+        }
+    }
+
     // MARK: – Helpers ─────────────────────────────────────────────────────────────
 
     private func formatDate(_ isoString: String) -> String {
@@ -338,3 +430,20 @@ struct ContentPackDetailView: View {
         return displayFormatter.string(from: date)
     }
 }
+
+// MARK: – ShareSheet ────────────────────────────────────────────────────────────
+
+#if os(iOS)
+struct ShareSheet: UIViewControllerRepresentable {
+    let items: [Any]
+
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        let controller = UIActivityViewController(activityItems: items, applicationActivities: nil)
+        return controller
+    }
+
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {
+        // No updates needed
+    }
+}
+#endif

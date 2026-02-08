@@ -10,6 +10,7 @@ struct ContentLibraryView: View {
     @State private var isLoading = false
     @State private var errorMessage: String?
     @State private var showGenerateView = false
+    @State private var showImportView = false
     @State private var selectedPackId: String?
 
     var body: some View {
@@ -40,13 +41,23 @@ struct ContentLibraryView: View {
                         .foregroundColor(.txt1)
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button {
-                        hapticImpact(.light)
-                        showGenerateView = true
-                    } label: {
-                        Image(systemName: "plus.circle.fill")
-                            .font(.system(size: 22))
-                            .foregroundColor(.accOrange)
+                    HStack(spacing: Layout.space2) {
+                        Button {
+                            hapticImpact(.light)
+                            showImportView = true
+                        } label: {
+                            Image(systemName: "square.and.arrow.down")
+                                .font(.system(size: 20))
+                                .foregroundColor(.accBlue)
+                        }
+                        Button {
+                            hapticImpact(.light)
+                            showGenerateView = true
+                        } label: {
+                            Image(systemName: "plus.circle.fill")
+                                .font(.system(size: 22))
+                                .foregroundColor(.accOrange)
+                        }
                     }
                 }
                 #endif
@@ -56,6 +67,11 @@ struct ContentLibraryView: View {
                     Task { await loadPacks() }
                 })
                 .environmentObject(state)
+            }
+            .sheet(isPresented: $showImportView) {
+                ImportContentPackView(onComplete: {
+                    Task { await loadPacks() }
+                })
             }
             .task {
                 await loadPacks()
