@@ -9,6 +9,7 @@ AI-driven content generation pipeline för På Spåret-spelet.
 - **Followup Generation**: 2-3 följdfrågor med 4 svarsalternativ vardera
 - **Fact Verification**: Verifierar att alla fakta är korrekta
 - **Anti-Leak Check**: Säkerställer att tidiga ledtrådar inte avslöjar destinationen
+- **Overlap Check**: Förhindrar att följdfrågor frågar om saker som redan nämnts i ledtrådar
 - **TTS Integration**: Pre-genererar alla röstklipp via ElevenLabs
 
 ## Installation
@@ -123,7 +124,8 @@ Genererar en komplett content pack (destination + ledtrådar + följdfrågor).
     "metadata": {
       "generatedAt": "2025-01-01T00:00:00.000Z",
       "verified": true,
-      "antiLeakChecked": true
+      "antiLeakChecked": true,
+      "overlapChecked": true
     }
   },
   "progress": {
@@ -175,6 +177,7 @@ Detta genererar 2 exempel content packs och sparar dem i `test-packs/` directory
 
 - `fact-checker.ts`: Verifierar faktakorrekthet med Claude
 - `anti-leak-checker.ts`: Kontrollerar att tidiga ledtrådar inte läcker destination
+- `overlap-checker.ts`: Kontrollerar att följdfrågor inte frågar om saker redan nämnda i ledtrådar
 
 ### Flow
 
@@ -183,10 +186,13 @@ Detta genererar 2 exempel content packs och sparar dem i `test-packs/` directory
 3. **Generera följdfrågor** - 2-3 frågor med 4 alternativ vardera
 4. **Verifiera fakta** - Kontrollera att allt stämmer
 5. **Anti-leak check** - Säkerställ att nivå 10/8/6 inte avslöjar destination
-6. **Retry if needed** - Om verifiering eller anti-leak failar, generera om
-7. **Return content pack** - Färdig för TTS och spel
+6. **Overlap check** - Kontrollera att följdfrågor inte överlappar med ledtrådar
+7. **Retry if needed** - Om verifiering, anti-leak eller overlap failar, generera om
+8. **Return content pack** - Färdig för TTS och spel
 
-## Anti-Leak System
+## Quality Control Systems
+
+### Anti-Leak System
 
 Systemet använder Claude för att simulera en spelare som försöker gissa destinationen baserat på ledtrådar.
 
@@ -197,6 +203,30 @@ Systemet använder Claude för att simulera en spelare som försöker gissa dest
 **Strict mode:**
 - När aktiverad (default): Regenerera round vid leak
 - Kan inaktiveras i `config.ts`
+
+### Overlap Check System
+
+Förhindrar att följdfrågor ställer frågor om saker som redan nämnts i ledtrådarna.
+
+**Exempel på overlap (förhindras):**
+- Ledtråd: "Floden Seine delar staden i två" → Följdfråga: "Vad heter floden?" **❌ OVERLAP**
+- Ledtråd: "Eiffeltornet är 324m högt" → Följdfråga: "Hur högt är Eiffeltornet?" **❌ OVERLAP**
+- Ledtråd: "Louvren är världens största konstmuseum" → Följdfråga: "Vilket museum visar Mona Lisa?" **❌ OVERLAP**
+
+**Exempel på OK (tillåts):**
+- Ledtråd: "Staden har en flod" → Följdfråga: "Vad heter floden?" **✓ OK** (floden inte namngiven)
+- Ledtråd: "Berömt torn från 1889" → Följdfråga: "Hur högt är Eiffeltornet?" **✓ OK** (tornet inte namngivet)
+- Ledtråd: "Världsberömt konstmuseum" → Följdfråga: "Vilket museum visar Mona Lisa?" **✓ OK** (museet inte namngivet)
+
+**Strict mode:**
+- När aktiverad: Regenerera round vid overlap
+- Kontrolleras med `CONFIG.ANTI_LEAK_STRICT_MODE` i `config.ts` (gäller både anti-leak och overlap)
+
+**Testning:**
+```bash
+# Kör overlap-checker tests
+tsx src/verification/__tests__/overlap-checker.test.ts
+```
 
 ## Fact Verification
 

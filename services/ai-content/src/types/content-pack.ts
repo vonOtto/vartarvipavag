@@ -38,11 +38,19 @@ export interface ContentPack {
     generatedAt: string;       // ISO timestamp
     verified: boolean;
     antiLeakChecked: boolean;
+    overlapChecked?: boolean;
     verificationDetails?: {
       destinationVerified: VerificationResult;
       cluesVerified: VerificationResult[];
       followupsVerified: VerificationResult[];
       antiLeakPassed: boolean;
+      overlapPassed?: boolean;
+      overlapResults?: Array<{
+        questionText: string;
+        hasOverlap: boolean;
+        reason: string;
+        overlappingConcepts: string[];
+      }>;
     };
   };
 }

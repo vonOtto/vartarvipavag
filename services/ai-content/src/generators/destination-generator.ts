@@ -30,8 +30,8 @@ Svara ENBART med JSON i detta format:
   "reasoning": "Kort motivering varför denna destination är bra för spelet"
 }`;
 
-export async function generateDestination(): Promise<Destination> {
-  const prompt = `Generera EN intressant destination för ett geografiskt quiz-spel.
+export async function generateDestination(excludeDestinations?: string[]): Promise<Destination> {
+  let prompt = `Generera EN intressant destination för ett geografiskt quiz-spel.
 
 Destinationen ska:
 - Vara en känd stad eller plats
@@ -39,9 +39,14 @@ Destinationen ska:
 - Vara rolig att gissa på
 
 Inkludera alias (alternativa namn/stavningar) som spelare kan använda.
-Exempel: Paris → ["paris", "paree", "ljusets stad"]
+Exempel: Paris → ["paris", "paree", "ljusets stad"]`;
 
-Svara med JSON enligt systemprompten.`;
+  // Add exclusion constraint if provided
+  if (excludeDestinations && excludeDestinations.length > 0) {
+    prompt += `\n\nVIKTIGT: Välj en ANNAN destination än dessa (de har redan genererats):\n${excludeDestinations.map(d => `- ${d}`).join('\n')}`;
+  }
+
+  prompt += `\n\nSvara med JSON enligt systemprompten.`;
 
   // Use Sonnet for creative destination generation
   const response = await callClaude(prompt, {

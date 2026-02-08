@@ -91,16 +91,26 @@ router.post('/batch', async (req: Request, res: Response) => {
 
     console.log(`[generate] Generating ${count} content packs...`, { regions, language });
 
-    // Generate packs in parallel
-    const packPromises = Array.from({ length: count }, (_, index) =>
-      generateRound((progress) => {
-        console.log(
-          `[generate] Pack ${index + 1}/${count}: Step ${progress.currentStep}/${progress.totalSteps} - ${progress.stepName}`
-        );
-      })
-    );
+    // Generate packs SEQUENTIALLY to avoid duplicates
+    const contentPacks = [];
+    const excludeDestinations: string[] = [];
 
-    const contentPacks = await Promise.all(packPromises);
+    for (let i = 0; i < count; i++) {
+      console.log(`[generate] Generating pack ${i + 1}/${count} (excluding: ${excludeDestinations.join(', ')})`);
+
+      const pack = await generateRound(
+        (progress) => {
+          console.log(
+            `[generate] Pack ${i + 1}/${count}: Step ${progress.currentStep}/${progress.totalSteps} - ${progress.stepName}`
+          );
+        },
+        3, // maxRetries
+        excludeDestinations // Pass previously generated destinations
+      );
+
+      contentPacks.push(pack);
+      excludeDestinations.push(pack.destination.name);
+    }
 
     // Return summary with basic info
     const packsummary = contentPacks.map((pack) => ({

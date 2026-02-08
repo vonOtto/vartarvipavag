@@ -20,6 +20,7 @@ import {
   checkCluesForLeaks,
   checkFollowupsForLeaks,
 } from '../verification/anti-leak-checker';
+import { checkFollowupOverlaps } from '../verification/overlap-checker';
 import { costTracker } from '../metrics/cost-tracker';
 import { polishClue, polishFollowup } from '../utils/swedish-polish';
 
@@ -30,7 +31,8 @@ export type ProgressCallback = (progress: GenerationProgress) => void;
  */
 export async function generateRound(
   onProgress?: ProgressCallback,
-  maxRetries: number = 3
+  maxRetries: number = 3,
+  excludeDestinations?: string[]
 ): Promise<ContentPack> {
   const roundId = uuidv4();
   let attempt = 0;
@@ -59,7 +61,7 @@ export async function generateRound(
         roundId,
       });
 
-      const destination = await generateDestination();
+      const destination = await generateDestination(excludeDestinations);
 
       // Step 3: Generate clues
       onProgress?.({
@@ -124,11 +126,18 @@ export async function generateRound(
 
       const clueLeakCheck = await checkCluesForLeaks(clues, destination);
       const followupLeakCheck = await checkFollowupsForLeaks(followups, destination);
+      const overlapCheck = await checkFollowupOverlaps(followups, clues, destination);
 
       const antiLeakPassed = clueLeakCheck.passed && followupLeakCheck.passed;
+      const overlapPassed = overlapCheck.passed;
 
       if (!antiLeakPassed && CONFIG.ANTI_LEAK_STRICT_MODE) {
         console.warn(`[round-generator] Anti-leak check failed, retrying...`);
+        continue; // Retry
+      }
+
+      if (!overlapPassed && CONFIG.ANTI_LEAK_STRICT_MODE) {
+        console.warn(`[round-generator] Overlap check failed, retrying...`);
         continue; // Retry
       }
 
@@ -167,11 +176,14 @@ export async function generateRound(
           generatedAt: new Date().toISOString(),
           verified: allVerified,
           antiLeakChecked: antiLeakPassed,
+          overlapChecked: overlapPassed,
           verificationDetails: {
             destinationVerified,
             cluesVerified,
             followupsVerified,
             antiLeakPassed,
+            overlapPassed,
+            overlapResults: overlapCheck.results,
           },
         },
       };
@@ -182,6 +194,7 @@ export async function generateRound(
       console.log(`  Followups: ${followups.length}`);
       console.log(`  Verified: ${allVerified}`);
       console.log(`  Anti-leak passed: ${antiLeakPassed}`);
+      console.log(`  Overlap check passed: ${overlapPassed}`);
 
       // Save cost metrics
       costTracker.saveMetrics();
