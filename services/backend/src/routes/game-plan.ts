@@ -168,7 +168,7 @@ router.post(
           language: 'sv',
         },
         {
-          timeout: 180000, // 3 minutes timeout for batch generation
+          timeout: 360000, // 6 minutes timeout for batch generation (60-90s per pack × 3-5 packs)
         }
       );
 
