@@ -631,7 +631,7 @@ async function handleHostStartGame(
     // Derive delay from the AUDIO_PLAY event if one was emitted; fall back to 3000 ms
     const introAudioPlay = introEvents.find((e) => e.type === 'AUDIO_PLAY');
     const introDurationMs: number = introAudioPlay ? (introAudioPlay.payload as any).durationMs : 0;
-    const BREATHING_WINDOW_MS = 1500;
+    const BREATHING_WINDOW_MS = 2500; // 2.5s — less machine-gun paced
     const introDelayMs = introDurationMs > 0 ? introDurationMs + BREATHING_WINDOW_MS : 3000;
 
     logger.info('ROUND_INTRO scheduled', {
@@ -818,8 +818,9 @@ async function handleHostNextClue(
       const banterEvent = revealStartEvents.find((e) => e.type === 'AUDIO_PLAY');
       const banterDurationMs = banterEvent ? (banterEvent.payload as any).durationMs : 0;
 
-      // Wait for banter to finish + 1 200 ms pre-reveal pause
-      await new Promise((resolve) => setTimeout(resolve, banterDurationMs + 1200));
+      // Wait for banter to finish + 2000 ms pre-reveal pause (anticipation buildup)
+      const PRE_REVEAL_PAUSE_MS = 2000;
+      await new Promise((resolve) => setTimeout(resolve, banterDurationMs + PRE_REVEAL_PAUSE_MS));
 
       // Broadcast DESTINATION_REVEAL event
       const revealEvent = buildDestinationRevealEvent(
@@ -835,8 +836,9 @@ async function handleHostNextClue(
         sessionStore.broadcastEventToSession(sessionId, e)
       );
 
-      // Wait 2 000 ms — let destination name sit on screen
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      // Wait 4000 ms — celebration pause (let destination name sit on screen)
+      const REVEAL_CELEBRATION_MS = 4000;
+      await new Promise((resolve) => setTimeout(resolve, REVEAL_CELEBRATION_MS));
 
       // Build and broadcast DESTINATION_RESULTS event
       const results = session.state.lockedAnswers.map((answer) => {
@@ -862,8 +864,9 @@ async function handleHostNextClue(
         sessionStore.broadcastEventToSession(sessionId, e)
       );
 
-      // Wait 400 ms before result banter
-      await new Promise((resolve) => setTimeout(resolve, 400));
+      // Wait 6000 ms — results hold (time to review who was right/wrong)
+      const RESULTS_HOLD_MS = 6000;
+      await new Promise((resolve) => setTimeout(resolve, RESULTS_HOLD_MS));
 
       // Audio: correct/incorrect banter
       const anyCorrect = results.some((r) => r.isCorrect);
@@ -909,7 +912,7 @@ async function handleHostNextClue(
         }
 
         // 4) Wait for clip to finish + 1500 ms breathing window, then present first followup
-        const INTRO_BREATHING_MS = 1500;
+        const INTRO_BREATHING_MS = 2500; // 2.5s — natural pause before followup
         setTimeout(async () => {
           const sess = sessionStore.getSession(sessionId);
           if (!sess || sess.state.phase !== 'FOLLOWUP_QUESTION') {
@@ -1591,7 +1594,7 @@ async function handleNextDestination(
       // Derive delay from the AUDIO_PLAY event if one was emitted; fall back to 3000 ms
       const introAudioPlay = introEvents.find((e) => e.type === 'AUDIO_PLAY');
       const introDurationMs: number = introAudioPlay ? (introAudioPlay.payload as any).durationMs : 0;
-      const BREATHING_WINDOW_MS = 1500;
+      const BREATHING_WINDOW_MS = 2500; // 2.5s — less machine-gun paced
       const introDelayMs = introDurationMs > 0 ? introDurationMs + BREATHING_WINDOW_MS : 3000;
 
       logger.info('ROUND_INTRO scheduled for next destination', {
@@ -1974,13 +1977,13 @@ function broadcastFollowupAnswersLocked(sessionId: string, currentQuestionIndex:
 // CLUE AUTO-ADVANCE TIMER
 // ============================================================================
 
-/** Graduated discussion windows per clue level (game design review) */
+/** Graduated discussion windows per clue level (Phase 1: Relaxed party pacing) */
 const DISCUSSION_DELAY_BY_LEVEL: Record<number, number> = {
-  10: 14_000, // 14 seconds
-  8: 12_000,  // 12 seconds
-  6: 10_000,  // 10 seconds (updated from 9s)
-  4: 8_000,   // 8 seconds (updated from 7s)
-  2: 5_000,   // 5 seconds
+  10: 30_000, // 30 seconds — relaxed discussion time
+  8: 26_000,  // 26 seconds
+  6: 22_000,  // 22 seconds
+  4: 18_000,  // 18 seconds
+  2: 12_000,  // 12 seconds — still urgent but fair
 };
 
 /**
@@ -2108,8 +2111,9 @@ async function autoAdvanceClue(sessionId: string): Promise<void> {
       const banterEvent = revealStartEvents.find((e) => e.type === 'AUDIO_PLAY');
       const banterDurationMs = banterEvent ? (banterEvent.payload as any).durationMs : 0;
 
-      // Wait for banter to finish + 1 200 ms pre-reveal pause
-      await new Promise((resolve) => setTimeout(resolve, banterDurationMs + 1200));
+      // Wait for banter to finish + 2000 ms pre-reveal pause (anticipation buildup)
+      const PRE_REVEAL_PAUSE_MS = 2000;
+      await new Promise((resolve) => setTimeout(resolve, banterDurationMs + PRE_REVEAL_PAUSE_MS));
 
       // Broadcast DESTINATION_REVEAL event
       const revealEvent = buildDestinationRevealEvent(
@@ -2125,8 +2129,9 @@ async function autoAdvanceClue(sessionId: string): Promise<void> {
         sessionStore.broadcastEventToSession(sessionId, e)
       );
 
-      // Wait 2 000 ms — let destination name sit on screen
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      // Wait 4000 ms — celebration pause (let destination name sit on screen)
+      const REVEAL_CELEBRATION_MS = 4000;
+      await new Promise((resolve) => setTimeout(resolve, REVEAL_CELEBRATION_MS));
 
       // Build and broadcast DESTINATION_RESULTS event
       const results = session.state.lockedAnswers.map((answer) => {
@@ -2152,8 +2157,9 @@ async function autoAdvanceClue(sessionId: string): Promise<void> {
         sessionStore.broadcastEventToSession(sessionId, e)
       );
 
-      // Wait 400 ms before result banter
-      await new Promise((resolve) => setTimeout(resolve, 400));
+      // Wait 6000 ms — results hold (time to review who was right/wrong)
+      const RESULTS_HOLD_MS = 6000;
+      await new Promise((resolve) => setTimeout(resolve, RESULTS_HOLD_MS));
 
       // Audio: correct/incorrect banter
       const anyCorrect = results.some((r) => r.isCorrect);
@@ -2199,7 +2205,7 @@ async function autoAdvanceClue(sessionId: string): Promise<void> {
         }
 
         // 4) Wait for clip to finish + 1500 ms breathing window, then present first followup
-        const INTRO_BREATHING_MS = 1500;
+        const INTRO_BREATHING_MS = 2500; // 2.5s — natural pause before followup
         setTimeout(async () => {
           const sess = sessionStore.getSession(sessionId);
           if (!sess || sess.state.phase !== 'FOLLOWUP_QUESTION') {
@@ -2352,8 +2358,8 @@ function scheduleFollowupTimer(sessionId: string, durationMs: number): void {
     // or immediately in the else branch (last question — no next question to leak).
 
     if (nextQuestionIndex !== null && sess.state.followupQuestion) {
-      // ── 4 s pause so FOLLOWUP_RESULTS stays visible before next question ──
-      const BETWEEN_FOLLOWUPS_MS = 4000;
+      // ── 3 s pause so FOLLOWUP_RESULTS stays visible before next question ──
+      const BETWEEN_FOLLOWUPS_MS = 3000;
       setTimeout(async () => {
         const s = sessionStore.getSession(sessionId);
         if (!s || !s.state.followupQuestion || s.state.phase !== 'FOLLOWUP_QUESTION') {
@@ -2390,20 +2396,21 @@ function scheduleFollowupTimer(sessionId: string, durationMs: number): void {
         scheduleFollowupTimer(sessionId, nextFq.timer!.durationMs);
       }, BETWEEN_FOLLOWUPS_MS);
     } else {
-      // Last followup — hold FOLLOWUP_RESULTS for 4s before transitioning
+      // Last followup — hold FOLLOWUP_RESULTS for 3s before transitioning (breathing room)
       const endAudioEvents = onFollowupSequenceEnd(sess);
 
       // Do NOT broadcast STATE_SNAPSHOT yet — phase still = FOLLOWUP_QUESTION
       // so clients keep showing FOLLOWUP_RESULTS overlay
       endAudioEvents.forEach((e) => sessionStore.broadcastEventToSession(sessionId, e));
 
-      console.log(`[Followup] Holding FOLLOWUP_RESULTS for 4s before transition...`);
+      const FOLLOWUP_COMPLETION_MS = 3000; // 3s breathing room before scoreboard
+      console.log(`[Followup] Holding FOLLOWUP_RESULTS for ${FOLLOWUP_COMPLETION_MS}ms before transition...`);
 
       setTimeout(() => {
         const s = sessionStore.getSession(sessionId);
         if (!s || s.state.phase !== 'FOLLOWUP_QUESTION') return;
 
-        console.log(`[Followup] 4s elapsed, transitioning from FOLLOWUP_RESULTS...`);
+        console.log(`[Followup] ${FOLLOWUP_COMPLETION_MS}ms elapsed, transitioning from FOLLOWUP_RESULTS...`);
 
         // Now transition to SCOREBOARD or FINAL_RESULTS
         if (s.state.nextDestinationAvailable && s.gamePlan) {
@@ -2420,7 +2427,7 @@ function scheduleFollowupTimer(sessionId: string, durationMs: number): void {
           // Last destination — go straight to FINAL_RESULTS (skip SCOREBOARD)
           transitionToFinalResults(sessionId);
         }
-      }, 4000);
+      }, FOLLOWUP_COMPLETION_MS);
     }
   }, durationMs);
 
@@ -2453,7 +2460,7 @@ function scheduleScoreboardTimer(sessionId: string): void {
     clearTimeout(session._scoreboardTimer);
   }
 
-  const SCOREBOARD_AUTO_ADVANCE_MS = 8000; // 8 seconds
+  const SCOREBOARD_AUTO_ADVANCE_MS = 12000; // 12 seconds — see standings properly
 
   logger.info('Scoreboard auto-advance timer scheduled', {
     sessionId,
@@ -2603,7 +2610,7 @@ function scheduleScoreboardTimer(sessionId: string): void {
         // Derive delay from the AUDIO_PLAY event if one was emitted; fall back to 3000 ms
         const introAudioPlay = introEvents.find((e) => e.type === 'AUDIO_PLAY');
         const introDurationMs: number = introAudioPlay ? (introAudioPlay.payload as any).durationMs : 0;
-        const BREATHING_WINDOW_MS = 1500;
+        const BREATHING_WINDOW_MS = 2500; // 2.5s — less machine-gun paced
         const introDelayMs = introDurationMs > 0 ? introDurationMs + BREATHING_WINDOW_MS : 3000;
 
         logger.info('Scoreboard auto-advance: ROUND_INTRO scheduled', {

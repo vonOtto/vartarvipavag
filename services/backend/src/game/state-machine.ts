@@ -581,7 +581,7 @@ export function submitAnswer(
 // FOLLOW-UP QUESTIONS
 // ============================================================================
 
-const FOLLOWUP_TIMER_MS = 15000; // 15 s per question
+const FOLLOWUP_TIMER_MS = 25000; // 25 seconds — time to think and discuss
 
 /**
  * Starts the follow-up question sequence for the current destination.
