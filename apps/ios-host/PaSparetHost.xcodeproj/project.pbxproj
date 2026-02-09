@@ -22,6 +22,7 @@
 		AA000013 /* BonjourService.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000013 /* BonjourService.swift */; };
 		AA000014 /* GenerateGamePlanView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000014 /* GenerateGamePlanView.swift */; };
 		AA000015 /* ImportContentPackView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000015 /* ImportContentPackView.swift */; };
+		AA000016 /* LobbyContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000016 /* LobbyContentView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -40,6 +41,7 @@
 		BB000013 /* BonjourService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BonjourService.swift; sourceTree = "<group>"; };
 		BB000014 /* GenerateGamePlanView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GenerateGamePlanView.swift; sourceTree = "<group>"; };
 		BB000015 /* ImportContentPackView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportContentPackView.swift; sourceTree = "<group>"; };
+		BB000016 /* LobbyContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LobbyContentView.swift; sourceTree = "<group>"; };
 		BB000099 /* Info.plist */       = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		BB0000F0 /* PaSparetHost.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PaSparetHost.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -76,6 +78,7 @@
 			isa = PBXGroup;
 			children = (
 				BB000014 /* GenerateGamePlanView.swift */,
+				BB000016 /* LobbyContentView.swift */,
 				BB0000AE /* Content */,
 			);
 			path = Views;
@@ -159,6 +162,7 @@
 				AA000013 /* BonjourService.swift in Sources */,
 				AA000005 /* QRCodeView.swift in Sources */,
 				AA000014 /* GenerateGamePlanView.swift in Sources */,
+				AA000016 /* LobbyContentView.swift in Sources */,
 				AA000008 /* ContentLibraryView.swift in Sources */,
 				AA000009 /* ContentPackDetailView.swift in Sources */,
 				AA000010 /* GenerateContentView.swift in Sources */,

@@ -263,7 +263,7 @@ struct GenerateGamePlanView: View {
                         let finalPrompt: String? = customPrompt.trimmingCharacters(in: .whitespaces).isEmpty ? nil : customPrompt
 
                         onGenerate(numDestinations, finalRegions, finalPrompt)
-                        dismiss()
+                        // Note: LobbyContentView will dismiss when generation completes
                     } label: {
                         HStack(spacing: Layout.space2) {
                             Image(systemName: "sparkles")

@@ -38,6 +38,11 @@ class HostState: ObservableObject {
     @Published var destinations   : [DestinationSummary] = []
     @Published var isGeneratingPlan: Bool = false
 
+    // MARK: – content management
+    var hasContent: Bool {
+        return !destinations.isEmpty || gamePlan != nil
+    }
+
     // MARK: – connection status
     @Published var isConnected     : Bool   = false
     @Published var hasEverConnected: Bool   = false
@@ -321,6 +326,52 @@ class HostState: ObservableObject {
             "serverTimeMs": Int(Date().timeIntervalSince1970 * 1000),
             "payload"     : payload
         ])
+    }
+
+    /// Generate AI content for this session (called from lobby).
+    func generateContentInLobby(numDestinations: Int, regions: [String]?, prompt: String?) async throws {
+        guard let sid = sessionId else { return }
+
+        isGeneratingPlan = true
+        defer { isGeneratingPlan = false }
+
+        do {
+            let planResp = try await HostAPI.createGamePlanAI(
+                sessionId: sid,
+                numDestinations: numDestinations,
+                regions: regions,
+                prompt: prompt
+            )
+            gamePlan = planResp.gamePlan
+            destinations = planResp.destinations
+
+            // Update broadcast with new destination count
+            startBroadcastingIfNeeded()
+        } catch {
+            throw error
+        }
+    }
+
+    /// Import existing content packs (called from lobby).
+    func importContentPacks(_ packIds: [String]) async throws {
+        guard let sid = sessionId else { return }
+
+        isGeneratingPlan = true
+        defer { isGeneratingPlan = false }
+
+        do {
+            let planResp = try await HostAPI.createGamePlanManual(
+                sessionId: sid,
+                contentPackIds: packIds
+            )
+            gamePlan = planResp.gamePlan
+            destinations = planResp.destinations
+
+            // Update broadcast with new destination count
+            startBroadcastingIfNeeded()
+        } catch {
+            throw error
+        }
     }
 
     // MARK: – resume handshake ─────────────────────────────────────────────────

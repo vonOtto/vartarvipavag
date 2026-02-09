@@ -54,7 +54,6 @@ struct RootView: View {
 struct LaunchView: View {
     @EnvironmentObject var state: HostState
     @State private var showJoinSheet = false
-    @State private var showGenerateSheet = false
     @State private var joinCode = ""
     @State private var busy = false
     @State private var errorMessage: String?
@@ -113,7 +112,7 @@ struct LaunchView: View {
                     #if os(iOS)
                     hapticImpact(.medium)
                     #endif
-                    showGenerateSheet = true
+                    Task { await createSession() }
                 } label: {
                     HStack(spacing: Layout.space2) {
                         Image(systemName: "plus.circle.fill")
@@ -162,24 +161,19 @@ struct LaunchView: View {
                     Task { await joinSession(code: code) }
                 })
             }
-            .sheet(isPresented: $showGenerateSheet) {
-                GenerateGamePlanView { numDestinations, regions, prompt in
-                    Task { await createSession(numDestinations: numDestinations, regions: regions, prompt: prompt) }
-                }
-            }
         }
     }
 
     // MARK: – Actions
 
-    private func createSession(numDestinations: Int, regions: [String]?, prompt: String?) async {
+    private func createSession() async {
         busy = true
         errorMessage = nil
 
         defer { busy = false }
 
         do {
-            // Step 1: Create session
+            // Create session immediately (no content generation)
             let resp = try await HostAPI.createSession()
 
             state.sessionId     = resp.sessionId
@@ -189,24 +183,7 @@ struct LaunchView: View {
             state.joinURL       = resp.joinUrlTemplate.replacingOccurrences(
                                       of: "{joinCode}", with: resp.joinCode)
 
-            // Step 2: Auto-generate game plan with user-selected configuration
-            state.isGeneratingPlan = true
-            do {
-                let planResp = try await HostAPI.createGamePlanAI(
-                    sessionId: resp.sessionId,
-                    numDestinations: numDestinations,
-                    regions: regions,
-                    prompt: prompt
-                )
-                state.gamePlan = planResp.gamePlan
-                state.destinations = planResp.destinations
-            } catch {
-                // Log error but continue - game can work without multi-destination
-                print("Failed to generate game plan: \(error)")
-            }
-            state.isGeneratingPlan = false
-
-            // Step 3: Connect to WebSocket
+            // Connect to WebSocket
             state.connect()
 
             #if os(iOS)
@@ -214,7 +191,6 @@ struct LaunchView: View {
             #endif
         } catch {
             errorMessage = error.localizedDescription
-            state.isGeneratingPlan = false
             #if os(iOS)
             hapticNotification(.error)
             #endif
@@ -482,57 +458,10 @@ struct LobbyHostView: View {
                     .background(Color.line)
                     .padding(.vertical, Layout.space2)
 
-                // ── game plan status ──
-                if state.isGeneratingPlan {
-                    VStack(spacing: Layout.space2) {
-                        ProgressView()
-                            .progressViewStyle(CircularProgressViewStyle(tint: .accMint))
-                            .scaleEffect(1.2)
-                        Text("Genererar resmål...")
-                            .font(.body)
-                            .foregroundColor(.txt2)
-                    }
-                    .padding(.vertical, Layout.space4)
-                } else if let _ = state.gamePlan, !state.destinations.isEmpty {
-                    VStack(alignment: .leading, spacing: Layout.space2) {
-                        HStack {
-                            Image(systemName: "map.fill")
-                                .font(.system(size: 16))
-                                .foregroundColor(.accMint)
-                            Text("Redo med \(state.destinations.count) resmål")
-                                .font(.body)
-                                .fontWeight(.semibold)
-                                .foregroundColor(.txt1)
-                            Spacer()
-                            Image(systemName: "checkmark.circle.fill")
-                                .font(.system(size: 18))
-                                .foregroundColor(.stateOk)
-                        }
-
-                        // Show destination preview
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: Layout.space1) {
-                                ForEach(Array(state.destinations.enumerated()), id: \.offset) { index, dest in
-                                    VStack(alignment: .leading, spacing: 4) {
-                                        Text("\(index + 1). \(dest.name)")
-                                            .font(.small)
-                                            .fontWeight(.medium)
-                                            .foregroundColor(.txt1)
-                                        Text(dest.country)
-                                            .font(.system(size: 11))
-                                            .foregroundColor(.txt2)
-                                    }
-                                    .padding(.horizontal, Layout.space2)
-                                    .padding(.vertical, Layout.space1)
-                                    .background(Color.bg2)
-                                    .cornerRadius(Layout.radiusS)
-                                }
-                            }
-                        }
-                    }
+                // ── content status ──
+                LobbyContentView()
+                    .environmentObject(state)
                     .padding(.horizontal, Layout.space2)
-                    .padding(.bottom, Layout.space2)
-                }
 
                 Divider()
                     .background(Color.line)
@@ -605,11 +534,11 @@ struct LobbyHostView: View {
                     }
                 }
                 .buttonStyle(.primary)
-                .disabled(state.players.isEmpty || state.isGeneratingPlan)
-                .opacity((state.players.isEmpty || state.isGeneratingPlan) ? 0.5 : 1.0)
+                .disabled(state.players.isEmpty || state.isGeneratingPlan || !state.hasContent)
+                .opacity((state.players.isEmpty || state.isGeneratingPlan || !state.hasContent) ? 0.5 : 1.0)
                 .padding(.horizontal, Layout.space2)
                 .padding(.bottom, Layout.space4)
-                .shadow(color: (state.players.isEmpty || state.isGeneratingPlan) ? .clear : .accOrange.opacity(0.4), radius: Layout.shadowRadius)
+                .shadow(color: (state.players.isEmpty || state.isGeneratingPlan || !state.hasContent) ? .clear : .accOrange.opacity(0.4), radius: Layout.shadowRadius)
                 }
                 .animation(.spring(response: 0.4, dampingFraction: 0.75), value: state.players.count)
             }
