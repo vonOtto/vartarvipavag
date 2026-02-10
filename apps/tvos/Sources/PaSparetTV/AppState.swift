@@ -235,12 +235,12 @@ class AppState: ObservableObject {
             let options              = payload["options"]              as? [String]
             let currentIdx           = payload["currentQuestionIndex"] as? Int ?? 0
             let total                = payload["totalQuestions"]       as? Int ?? 1
+            let startMs              = payload["startAtServerMs"]      as? Int
             let duration             = payload["timerDurationMs"]      as? Int
-            // Server does not send startAtServerMs in the event; use current time as approx start
             followupQuestion = FollowupQuestionInfo(
                 questionText: qText, options: options,
                 currentQuestionIndex: currentIdx, totalQuestions: total,
-                timerStartMs: Int(Date().timeIntervalSince1970 * 1000), timerDurationMs: duration)
+                timerStartMs: startMs, timerDurationMs: duration)
             followupResults  = nil
             phase            = "FOLLOWUP_QUESTION"
 
