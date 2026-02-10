@@ -40,9 +40,10 @@ export function validateInLobby(session: Session): void {
 
 /**
  * Validates that a session is in CLUE_LEVEL phase
+ * ROUND_INTRO is also allowed since it's showing the first clue
  */
 export function validateInClueLevel(session: Session): void {
-  if (session.state.phase !== 'CLUE_LEVEL') {
+  if (session.state.phase !== 'CLUE_LEVEL' && session.state.phase !== 'ROUND_INTRO') {
     throw new Error(`Not in clue phase (phase: ${session.state.phase})`);
   }
 }
@@ -383,9 +384,10 @@ export function getCurrentClueIndex(
 
 /**
  * Validates that a session is in CLUE_LEVEL or PAUSED_FOR_BRAKE phase
+ * ROUND_INTRO is also allowed since it's the intro to the first clue
  */
 export function validateCanPullBrake(session: Session): void {
-  if (session.state.phase !== 'CLUE_LEVEL') {
+  if (session.state.phase !== 'CLUE_LEVEL' && session.state.phase !== 'ROUND_INTRO') {
     throw new Error(`Cannot pull brake in phase: ${session.state.phase}`);
   }
 }
@@ -413,7 +415,7 @@ export function pullBrake(
     };
   }
 
-  if (session.state.phase !== 'CLUE_LEVEL') {
+  if (session.state.phase !== 'CLUE_LEVEL' && session.state.phase !== 'ROUND_INTRO') {
     return {
       accepted: false,
       reason: 'invalid_phase',

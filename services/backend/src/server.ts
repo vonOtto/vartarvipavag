@@ -754,8 +754,10 @@ async function handleHostNextClue(
     return;
   }
 
-  // Allow in CLUE_LEVEL or PAUSED_FOR_BRAKE (host override releases brake)
-  if (session.state.phase !== 'CLUE_LEVEL' && session.state.phase !== 'PAUSED_FOR_BRAKE') {
+  // Allow in CLUE_LEVEL, ROUND_INTRO, or PAUSED_FOR_BRAKE (host override releases brake)
+  if (session.state.phase !== 'CLUE_LEVEL' &&
+      session.state.phase !== 'ROUND_INTRO' &&
+      session.state.phase !== 'PAUSED_FOR_BRAKE') {
     logger.warn('HOST_NEXT_CLUE: Not in clue or brake phase', {
       sessionId,
       phase: session.state.phase,
@@ -785,6 +787,15 @@ async function handleHostNextClue(
         brakeOwner: session.state.brakeOwnerPlayerId,
       });
       releaseBrake(session);
+    }
+
+    // If we're in ROUND_INTRO, transition to CLUE_LEVEL first
+    // (host is manually advancing past the intro audio)
+    if (session.state.phase === 'ROUND_INTRO') {
+      logger.info('HOST_NEXT_CLUE: Transitioning from ROUND_INTRO to CLUE_LEVEL', {
+        sessionId,
+      });
+      session.state.phase = 'CLUE_LEVEL';
     }
 
     // Advance to next clue or reveal

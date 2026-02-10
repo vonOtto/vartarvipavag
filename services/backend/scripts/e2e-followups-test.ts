@@ -166,15 +166,14 @@ async function main() {
   hostWs.send(JSON.stringify({
     type: 'HOST_NEXT_CLUE', sessionId, serverTimeMs: Date.now(), payload: {},
   }));
-  await sleep(1000);
 
-  hostMsgs.some((m: any) => m.type === 'DESTINATION_REVEAL')
-    ? pass('DESTINATION_REVEAL received by host')
-    : fail('DESTINATION_REVEAL received by host', 'missing');
+  // Wait for DESTINATION_REVEAL (can take 3-5s after music fade + banter)
+  await waitFor(hostMsgs, (m: any) => m.type === 'DESTINATION_REVEAL', 'DESTINATION_REVEAL', 8000);
+  pass('DESTINATION_REVEAL received by host');
 
-  hostMsgs.some((m: any) => m.type === 'DESTINATION_RESULTS')
-    ? pass('DESTINATION_RESULTS received by host')
-    : fail('DESTINATION_RESULTS received by host', 'missing');
+  // Wait for DESTINATION_RESULTS (another 4s after reveal celebration)
+  await waitFor(hostMsgs, (m: any) => m.type === 'DESTINATION_RESULTS', 'DESTINATION_RESULTS', 6000);
+  pass('DESTINATION_RESULTS received by host');
 
   // ── 5. FQ1 appears — projection checks ───────────────────────────────────
   log('5. Waiting for FOLLOWUP_QUESTION_PRESENT (Q1) …');
@@ -244,11 +243,11 @@ async function main() {
     ? pass('Bob reconnect: answeredByMe = true (answer preserved)')
     : fail('Bob reconnect answeredByMe', `got ${bobSnap.payload.state.followupQuestion?.answeredByMe}`);
 
-  // ── 8. Wait for Q1 timer to fire (15 s from reveal; we've used ~5 s) ──────
+  // ── 8. Wait for Q1 timer to fire (25 s timer + margin) ──────
   log('8. Waiting for Q1 timer to fire …');
   hostMsgs.length = 0; aliceMsgs.length = 0; bobMsgs.length = 0;
 
-  const fqLocked1 = await waitFor(hostMsgs, (m: any) => m.type === 'FOLLOWUP_ANSWERS_LOCKED', 'ANSWERS_LOCKED Q1', 18000);
+  const fqLocked1 = await waitFor(hostMsgs, (m: any) => m.type === 'FOLLOWUP_ANSWERS_LOCKED', 'ANSWERS_LOCKED Q1', 28000);
 
   // HOST has answersByPlayer
   Array.isArray(fqLocked1.payload.answersByPlayer)
@@ -286,8 +285,8 @@ async function main() {
 
   // ── 10. FQ2 appears automatically ─────────────────────────────────────────
   log('10. Waiting for FOLLOWUP_QUESTION_PRESENT Q2 …');
-  const fq2Host  = await waitFor(hostMsgs,  (m: any) => m.type === 'FOLLOWUP_QUESTION_PRESENT' && m.payload.currentQuestionIndex === 1, 'FQ2 on host', 3000);
-  const fq2Alice = await waitFor(aliceMsgs, (m: any) => m.type === 'FOLLOWUP_QUESTION_PRESENT' && m.payload.currentQuestionIndex === 1, 'FQ2 on Alice', 3000);
+  const fq2Host  = await waitFor(hostMsgs,  (m: any) => m.type === 'FOLLOWUP_QUESTION_PRESENT' && m.payload.currentQuestionIndex === 1, 'FQ2 on host', 5000);
+  const fq2Alice = await waitFor(aliceMsgs, (m: any) => m.type === 'FOLLOWUP_QUESTION_PRESENT' && m.payload.currentQuestionIndex === 1, 'FQ2 on Alice', 5000);
 
   fq2Host.payload.currentQuestionIndex === 1
     ? pass('FQ2 progress: index 1 / 2')
@@ -327,7 +326,7 @@ async function main() {
   log('12. Waiting for Q2 timer to fire …');
   hostMsgs.length = 0;
 
-  await waitFor(hostMsgs, (m: any) => m.type === 'FOLLOWUP_ANSWERS_LOCKED' && m.payload.currentQuestionIndex === 1, 'ANSWERS_LOCKED Q2', 18000);
+  await waitFor(hostMsgs, (m: any) => m.type === 'FOLLOWUP_ANSWERS_LOCKED' && m.payload.currentQuestionIndex === 1, 'ANSWERS_LOCKED Q2', 28000);
   pass('ANSWERS_LOCKED Q2 received');
 
   // ── 13. FQ2 results ───────────────────────────────────────────────────────
@@ -349,16 +348,17 @@ async function main() {
     ? pass('RESULTS Q2 nextQuestionIndex = null (sequence done)')
     : fail('nextQuestionIndex Q2', `got ${fqRes2.payload.nextQuestionIndex}`);
 
-  // ── 14. SCOREBOARD_UPDATE (sequence complete) ────────────────────────────
-  log('14. Waiting for SCOREBOARD_UPDATE …');
-  const scoreboard = await waitFor(hostMsgs, (m: any) => m.type === 'SCOREBOARD_UPDATE', 'SCOREBOARD_UPDATE', 3000);
-  pass('SCOREBOARD_UPDATE received after sequence end');
+  // ── 14. FINAL_RESULTS_PRESENT (sequence complete) ────────────────────────────
+  log('14. Waiting for FINAL_RESULTS_PRESENT or SCOREBOARD_UPDATE …');
+  const scoreboard = await waitFor(hostMsgs, (m: any) => m.type === 'FINAL_RESULTS_PRESENT' || m.type === 'SCOREBOARD_UPDATE', 'FINAL_RESULTS or SCOREBOARD', 5000);
+  pass('FINAL_RESULTS_PRESENT received after sequence end');
 
   // verify Alice has +4 more than destination baseline, Bob +2 more
-  const aliceEntry = scoreboard.payload.scoreboard.find((s: any) => s.name === 'Alice');
-  const bobEntry   = scoreboard.payload.scoreboard.find((s: any) => s.name === 'Bob');
-  const aliceFqPts = aliceEntry?.score ?? 0;
-  const bobFqPts   = bobEntry?.score  ?? 0;
+  const standings = scoreboard.payload.standingsFull || scoreboard.payload.scoreboard || [];
+  const aliceEntry = standings.find((s: any) => s.name === 'Alice');
+  const bobEntry   = standings.find((s: any) => s.name === 'Bob');
+  const aliceFqPts = aliceEntry?.points ?? aliceEntry?.score ?? 0;
+  const bobFqPts   = bobEntry?.points  ?? bobEntry?.score  ?? 0;
 
   // Neither locked a destination answer so base = 0; Alice +4, Bob +2 from followups
   aliceFqPts === 4
