@@ -669,7 +669,7 @@
         "serverTimeMs": { "type": "integer" },
         "payload": {
           "type": "object",
-          "required": ["questionText", "currentQuestionIndex", "totalQuestions", "timerDurationMs"],
+          "required": ["questionText", "currentQuestionIndex", "totalQuestions", "timerDurationMs", "startAtServerMs"],
           "properties": {
             "questionText": { "type": "string", "description": "The question shown to all players" },
             "options": {
@@ -679,7 +679,8 @@
             },
             "currentQuestionIndex": { "type": "integer", "minimum": 0, "description": "0-indexed position in the followup sequence" },
             "totalQuestions": { "type": "integer", "minimum": 1, "description": "Total follow-up questions for this destination" },
-            "timerDurationMs": { "type": "integer", "minimum": 1000, "description": "Countdown duration. Server locks answers at serverTimeMs + timerDurationMs." },
+            "timerDurationMs": { "type": "integer", "minimum": 1000, "description": "Countdown duration. Server locks answers at startAtServerMs + timerDurationMs." },
+            "startAtServerMs": { "type": "integer", "description": "Server time when timer started. Client uses this + timerDurationMs to calculate remaining time, avoiding clock skew issues." },
             "correctAnswer": { "type": "string", "description": "HOST projection only — never sent to TV or PLAYER" }
           },
           "additionalProperties": false

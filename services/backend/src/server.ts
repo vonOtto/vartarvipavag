@@ -57,6 +57,29 @@ import {
 } from './game/audio-director';
 import { prefetchRoundTts, generateClueVoice, generateQuestionVoice, generateFollowupIntroVoice } from './game/tts-prefetch';
 
+/**
+ * Safely generates TTS voice with error handling.
+ * If TTS generation fails, logs error but continues game flow.
+ * @returns TTS manifest entry if successful, null otherwise
+ */
+async function safeGenerateTts<T>(
+  sessionId: string,
+  generateFn: () => Promise<T>,
+  context: string
+): Promise<T | null> {
+  try {
+    return await generateFn();
+  } catch (error: any) {
+    logger.error('TTS generation failed, continuing without TTS', {
+      sessionId,
+      context,
+      error: error.message,
+      stack: error.stack,
+    });
+    return null;
+  }
+}
+
 export function createServer() {
   const app = express();
 
@@ -288,10 +311,10 @@ export function createWebSocketServer(server: HTTPServer) {
         );
         sessionStore.broadcastEventToSession(sessionId, lobbyEvent);
       } else {
-        // Active-gameplay path: mark player as disconnected with timestamp
-        // and schedule grace period cleanup
+        // Active-gameplay path: mark player/host/tv as disconnected with timestamp
+        // and schedule grace period cleanup (all roles get grace period)
         const player = updatedSession.state.players.find((p) => p.playerId === actualPlayerId);
-        if (player && role === 'player') {
+        if (player) {
           player.disconnectedAt = getServerTimeMs();
 
           // Initialize disconnect timers map if needed
@@ -313,12 +336,13 @@ export function createWebSocketServer(server: HTTPServer) {
 
             const p = sess.state.players.find((pl) => pl.playerId === actualPlayerId);
             if (p && !p.isConnected) {
-              // Player did not reconnect within grace period - remove them
+              // Player/host/tv did not reconnect within grace period
               sessionStore.removePlayer(sessionId, actualPlayerId);
 
-              logger.info('Player removed after grace period expired', {
+              logger.info('Player/host/tv removed after grace period expired', {
                 sessionId,
                 playerId: actualPlayerId,
+                role: p.role,
                 gracePeriodMs: GRACE_PERIOD_MS,
               });
 
@@ -333,9 +357,10 @@ export function createWebSocketServer(server: HTTPServer) {
 
           updatedSession._disconnectTimers.set(actualPlayerId, cleanupTimer);
 
-          logger.info('Player marked as disconnected with grace period', {
+          logger.info('Player/host/tv marked as disconnected with grace period', {
             sessionId,
             playerId: actualPlayerId,
+            role,
             gracePeriodMs: GRACE_PERIOD_MS,
           });
         }
@@ -648,7 +673,11 @@ async function handleHostStartGame(
       try {
         // On-demand: generate the first clue voice line and add it to manifest
         // BEFORE onGameStart so audio-director finds it and emits AUDIO_PLAY.
-        await generateClueVoice(sess, gameData.clueLevelPoints, gameData.clueText);
+        await safeGenerateTts(
+          sessionId,
+          () => generateClueVoice(sess, gameData.clueLevelPoints, gameData.clueText),
+          'HOST_START_GAME first clue'
+        );
 
         // Advance phase before snapshot so clients see CLUE_LEVEL
         sess.state.phase = 'CLUE_LEVEL';
@@ -937,7 +966,11 @@ async function handleHostNextClue(
           }
 
           // On-demand: generate question voice BEFORE audio-director searches manifest
-          await generateQuestionVoice(sess, followupStart.currentQuestionIndex, followupStart.question.questionText);
+          await safeGenerateTts(
+            sessionId,
+            () => generateQuestionVoice(sess, followupStart.currentQuestionIndex, followupStart.question.questionText),
+            'followup question'
+          );
 
           // Audio: mutate audioState before snapshot so reconnect sees followup music
           const fqAudioEvents = onFollowupStart(sess, followupStart.currentQuestionIndex, followupStart.question.questionText);
@@ -978,7 +1011,11 @@ async function handleHostNextClue(
       session.state.totalPlayers = session.state.players.filter(p => p.role === 'player').length;
 
       // On-demand: generate clue voice BEFORE audio-director searches manifest
-      await generateClueVoice(session, result.clueLevelPoints!, result.clueText!);
+      await safeGenerateTts(
+        sessionId,
+        () => generateClueVoice(session, result.clueLevelPoints!, result.clueText!),
+        'handleHostNextClue clue advance'
+      );
 
       // Resolve TTS clip duration for textRevealAfterMs
       const clueClipId = `voice_clue_${result.clueLevelPoints!}`;
@@ -1552,7 +1589,11 @@ async function handleNextDestination(
       }
 
       // Generate the first clue voice line
-      await generateClueVoice(session, firstCluePoints, firstClueText);
+      await safeGenerateTts(
+        sessionId,
+        () => generateClueVoice(session, firstCluePoints, firstClueText),
+        'next destination first clue'
+      );
 
       // Set phase directly to CLUE_LEVEL
       session.state.phase = 'CLUE_LEVEL';
@@ -1644,7 +1685,11 @@ async function handleNextDestination(
           }
 
           // Generate the first clue voice line
-          await generateClueVoice(sess, firstCluePoints, firstClueText);
+          await safeGenerateTts(
+            sessionId,
+            () => generateClueVoice(sess, firstCluePoints, firstClueText),
+            'next destination first clue (delayed)'
+          );
 
           // Advance phase
           sess.state.phase = 'CLUE_LEVEL';
@@ -1957,6 +2002,7 @@ function broadcastFollowupQuestionPresent(
       data.currentQuestionIndex,
       data.totalQuestions,
       data.timerDurationMs,
+      data.startAtServerMs,
       connection.role === 'host' ? data.question.correctAnswer : undefined
     );
     connection.ws.send(JSON.stringify(event));
@@ -2249,7 +2295,11 @@ async function autoAdvanceClue(sessionId: string): Promise<void> {
           }
 
           // On-demand: generate question voice BEFORE audio-director searches manifest
-          await generateQuestionVoice(sess, followupStart.currentQuestionIndex, followupStart.question.questionText);
+          await safeGenerateTts(
+            sessionId,
+            () => generateQuestionVoice(sess, followupStart.currentQuestionIndex, followupStart.question.questionText),
+            'followup question'
+          );
 
           // Audio: mutate audioState before snapshot so reconnect sees followup music
           const fqAudioEvents = onFollowupStart(sess, followupStart.currentQuestionIndex, followupStart.question.questionText);
@@ -2290,7 +2340,11 @@ async function autoAdvanceClue(sessionId: string): Promise<void> {
       session.state.totalPlayers = session.state.players.filter(p => p.role === 'player').length;
 
       // On-demand: generate clue voice BEFORE audio-director searches manifest
-      await generateClueVoice(session, result.clueLevelPoints!, result.clueText!);
+      await safeGenerateTts(
+        sessionId,
+        () => generateClueVoice(session, result.clueLevelPoints!, result.clueText!),
+        'handleHostNextClue clue advance'
+      );
 
       // Resolve TTS clip duration for textRevealAfterMs
       const clueClipId = `voice_clue_${result.clueLevelPoints!}`;
@@ -2411,7 +2465,11 @@ function scheduleFollowupTimer(sessionId: string, durationMs: number): void {
         const nextFq = s.state.followupQuestion;
 
         // Next question — generate voice BEFORE audio-director searches manifest
-        await generateQuestionVoice(s, nextFq.currentQuestionIndex, nextFq.questionText);
+        await safeGenerateTts(
+          sessionId,
+          () => generateQuestionVoice(s, nextFq.currentQuestionIndex, nextFq.questionText),
+          'next followup question'
+        );
 
         // Now safe to push STATE_SNAPSHOT — clients will see the next question
         // only after the 4 s results pause has elapsed.

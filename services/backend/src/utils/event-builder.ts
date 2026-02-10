@@ -248,6 +248,7 @@ export function buildFollowupQuestionPresentEvent(
   currentQuestionIndex: number,
   totalQuestions: number,
   timerDurationMs: number,
+  startAtServerMs: number,
   correctAnswer?: string
 ): EventEnvelope {
   return buildEvent('FOLLOWUP_QUESTION_PRESENT', sessionId, {
@@ -256,6 +257,7 @@ export function buildFollowupQuestionPresentEvent(
     currentQuestionIndex,
     totalQuestions,
     timerDurationMs,
+    startAtServerMs,
     ...(correctAnswer !== undefined ? { correctAnswer } : {}),
   });
 }

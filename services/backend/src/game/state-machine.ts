@@ -127,6 +127,10 @@ export function startNewDestination(
   // Clear brake fairness for new destination
   session.state.brakeFairness = {};
 
+  // Initialize answer count tracking
+  session.state.answeredCount = 0;
+  session.state.totalPlayers = session.state.players.filter((p) => p.role === 'player').length;
+
   // Store full destination in session for later reference
   // We'll use a private property that won't be in the projected state
   (session as any)._currentDestination = destination;
