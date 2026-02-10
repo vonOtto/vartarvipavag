@@ -8,7 +8,11 @@ struct LobbyContentView: View {
     @EnvironmentObject var state: HostState
     @State private var showGenerateSheet = false
     @State private var showSelectSheet = false
+    @State private var showContentActionSheet = false
+    @State private var replaceContent = true
     @State private var errorMessage: String?
+    @State private var generationTask: Task<Void, Never>?
+    @State private var showCancelConfirmation = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: Layout.space2) {
@@ -39,14 +43,63 @@ struct LobbyContentView: View {
         }
         .sheet(isPresented: $showGenerateSheet) {
             GenerateGamePlanView { numDestinations, regions, prompt in
-                Task {
+                // Dismiss sheet immediately so user can see progress in lobby
+                showGenerateSheet = false
+
+                // Cancel any existing generation task
+                generationTask?.cancel()
+
+                // Start new generation task
+                generationTask = Task {
                     do {
                         try await state.generateContentInLobby(
                             numDestinations: numDestinations,
                             regions: regions,
                             prompt: prompt
                         )
-                        showGenerateSheet = false
+                        errorMessage = nil
+                        #if os(iOS)
+                        hapticNotification(.success)
+                        #endif
+                    } catch is CancellationError {
+                        errorMessage = "Generering avbruten"
+                        #if os(iOS)
+                        hapticNotification(.warning)
+                        #endif
+                    } catch {
+                        errorMessage = error.localizedDescription
+                        #if os(iOS)
+                        hapticNotification(.error)
+                        #endif
+                    }
+                    generationTask = nil
+                }
+            }
+        }
+        .confirmationDialog("Avbryt generering?", isPresented: $showCancelConfirmation) {
+            Button("Ja, avbryt", role: .destructive) {
+                generationTask?.cancel()
+                state.cancelContentGeneration()
+                errorMessage = "Generering avbruten"
+                #if os(iOS)
+                hapticNotification(.warning)
+                #endif
+            }
+            Button("Fortsätt generera", role: .cancel) { }
+        } message: {
+            Text("Vill du verkligen avbryta genereringen? Detta kan inte ångras.")
+        }
+        .sheet(isPresented: $showSelectSheet) {
+            ContentPackPickerView(
+                maxSelection: replaceContent ? 5 : (5 - state.destinations.count),
+                currentSelectionCount: replaceContent ? 0 : state.destinations.count
+            ) { packIds in
+                // Dismiss sheet immediately so user can see lobby
+                showSelectSheet = false
+
+                Task {
+                    do {
+                        try await state.importContentPacks(packIds, replace: replaceContent)
                         errorMessage = nil
                         #if os(iOS)
                         hapticNotification(.success)
@@ -60,24 +113,18 @@ struct LobbyContentView: View {
                 }
             }
         }
-        .sheet(isPresented: $showSelectSheet) {
-            ContentPackPickerView { packIds in
-                Task {
-                    do {
-                        try await state.importContentPacks(packIds)
-                        showSelectSheet = false
-                        errorMessage = nil
-                        #if os(iOS)
-                        hapticNotification(.success)
-                        #endif
-                    } catch {
-                        errorMessage = error.localizedDescription
-                        #if os(iOS)
-                        hapticNotification(.error)
-                        #endif
-                    }
-                }
+        .confirmationDialog("Välj åtgärd", isPresented: $showContentActionSheet) {
+            Button("Ersätt befintligt innehåll") {
+                replaceContent = true
+                showSelectSheet = true
             }
+            Button("Lägg till fler destinationer") {
+                replaceContent = false
+                showSelectSheet = true
+            }
+            Button("Avbryt", role: .cancel) { }
+        } message: {
+            Text("Du har redan \(state.destinations.count) resmål valda. Vill du ersätta dem eller lägga till fler?")
         }
     }
 
@@ -146,24 +193,115 @@ struct LobbyContentView: View {
 
     private var generatingView: some View {
         VStack(spacing: Layout.space2) {
-            HStack(spacing: Layout.space2) {
-                ProgressView()
-                    .progressViewStyle(CircularProgressViewStyle(tint: .accMint))
-                    .scaleEffect(1.0)
-                Text("Genererar innehåll...")
-                    .font(.body)
-                    .foregroundColor(.txt1)
-                Spacer()
+            // Main progress card
+            VStack(spacing: Layout.space3) {
+                // Header with spinner
+                HStack(spacing: Layout.space2) {
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle(tint: .accMint))
+                        .scaleEffect(1.2)
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Genererar innehåll med AI")
+                            .font(.body)
+                            .fontWeight(.semibold)
+                            .foregroundColor(.txt1)
+
+                        if let progress = state.generationProgress,
+                           let destIndex = progress.destinationIndex,
+                           let totalDests = progress.totalDestinations {
+                            Text("Destination \(destIndex) av \(totalDests)")
+                                .font(.small)
+                                .foregroundColor(.txt2)
+                        }
+                    }
+
+                    Spacer()
+                }
+
+                // Progress bar
+                if let progress = state.generationProgress {
+                    VStack(alignment: .leading, spacing: 8) {
+                        // Progress bar
+                        GeometryReader { geometry in
+                            ZStack(alignment: .leading) {
+                                // Background
+                                RoundedRectangle(cornerRadius: 4)
+                                    .fill(Color.bg1)
+                                    .frame(height: 8)
+
+                                // Progress fill with animation
+                                RoundedRectangle(cornerRadius: 4)
+                                    .fill(
+                                        LinearGradient(
+                                            gradient: Gradient(colors: [Color.accMint, Color.accBlue]),
+                                            startPoint: .leading,
+                                            endPoint: .trailing
+                                        )
+                                    )
+                                    .frame(width: max(geometry.size.width * CGFloat(progress.progress), 20), height: 8)
+                                    .animation(.easeInOut(duration: 0.5), value: progress.progress)
+                            }
+                        }
+                        .frame(height: 8)
+
+                        // Progress percentage
+                        HStack {
+                            Text(progress.stepDescription)
+                                .font(.small)
+                                .foregroundColor(.txt2)
+                                .lineLimit(1)
+
+                            Spacer()
+
+                            Text("\(Int(progress.progress * 100))%")
+                                .font(.small)
+                                .fontWeight(.medium)
+                                .foregroundColor(.accMint)
+                        }
+                    }
+                }
+
+                // Cancel button
+                Button {
+                    #if os(iOS)
+                    hapticImpact(.medium)
+                    #endif
+                    showCancelConfirmation = true
+                } label: {
+                    HStack(spacing: Layout.space1) {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 16))
+                        Text("Avbryt generering")
+                            .font(.body)
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.secondary)
+                .frame(height: 44)
             }
             .padding(.horizontal, Layout.space2)
-            .padding(.vertical, Layout.space2)
-            .background(Color.bg2)
-            .cornerRadius(Layout.radiusM)
+            .padding(.vertical, Layout.space3)
+            .background(
+                RoundedRectangle(cornerRadius: Layout.radiusM)
+                    .fill(Color.bg2)
+                    .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
+            )
 
-            Text("Detta kan ta 3-6 minuter. Spelare kan fortsätta ansluta medan vi genererar.")
-                .font(.small)
-                .foregroundColor(.txt2)
-                .frame(maxWidth: .infinity, alignment: .leading)
+            // Info message
+            HStack(spacing: Layout.space1) {
+                Image(systemName: "info.circle.fill")
+                    .font(.system(size: 14))
+                    .foregroundColor(.accBlue)
+                Text("Detta kan ta 3-6 minuter. Spelare kan fortsätta ansluta medan vi genererar.")
+                    .font(.small)
+                    .foregroundColor(.txt2)
+            }
+            .padding(.horizontal, Layout.space2)
+            .padding(.vertical, Layout.space1)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color.accBlue.opacity(0.08))
+            .cornerRadius(Layout.radiusS)
         }
     }
 
@@ -206,22 +344,65 @@ struct LobbyContentView: View {
                 }
             }
 
-            // Change content button
-            Button {
-                #if os(iOS)
-                hapticImpact(.light)
-                #endif
-                showGenerateSheet = true
-            } label: {
-                HStack(spacing: Layout.space1) {
-                    Image(systemName: "arrow.triangle.2.circlepath")
-                        .font(.system(size: 14))
-                    Text("Ändra innehåll")
-                        .font(.small)
+            // Action buttons
+            HStack(spacing: Layout.space2) {
+                // Rensa allt
+                Button {
+                    #if os(iOS)
+                    hapticImpact(.light)
+                    #endif
+                    state.destinations = []
+                    state.gamePlan = nil
+                } label: {
+                    HStack(spacing: Layout.space1) {
+                        Image(systemName: "trash")
+                            .font(.system(size: 14))
+                        Text("Rensa")
+                            .font(.small)
+                    }
+                    .foregroundColor(.stateBad)
                 }
-                .foregroundColor(.accBlue)
+
+                Spacer()
+
+                // Generera nytt
+                Button {
+                    #if os(iOS)
+                    hapticImpact(.light)
+                    #endif
+                    showGenerateSheet = true
+                } label: {
+                    HStack(spacing: Layout.space1) {
+                        Image(systemName: "sparkles")
+                            .font(.system(size: 14))
+                        Text("Generera nytt")
+                            .font(.small)
+                    }
+                    .foregroundColor(.accOrange)
+                }
+
+                // Välj från bibliotek
+                Button {
+                    #if os(iOS)
+                    hapticImpact(.light)
+                    #endif
+                    // If content exists, ask if replace or add
+                    if !state.destinations.isEmpty && state.destinations.count < 5 {
+                        showContentActionSheet = true
+                    } else {
+                        replaceContent = true
+                        showSelectSheet = true
+                    }
+                } label: {
+                    HStack(spacing: Layout.space1) {
+                        Image(systemName: "folder.fill")
+                            .font(.system(size: 14))
+                        Text("Välj från bibliotek")
+                            .font(.small)
+                    }
+                    .foregroundColor(.accBlue)
+                }
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 
@@ -254,12 +435,20 @@ struct LobbyContentView: View {
 /// Modal sheet for selecting existing content packs.
 struct ContentPackPickerView: View {
     @Environment(\.dismiss) private var dismiss
+    let maxSelection: Int
+    let currentSelectionCount: Int
     let onSelect: ([String]) -> Void
 
     @State private var packs: [ContentPackInfo] = []
     @State private var selectedIds: Set<String> = []
     @State private var isLoading = false
     @State private var errorMessage: String?
+
+    init(maxSelection: Int = 5, currentSelectionCount: Int = 0, onSelect: @escaping ([String]) -> Void) {
+        self.maxSelection = maxSelection
+        self.currentSelectionCount = currentSelectionCount
+        self.onSelect = onSelect
+    }
 
     var body: some View {
         NavigationView {
@@ -293,8 +482,8 @@ struct ContentPackPickerView: View {
                         #endif
                         onSelect(Array(selectedIds))
                     }
-                    .disabled(selectedIds.isEmpty)
-                    .foregroundColor(selectedIds.isEmpty ? .txt3 : .accOrange)
+                    .disabled(!isSelectionValid)
+                    .foregroundColor(isSelectionValid ? .accOrange : .txt3)
                 }
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Avbryt") {
@@ -367,22 +556,52 @@ struct ContentPackPickerView: View {
         .padding(.vertical, Layout.space6)
     }
 
+    private var isSelectionValid: Bool {
+        let total = currentSelectionCount + selectedIds.count
+        return total >= 3 && total <= 5 && selectedIds.count > 0 && selectedIds.count <= maxSelection
+    }
+
+    private var selectionStatusText: String {
+        let total = currentSelectionCount + selectedIds.count
+        if currentSelectionCount > 0 {
+            return "Välj upp till \(maxSelection) fler (\(selectedIds.count) valda, totalt \(total))"
+        } else {
+            return "Välj 3-5 destinationer (\(selectedIds.count) valda)"
+        }
+    }
+
     private var packListView: some View {
-        ScrollView {
-            VStack(spacing: Layout.space2) {
-                ForEach(packs) { pack in
-                    PackSelectionRow(
-                        pack: pack,
-                        isSelected: selectedIds.contains(pack.roundId)
-                    ) {
-                        #if os(iOS)
-                        hapticImpact(.light)
-                        #endif
-                        toggleSelection(pack.roundId)
+        VStack(spacing: 0) {
+            // Selection counter
+            HStack(spacing: Layout.space2) {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 16))
+                    .foregroundColor(isSelectionValid ? .stateOk : .stateWarn)
+                Text(selectionStatusText)
+                    .font(.body)
+                    .foregroundColor(isSelectionValid ? .txt1 : .stateWarn)
+                Spacer()
+            }
+            .padding(.horizontal, Layout.space2)
+            .padding(.vertical, Layout.space2)
+            .background(Color.bg1)
+
+            ScrollView {
+                VStack(spacing: Layout.space2) {
+                    ForEach(packs) { pack in
+                        PackSelectionRow(
+                            pack: pack,
+                            isSelected: selectedIds.contains(pack.roundId)
+                        ) {
+                            #if os(iOS)
+                            hapticImpact(.light)
+                            #endif
+                            toggleSelection(pack.roundId)
+                        }
                     }
                 }
+                .padding(Layout.space2)
             }
-            .padding(Layout.space2)
         }
     }
 
@@ -392,7 +611,10 @@ struct ContentPackPickerView: View {
         if selectedIds.contains(id) {
             selectedIds.remove(id)
         } else {
-            selectedIds.insert(id)
+            // Only allow selection if we haven't hit the max
+            if selectedIds.count < maxSelection {
+                selectedIds.insert(id)
+            }
         }
     }
 

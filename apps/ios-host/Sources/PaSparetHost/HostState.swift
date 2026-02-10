@@ -1,5 +1,36 @@
 import Foundation
 
+/// Progress state for content generation.
+struct GenerationProgress {
+    let currentStep: Int
+    let totalSteps: Int
+    let stepDescription: String
+    let destinationIndex: Int?
+    let totalDestinations: Int?
+
+    init(currentStep: Int, totalSteps: Int, stepDescription: String, destinationIndex: Int? = nil, totalDestinations: Int? = nil) {
+        self.currentStep = currentStep
+        self.totalSteps = totalSteps
+        self.stepDescription = stepDescription
+        self.destinationIndex = destinationIndex
+        self.totalDestinations = totalDestinations
+    }
+
+    var progress: Double {
+        guard totalSteps > 0, let destIndex = destinationIndex, let totalDests = totalDestinations, totalDests > 0 else {
+            // Simple progress if no destination info
+            guard totalSteps > 0 else { return 0.0 }
+            return Double(currentStep) / Double(totalSteps)
+        }
+
+        // Overall progress across all destinations
+        let completedDestinations = destIndex - 1
+        let currentDestProgress = Double(currentStep) / Double(totalSteps)
+        let overallProgress = (Double(completedDestinations) + currentDestProgress) / Double(totalDests)
+        return overallProgress
+    }
+}
+
 /// Observable state for the host app.  Owns the WebSocket lifecycle and
 /// publishes every field the host views need.  All mutations are isolated to
 /// the main actor via the class-level annotation.
@@ -37,6 +68,8 @@ class HostState: ObservableObject {
     @Published var gamePlan       : GamePlan?
     @Published var destinations   : [DestinationSummary] = []
     @Published var isGeneratingPlan: Bool = false
+    @Published var generationProgress: GenerationProgress?
+    private var generationTask: Task<Void, Never>?
 
     // MARK: – content management
     var hasContent: Bool {
@@ -333,36 +366,143 @@ class HostState: ObservableObject {
         guard let sid = sessionId else { return }
 
         isGeneratingPlan = true
-        defer { isGeneratingPlan = false }
+        defer {
+            isGeneratingPlan = false
+            generationProgress = nil
+            generationTask = nil
+        }
 
         do {
-            let planResp = try await HostAPI.createGamePlanAI(
-                sessionId: sid,
-                numDestinations: numDestinations,
-                regions: regions,
-                prompt: prompt
+            // Show initial progress
+            generationProgress = GenerationProgress(
+                currentStep: 0,
+                totalSteps: 8 * numDestinations,
+                stepDescription: "Startar AI-generering...",
+                destinationIndex: 1,
+                totalDestinations: numDestinations
             )
+
+            // Start a progress simulation task (since the API blocks)
+            let progressTask = Task {
+                await simulateProgress(totalDestinations: numDestinations)
+            }
+
+            // Call the blocking batch API with timeout (120 seconds)
+            let planResp = try await withTimeout(seconds: 120) {
+                try await HostAPI.createGamePlanAI(
+                    sessionId: sid,
+                    numDestinations: numDestinations,
+                    regions: regions,
+                    prompt: prompt
+                )
+            }
+
+            // Check for cancellation
+            try Task.checkCancellation()
+
+            // Cancel progress simulation
+            progressTask.cancel()
+
+            // Show completion
+            generationProgress = GenerationProgress(
+                currentStep: 8 * numDestinations,
+                totalSteps: 8 * numDestinations,
+                stepDescription: "Klar!",
+                destinationIndex: numDestinations,
+                totalDestinations: numDestinations
+            )
+
             gamePlan = planResp.gamePlan
             destinations = planResp.destinations
 
             // Update broadcast with new destination count
             startBroadcastingIfNeeded()
+        } catch is CancellationError {
+            // Re-throw cancellation errors so caller can handle them
+            throw CancellationError()
         } catch {
             throw error
         }
     }
 
+    /// Cancel ongoing content generation.
+    func cancelContentGeneration() {
+        generationTask?.cancel()
+        generationTask = nil
+        isGeneratingPlan = false
+        generationProgress = nil
+    }
+
+    /// Simulates progress updates while batch generation runs.
+    /// Shows estimated progress based on time (60-90s per destination).
+    private func simulateProgress(totalDestinations: Int) async {
+        let stepNames = [
+            "Initierar generering",
+            "Genererar destination",
+            "Genererar ledtrådar",
+            "Genererar följdfrågor",
+            "Verifierar fakta",
+            "Kontrollerar anti-leak",
+            "Förbereder TTS",
+            "Slutför"
+        ]
+
+        let totalSteps = 8 * totalDestinations
+        let estimatedTimePerDestination: Double = 75.0 // 75 seconds average
+        let updateInterval: Double = 2.0 // Update every 2 seconds
+
+        var currentStep = 0
+        var elapsedTime: Double = 0
+
+        while !Task.isCancelled && currentStep < totalSteps {
+            try? await Task.sleep(nanoseconds: UInt64(updateInterval * 1_000_000_000))
+            elapsedTime += updateInterval
+
+            // Estimate which destination and step we're on based on time
+            let estimatedDestIndex = min(Int(elapsedTime / estimatedTimePerDestination), totalDestinations - 1)
+            let estimatedStepInDest = Int((elapsedTime.truncatingRemainder(dividingBy: estimatedTimePerDestination)) / (estimatedTimePerDestination / 8.0))
+            let actualStep = min((estimatedDestIndex * 8) + estimatedStepInDest, totalSteps - 1)
+
+            currentStep = actualStep
+
+            let destNumber = (currentStep / 8) + 1
+            let stepInDest = (currentStep % 8)
+            let stepName = stepNames[min(stepInDest, stepNames.count - 1)]
+
+            await MainActor.run {
+                self.generationProgress = GenerationProgress(
+                    currentStep: currentStep,
+                    totalSteps: totalSteps,
+                    stepDescription: "Destination \(destNumber)/\(totalDestinations): \(stepName)",
+                    destinationIndex: destNumber,
+                    totalDestinations: totalDestinations
+                )
+            }
+        }
+    }
+
     /// Import existing content packs (called from lobby).
-    func importContentPacks(_ packIds: [String]) async throws {
+    /// If replace=true, replaces current content. If false, adds to existing.
+    func importContentPacks(_ packIds: [String], replace: Bool = true) async throws {
         guard let sid = sessionId else { return }
 
         isGeneratingPlan = true
         defer { isGeneratingPlan = false }
 
         do {
+            // If adding to existing, combine with current pack IDs
+            let finalPackIds: [String]
+            if replace {
+                finalPackIds = packIds
+            } else {
+                // Get current content pack IDs from gamePlan
+                let currentPackIds = gamePlan?.destinations.map { $0.contentPackId } ?? []
+                finalPackIds = currentPackIds + packIds
+            }
+
             let planResp = try await HostAPI.createGamePlanManual(
                 sessionId: sid,
-                contentPackIds: packIds
+                contentPackIds: finalPackIds
             )
             gamePlan = planResp.gamePlan
             destinations = planResp.destinations
@@ -472,6 +612,7 @@ class HostState: ObservableObject {
         gamePlan = nil
         destinations = []
         isGeneratingPlan = false
+        generationProgress = nil
     }
 
     /// Start Bonjour broadcasting if we have all required data and aren't already broadcasting.

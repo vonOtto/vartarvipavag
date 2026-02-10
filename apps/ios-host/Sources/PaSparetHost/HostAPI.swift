@@ -85,6 +85,7 @@ enum HostAPI {
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.timeoutInterval = 420  // 7 minutes - backend has 6 min timeout, give extra buffer
 
         var body: [String: Any] = ["numDestinations": numDestinations]
         if let regions = regions, !regions.isEmpty {
@@ -135,6 +136,7 @@ enum HostAPI {
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.timeoutInterval = 420  // 7 minutes - AI generation can take several minutes
 
         let body: [String: Any] = [
             "aiGenerated": aiGenerated,
@@ -198,12 +200,46 @@ enum APIError: LocalizedError {
     case invalidURL
     case http(Int)
     case hostRoleTaken
+    case generationFailed(String)
+    case timeout
 
     var errorDescription: String? {
         switch self {
         case .invalidURL:     return "Invalid URL"
         case .http(let c):    return "HTTP \(c)"
         case .hostRoleTaken:  return "Session already has a host"
+        case .generationFailed(let msg): return "Generation failed: \(msg)"
+        case .timeout:        return "Generering tog för lång tid (timeout)"
         }
+    }
+}
+
+// MARK: – Timeout helper ──────────────────────────────────────────────────────
+
+/// Execute an async operation with a timeout.
+func withTimeout<T>(
+    seconds: TimeInterval,
+    operation: @escaping () async throws -> T
+) async throws -> T {
+    try await withThrowingTaskGroup(of: T.self) { group in
+        // Add the actual operation
+        group.addTask {
+            try await operation()
+        }
+
+        // Add timeout task
+        group.addTask {
+            try await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
+            throw APIError.timeout
+        }
+
+        // Wait for first to complete
+        guard let result = try await group.next() else {
+            throw APIError.timeout
+        }
+
+        // Cancel remaining tasks
+        group.cancelAll()
+        return result
     }
 }
