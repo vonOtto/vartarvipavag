@@ -117,7 +117,7 @@ export function createWebSocketServer(server: HTTPServer) {
 
   logger.info('WebSocket server created on path /ws');
 
-  wss.on('connection', (ws: WebSocket, req) => {
+  wss.on('connection', async (ws: WebSocket, req) => {
     const ip = req.socket.remoteAddress;
     logger.info('New WebSocket connection attempt', { ip });
 
@@ -159,17 +159,13 @@ export function createWebSocketServer(server: HTTPServer) {
       return;
     }
 
-    // Reject duplicate TV connections
-    if (role === 'tv' && sessionStore.hasActiveTV(sessionId)) {
-      logger.warn('WebSocket connection rejected: TV already connected', {
-        sessionId,
-        ip,
-      });
-      ws.close(4009, 'TV already connected');
-      return;
+    // Wait for any pending join operation to complete before adding connection
+    // This prevents race conditions between REST join and WebSocket connect
+    if (session._joinLock) {
+      await session._joinLock;
     }
 
-    // Add connection to session
+    // Add connection to session (handles duplicate connections via graceful takeover)
     const connectionId = sessionStore.addConnection(sessionId, actualPlayerId, ws, role);
 
     logger.info('WebSocket connection established', {
@@ -772,6 +768,15 @@ async function handleHostNextClue(
   }
 
   try {
+    // Guard: prevent concurrent clue advances (manual + timer racing)
+    if (session._isAdvancingClue) {
+      logger.warn('HOST_NEXT_CLUE: Already advancing clue, ignoring duplicate request', {
+        sessionId,
+      });
+      return;
+    }
+    session._isAdvancingClue = true;
+
     // Clear any pending auto-advance timer — manual override takes priority
     if (session._clueTimer) {
       clearTimeout(session._clueTimer);
@@ -1019,6 +1024,12 @@ async function handleHostNextClue(
       `Failed to advance clue: ${error.message}`
     );
     ws.send(JSON.stringify(errorEvent));
+  } finally {
+    // Clear advancing flag
+    const sess = sessionStore.getSession(sessionId);
+    if (sess) {
+      sess._isAdvancingClue = false;
+    }
   }
 }
 
@@ -2081,7 +2092,20 @@ async function autoAdvanceClue(sessionId: string): Promise<void> {
     return;
   }
 
+  // Guard: prevent concurrent clue advances (auto-timer + manual racing)
+  if (session._isAdvancingClue) {
+    logger.warn('autoAdvanceClue: Already advancing clue, ignoring timer', {
+      sessionId,
+    });
+    return;
+  }
+  session._isAdvancingClue = true;
+
   try {
+    // Clear the timer reference since it's firing now
+    session._clueTimer = undefined;
+    session.state.clueTimerEnd = null;
+
     // If somehow still in brake phase, release it first (safety mirror)
     if (session.state.phase === 'PAUSED_FOR_BRAKE') {
       logger.info('autoAdvanceClue: Releasing brake before advance', {
@@ -2334,6 +2358,12 @@ async function autoAdvanceClue(sessionId: string): Promise<void> {
       sessionId,
       error: error.message,
     });
+  } finally {
+    // Clear advancing flag
+    const sess = sessionStore.getSession(sessionId);
+    if (sess) {
+      sess._isAdvancingClue = false;
+    }
   }
 }
 

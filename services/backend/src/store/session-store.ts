@@ -49,7 +49,7 @@ export interface Session {
   gamePlan?: GamePlan;
   // Internal state for brake fairness and rate limiting
   _brakeTimestamps?: Map<string, number>; // playerId -> last brake timestamp
-  _brakeFairness?: Map<string, { playerId: string; timestamp: number }>; // clue_key -> first brake
+  _brakeFairness?: Map<string, { playerId: string; timestamp: number }>; // clue_key -> first brake (DEPRECATED - use state.brakeFairness)
   // Grace period cleanup timers for disconnected players
   _disconnectTimers?: Map<string, NodeJS.Timeout>; // playerId -> cleanup timer
   // Clue auto-advance timer (graduated per level)
@@ -58,6 +58,10 @@ export interface Session {
   _scoreboardTimer?: NodeJS.Timeout; // Timer handle for auto-advance to next destination
   // Clue start time tracking for speed bonus calculation
   _clueStartTime?: number; // Timestamp when current clue level started (for speed bonus)
+  // Join flow lock to prevent race conditions
+  _joinLock?: Promise<void>; // Lock for atomic join operations
+  // Clue advance guard to prevent double-advance
+  _isAdvancingClue?: boolean; // Flag to prevent concurrent clue advances
 }
 
 class SessionStore {
@@ -257,7 +261,53 @@ class SessionStore {
   }
 
   /**
-   * Deletes a session
+   * Cleans up all timers and resources for a session.
+   * MUST be called before deleteSession() to prevent memory leaks.
+   */
+  cleanupSession(sessionId: string): void {
+    const session = this.sessions.get(sessionId);
+    if (!session) {
+      return;
+    }
+
+    // Clear clue timer
+    if (session._clueTimer) {
+      clearTimeout(session._clueTimer);
+      session._clueTimer = undefined;
+      logger.debug('Cleaned up clue timer', { sessionId });
+    }
+
+    // Clear scoreboard timer
+    if (session._scoreboardTimer) {
+      clearTimeout(session._scoreboardTimer);
+      session._scoreboardTimer = undefined;
+      logger.debug('Cleaned up scoreboard timer', { sessionId });
+    }
+
+    // Clear all disconnect timers
+    if (session._disconnectTimers) {
+      session._disconnectTimers.forEach((timer, playerId) => {
+        clearTimeout(timer);
+        logger.debug('Cleaned up disconnect timer', { sessionId, playerId });
+      });
+      session._disconnectTimers.clear();
+    }
+
+    // Close all WebSocket connections
+    session.connections.forEach((connection, playerId) => {
+      if (connection.ws.readyState === 1) { // WebSocket.OPEN
+        connection.ws.close(1000, 'Session ended');
+        logger.debug('Closed WebSocket connection', { sessionId, playerId });
+      }
+    });
+    session.connections.clear();
+
+    logger.info('Session cleanup completed', { sessionId });
+  }
+
+  /**
+   * Deletes a session.
+   * IMPORTANT: Call cleanupSession() first to prevent memory leaks.
    */
   deleteSession(sessionId: string): boolean {
     const session = this.sessions.get(sessionId);
@@ -281,7 +331,9 @@ class SessionStore {
   }
 
   /**
-   * Adds a WebSocket connection to a session
+   * Adds a WebSocket connection to a session.
+   * If a connection with the same playerId already exists, closes the old one
+   * and replaces it with the new one (graceful takeover for reconnects).
    */
   addConnection(
     sessionId: string,
@@ -292,6 +344,25 @@ class SessionStore {
     const session = this.sessions.get(sessionId);
     if (!session) {
       throw new Error('Session not found');
+    }
+
+    // Check if connection with this playerId already exists
+    const existingConnection = session.connections.get(playerId);
+    if (existingConnection) {
+      logger.warn('Duplicate connection detected - closing old connection', {
+        sessionId,
+        playerId,
+        role,
+        oldConnectionId: existingConnection.connectionId,
+      });
+
+      // Close the old WebSocket connection gracefully
+      if (existingConnection.ws.readyState === 1) { // WebSocket.OPEN
+        existingConnection.ws.close(4010, 'Connection replaced by newer connection');
+      }
+
+      // Remove the old connection from the map
+      session.connections.delete(playerId);
     }
 
     const connectionId = uuidv4();
@@ -312,6 +383,7 @@ class SessionStore {
       role,
       connectionId,
       totalConnections: session.connections.size,
+      replacedExisting: !!existingConnection,
     });
 
     return connectionId;

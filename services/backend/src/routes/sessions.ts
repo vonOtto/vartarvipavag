@@ -65,7 +65,7 @@ router.post('/v1/sessions', (_req: Request, res: Response) => {
  * POST /v1/sessions/:id/join
  * Player joins a session
  */
-router.post('/v1/sessions/:id/join', (req: Request, res: Response) => {
+router.post('/v1/sessions/:id/join', async (req: Request, res: Response) => {
   try {
     const sessionId = req.params.id;
     const { name, role } = req.body;
@@ -110,18 +110,29 @@ router.post('/v1/sessions/:id/join', (req: Request, res: Response) => {
       });
     }
 
-    // If the client wants to claim the host role, verify the slot is free.
-    // This check runs while we are still single-threaded (no await above it)
-    // so it is effectively atomic for the in-memory store.
-    const claimingHost = role === 'host';
-    if (claimingHost && sessionStore.hasActiveHost(sessionId)) {
-      return res.status(409).json({
-        error: 'Host already taken',
-      });
+    // Implement join lock to prevent race conditions between concurrent joins
+    // Wait for any existing join operation to complete first
+    if (session._joinLock) {
+      await session._joinLock;
     }
 
-    // Add player to session (always creates with role 'player' internally)
-    const player = sessionStore.addPlayer(sessionId, name.trim());
+    // Create a new join lock for this operation
+    let resolveJoinLock: () => void;
+    session._joinLock = new Promise<void>((resolve) => {
+      resolveJoinLock = resolve;
+    });
+
+    try {
+      // If the client wants to claim the host role, verify the slot is free.
+      const claimingHost = role === 'host';
+      if (claimingHost && sessionStore.hasActiveHost(sessionId)) {
+        return res.status(409).json({
+          error: 'Host already taken',
+        });
+      }
+
+      // Add player to session (always creates with role 'player' internally)
+      const player = sessionStore.addPlayer(sessionId, name.trim());
 
     // If claiming host, patch the role on both the canonical player list and
     // the game-state player list so that projections and lobby events reflect
@@ -169,16 +180,21 @@ router.post('/v1/sessions/:id/join', (req: Request, res: Response) => {
       note: 'WebSocket not yet connected - LOBBY_UPDATED will broadcast on WS connect',
     });
 
-    // Note: LOBBY_UPDATED will be broadcasted when the player establishes
-    // their WebSocket connection (see server.ts ws.on('connection') handler).
-    // Broadcasting here would race with the WebSocket connection and cause
-    // inconsistent lobby state updates.
+      // Note: LOBBY_UPDATED will be broadcasted when the player establishes
+      // their WebSocket connection (see server.ts ws.on('connection') handler).
+      // Broadcasting here would race with the WebSocket connection and cause
+      // inconsistent lobby state updates.
 
-    return res.status(200).json({
-      playerId: player.playerId,
-      playerAuthToken,
-      wsUrl,
-    });
+      return res.status(200).json({
+        playerId: player.playerId,
+        playerAuthToken,
+        wsUrl,
+      });
+    } finally {
+      // Always release the join lock
+      resolveJoinLock!();
+      session._joinLock = undefined;
+    }
   } catch (error) {
     logger.error('Failed to join session', { error, sessionId: req.params.id });
     return res.status(500).json({

@@ -125,4 +125,6 @@ export interface GameState {
   // Answer count tracking during clue phase
   answeredCount?: number; // Number of players who have locked their answer
   totalPlayers?: number; // Total number of active players
+  // Brake fairness tracking (persisted for reconnects)
+  brakeFairness?: Record<string, { playerId: string; timestamp: number }>; // clue_key -> first brake
 }

@@ -124,6 +124,9 @@ export function startNewDestination(
   session.state.clueLevelPoints = firstClue.points;
   session.state.clueText = firstClue.text;
 
+  // Clear brake fairness for new destination
+  session.state.brakeFairness = {};
+
   // Store full destination in session for later reference
   // We'll use a private property that won't be in the projected state
   (session as any)._currentDestination = destination;
@@ -442,13 +445,13 @@ export function pullBrake(
   }
 
   // Check if this is the first brake for this clue level
-  // We store the first brake timestamp and owner for fairness
+  // Store in GameState.brakeFairness for reconnect persistence
   const clueKey = `clue_${session.state.clueLevelPoints}`;
-  if (!session._brakeFairness) {
-    session._brakeFairness = new Map<string, { playerId: string; timestamp: number }>();
+  if (!session.state.brakeFairness) {
+    session.state.brakeFairness = {};
   }
 
-  const existingBrake = session._brakeFairness.get(clueKey);
+  const existingBrake = session.state.brakeFairness[clueKey];
   if (existingBrake) {
     // Someone already pulled brake for this clue level
     logger.info('Brake rejected - too late', {
@@ -465,7 +468,7 @@ export function pullBrake(
   }
 
   // Accept the brake - this is the first one for this clue level
-  session._brakeFairness.set(clueKey, { playerId, timestamp: serverTimeMs });
+  session.state.brakeFairness[clueKey] = { playerId, timestamp: serverTimeMs };
   session._brakeTimestamps.set(playerId, serverTimeMs);
 
   // Get player name
