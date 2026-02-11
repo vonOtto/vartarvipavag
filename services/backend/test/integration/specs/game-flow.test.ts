@@ -115,8 +115,8 @@ export async function runGameFlowTests(): Promise<void> {
       // Advance to reveal
       host.send('HOST_NEXT_CLUE', {});
 
-      // Wait for DESTINATION_RESULTS event
-      const results = await host.waitForEvent('DESTINATION_RESULTS', 5000);
+      // Wait for DESTINATION_RESULTS event (needs longer timeout due to reveal sequence delays)
+      const results = await host.waitForEvent('DESTINATION_RESULTS', 10000);
       assertProperty(results.payload, 'results', undefined, 'Should have results array');
       assert(Array.isArray(results.payload.results), 'Results should be an array');
 

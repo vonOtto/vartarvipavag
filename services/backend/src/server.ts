@@ -833,7 +833,18 @@ async function handleHostNextClue(
     }
 
     // Advance to next clue or reveal
+    logger.info('HOST_NEXT_CLUE: Calling nextClue', {
+      sessionId,
+      currentPoints: session.state.clueLevelPoints,
+      phase: session.state.phase,
+    });
     const result = nextClue(session);
+
+    logger.info('HOST_NEXT_CLUE: nextClue returned', {
+      sessionId,
+      isReveal: result.isReveal,
+      clueLevelPoints: result.clueLevelPoints,
+    });
 
     if (result.isReveal) {
       // Destination revealed
@@ -865,9 +876,19 @@ async function handleHostNextClue(
 
       // Wait for banter to finish + 2000 ms pre-reveal pause (anticipation buildup)
       const PRE_REVEAL_PAUSE_MS = 2000;
+      logger.info('Waiting for banter + pre-reveal pause', {
+        sessionId,
+        banterDurationMs,
+        PRE_REVEAL_PAUSE_MS,
+        totalWaitMs: banterDurationMs + PRE_REVEAL_PAUSE_MS,
+      });
       await new Promise((resolve) => setTimeout(resolve, banterDurationMs + PRE_REVEAL_PAUSE_MS));
 
       // Broadcast DESTINATION_REVEAL event
+      logger.info('Broadcasting DESTINATION_REVEAL', {
+        sessionId,
+        destinationName: result.destinationName,
+      });
       const revealEvent = buildDestinationRevealEvent(
         sessionId,
         result.destinationName!,
@@ -875,6 +896,7 @@ async function handleHostNextClue(
         result.aliases || []
       );
       sessionStore.broadcastEventToSession(sessionId, revealEvent);
+      logger.info('DESTINATION_REVEAL broadcasted', { sessionId });
 
       // Audio: reveal sting SFX (simultaneous with REVEAL)
       onDestinationReveal(session).forEach((e) =>
@@ -2194,9 +2216,19 @@ async function autoAdvanceClue(sessionId: string): Promise<void> {
 
       // Wait for banter to finish + 2000 ms pre-reveal pause (anticipation buildup)
       const PRE_REVEAL_PAUSE_MS = 2000;
+      logger.info('Waiting for banter + pre-reveal pause', {
+        sessionId,
+        banterDurationMs,
+        PRE_REVEAL_PAUSE_MS,
+        totalWaitMs: banterDurationMs + PRE_REVEAL_PAUSE_MS,
+      });
       await new Promise((resolve) => setTimeout(resolve, banterDurationMs + PRE_REVEAL_PAUSE_MS));
 
       // Broadcast DESTINATION_REVEAL event
+      logger.info('Broadcasting DESTINATION_REVEAL', {
+        sessionId,
+        destinationName: result.destinationName,
+      });
       const revealEvent = buildDestinationRevealEvent(
         sessionId,
         result.destinationName!,
@@ -2204,6 +2236,7 @@ async function autoAdvanceClue(sessionId: string): Promise<void> {
         result.aliases || []
       );
       sessionStore.broadcastEventToSession(sessionId, revealEvent);
+      logger.info('DESTINATION_REVEAL broadcasted', { sessionId });
 
       // Audio: reveal sting SFX (simultaneous with REVEAL)
       onDestinationReveal(session).forEach((e) =>
