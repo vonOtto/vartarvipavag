@@ -71,11 +71,13 @@ struct ContentPackDetailView: View {
         } message: {
             Text("Detta går inte att ångra.")
         }
+        #if os(iOS)
         .sheet(isPresented: $showShareSheet) {
             if let url = exportedTemplateURL {
                 ShareSheet(items: [url])
             }
         }
+        #endif
         .task {
             await loadPack()
         }
