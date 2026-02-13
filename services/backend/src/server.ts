@@ -4,6 +4,7 @@
 
 import express, { Request, Response } from 'express';
 import cors from 'cors';
+import path from 'path';
 import { WebSocketServer, WebSocket } from 'ws';
 import { Server as HTTPServer } from 'http';
 import { logger } from './utils/logger';
@@ -100,34 +101,23 @@ export function createServer() {
     });
   });
 
-  // Root endpoint
-  app.get('/', (_req: Request, res: Response) => {
-    res.status(200).json({
-      service: 'På Spåret Party Edition - Backend',
-      version: '1.0.0',
-      endpoints: {
-        health: 'GET /health',
-        websocket: 'WS /ws',
-        sessions: 'POST /v1/sessions',
-        join: 'POST /v1/sessions/:id/join',
-        tvJoin: 'POST /v1/sessions/:id/tv',
-        byCode: 'GET /v1/sessions/by-code/:joinCode',
-        contentPacks: 'GET /v1/content/packs',
-        contentPack: 'GET /v1/content/packs/:id',
-        generateContent: 'POST /v1/content/generate',
-        generationStatus: 'GET /v1/content/generate/:id/status',
-        gamePlanGenerateAi: 'POST /v1/sessions/:id/game-plan/generate-ai',
-        gamePlanImport: 'POST /v1/sessions/:id/game-plan/import',
-        gamePlanHybrid: 'POST /v1/sessions/:id/game-plan/hybrid',
-        gamePlan: 'GET /v1/sessions/:id/game-plan',
-      },
-    });
-  });
-
   // API Routes
   app.use(sessionRoutes);
   app.use(contentRoutes);
   app.use(gamePlanRoutes);
+
+  // Serve web-player static files
+  // Find monorepo root by going up from services/backend/src
+  const webPlayerPath = path.resolve(__dirname, '../../../apps/web-player/dist');
+
+  logger.info('Serving web-player from', { webPlayerPath });
+
+  app.use(express.static(webPlayerPath));
+
+  // SPA fallback - serve index.html for all non-API routes
+  app.get('*', (_req: Request, res: Response) => {
+    res.sendFile(path.join(webPlayerPath, 'index.html'));
+  });
 
   return app;
 }
@@ -1815,9 +1805,12 @@ function handleEndGame(
     return;
   }
 
-  // Must be in SCOREBOARD phase
-  if (session.state.phase !== 'SCOREBOARD') {
-    logger.warn('END_GAME: Not in SCOREBOARD phase', {
+  // Allow ending game from any phase (host can abort mid-game)
+  const allowedPhases = ['CLUE_LEVEL', 'PAUSED_FOR_BRAKE', 'SCOREBOARD', 'REVEAL_DESTINATION',
+                         'FOLLOWUP_QUESTION', 'ROUND_INTRO', 'PREPARING_ROUND'];
+
+  if (!allowedPhases.includes(session.state.phase)) {
+    logger.warn('END_GAME: Cannot end from this phase', {
       sessionId,
       phase: session.state.phase,
     });
@@ -1831,11 +1824,22 @@ function handleEndGame(
   }
 
   try {
-    // Clear scoreboard auto-advance timer if host manually ends game
+    // Clear all active timers
     if (session._scoreboardTimer) {
       clearTimeout(session._scoreboardTimer);
       session._scoreboardTimer = undefined;
       logger.info('END_GAME: Cleared scoreboard auto-advance timer', { sessionId });
+    }
+    if (session._clueTimer) {
+      clearTimeout(session._clueTimer);
+      session._clueTimer = undefined;
+      session.state.clueTimerEnd = null;
+      logger.info('END_GAME: Cleared clue auto-advance timer', { sessionId });
+    }
+    if (session._followupTimer) {
+      clearTimeout(session._followupTimer);
+      session._followupTimer = undefined;
+      logger.info('END_GAME: Cleared followup timer', { sessionId });
     }
     // Calculate destinations completed
     const destInfo = getCurrentDestinationInfo(session);

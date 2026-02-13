@@ -122,8 +122,10 @@ class HostState: ObservableObject {
         wsTask   = task
         task.resume()
 
-        isConnected     = true
-        hasEverConnected = true
+        // Do NOT set isConnected here — wait for WELCOME from the server.
+        // Setting it optimistically caused a flicker: connect() toggled it true,
+        // then the receive loop would throw before WELCOME arrived and
+        // scheduleReconnect() would flip it back to false within the same frame.
         error           = nil
 
         Task.detached { [weak self] in
@@ -161,7 +163,9 @@ class HostState: ObservableObject {
         switch type {
 
         case "WELCOME":
-            reconnectAttempt = 0
+            reconnectAttempt    = 0       // connection is healthy
+            isConnected         = true    // authoritative: server acknowledged us
+            hasEverConnected    = true
             await sendResume()
 
         case "STATE_SNAPSHOT":
@@ -265,13 +269,14 @@ class HostState: ObservableObject {
             let total        = payload["totalQuestions"]       as? Int ?? 1
             let correct      = payload["correctAnswer"]        as? String ?? ""
             let duration     = payload["timerDurationMs"]      as? Int
+            let startAtMs    = payload["startAtServerMs"]     as? Int
             followupQuestion = HostFollowupQuestion(
                 questionText:         qText,
                 options:              options,
                 currentQuestionIndex: currentIdx,
                 totalQuestions:       total,
                 correctAnswer:        correct,
-                timerStartMs:         Int(Date().timeIntervalSince1970 * 1000),
+                timerStartMs:         startAtMs,
                 timerDurationMs:      duration)
             followupResults  = nil
             phase            = "FOLLOWUP_QUESTION"
@@ -337,6 +342,17 @@ class HostState: ObservableObject {
         guard let sid = sessionId else { return }
         send([
             "type"        : "HOST_NEXT_CLUE",
+            "sessionId"   : sid,
+            "serverTimeMs": Int(Date().timeIntervalSince1970 * 1000),
+            "payload"     : [String: Any]()
+        ])
+    }
+
+    /// Send END_GAME to the server. Host can end game from any phase.
+    func sendEndGame() {
+        guard let sid = sessionId else { return }
+        send([
+            "type"        : "END_GAME",
             "sessionId"   : sid,
             "serverTimeMs": Int(Date().timeIntervalSince1970 * 1000),
             "payload"     : [String: Any]()

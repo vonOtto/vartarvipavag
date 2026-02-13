@@ -666,6 +666,23 @@ struct GameHostView: View {
 
             Spacer()
 
+            // ── end game button ──
+            Button {
+                #if os(iOS)
+                hapticImpact(.medium)
+                #endif
+                state.sendEndGame()
+            } label: {
+                HStack(spacing: Layout.space2) {
+                    Image(systemName: "stop.circle.fill")
+                        .font(.system(size: 20, weight: .semibold))
+                    Text("Avsluta spel")
+                }
+            }
+            .buttonStyle(.secondary)
+            .padding(.horizontal, Layout.space2)
+            .padding(.bottom, Layout.space2)
+
             // ── next-clue button ──
             Button {
                 #if os(iOS)
