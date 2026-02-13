@@ -834,6 +834,32 @@ button:disabled {
   animation: fadeInUp 0.4s ease-out 0.4s backwards;
 }
 
+/* Compact destination display (shown with scoreboard) */
+.destination-reveal-compact {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+  padding: var(--s-2);
+  text-align: center;
+  background: color-mix(in srgb, var(--acc-orange) 8%, var(--bg-1));
+  border-radius: var(--r-m);
+  margin-bottom: var(--s-3);
+}
+
+.destination-name-compact {
+  font-family: var(--font-body);
+  font-size: var(--text-h1-size);
+  font-weight: var(--text-h1-weight);
+  color: var(--acc-orange);
+  letter-spacing: -0.01em;
+}
+
+.destination-country-compact {
+  font-size: var(--text-body-size);
+  font-weight: var(--text-body-weight);
+  color: var(--txt-2);
+}
+
 /* Own answer result */
 .my-result {
   padding: var(--s-2);

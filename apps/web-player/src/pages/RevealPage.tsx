@@ -122,29 +122,56 @@ export const RevealPage: React.FC = () => {
           </div>
         )}
 
-        {destination ? (
-          <div className="destination-reveal">
-            <h2>Det var...</h2>
-            <div className="destination-name">{destination.name}</div>
-            <div className="destination-country">{destination.country}</div>
-          </div>
-        ) : (
-          <div className="waiting-message">Avslöjar destination...</div>
+        {/* REVEAL_DESTINATION: Show only destination (dramatic, full screen) */}
+        {gameState?.phase === 'REVEAL_DESTINATION' && (
+          <>
+            {destination ? (
+              <div className="destination-reveal">
+                <h2>Det var...</h2>
+                <div className="destination-name">{destination.name}</div>
+                <div className="destination-country">{destination.country}</div>
+              </div>
+            ) : (
+              <div className="waiting-message">Avslöjar destination...</div>
+            )}
+
+            {/* Own answer result */}
+            {myResult && (
+              <div className={`my-result ${myResult.isCorrect ? 'result-correct' : 'result-incorrect'}`}>
+                <div className="my-result-answer">Ditt svar: <strong>{myResult.answerText}</strong></div>
+                <div className="my-result-verdict">
+                  {myResult.isCorrect ? 'Rätt!' : 'Fel'} — +{myResult.pointsAwarded} poäng (låst vid {myResult.lockedAtLevelPoints})
+                </div>
+              </div>
+            )}
+          </>
         )}
 
-        {/* Own answer result */}
-        {myResult && (
-          <div className={`my-result ${myResult.isCorrect ? 'result-correct' : 'result-incorrect'}`}>
-            <div className="my-result-answer">Ditt svar: <strong>{myResult.answerText}</strong></div>
-            <div className="my-result-verdict">
-              {myResult.isCorrect ? 'Rätt!' : 'Fel'} — +{myResult.pointsAwarded} poäng (låst vid {myResult.lockedAtLevelPoints})
-            </div>
-          </div>
-        )}
+        {/* SCOREBOARD or FINAL_RESULTS: Show destination + scoreboard */}
+        {(gameState?.phase === 'SCOREBOARD' || gameState?.phase === 'FINAL_RESULTS') && (
+          <>
+            {destination && (
+              <div className="destination-reveal-compact">
+                <div className="destination-name-compact">{destination.name}</div>
+                <div className="destination-country-compact">{destination.country}</div>
+              </div>
+            )}
 
-        {/* Scoreboard */}
-        {scoreboard.length > 0 && (
-          <Scoreboard entries={scoreboard} myPlayerId={session.playerId} />
+            {/* Own answer result */}
+            {myResult && (
+              <div className={`my-result ${myResult.isCorrect ? 'result-correct' : 'result-incorrect'}`}>
+                <div className="my-result-answer">Ditt svar: <strong>{myResult.answerText}</strong></div>
+                <div className="my-result-verdict">
+                  {myResult.isCorrect ? 'Rätt!' : 'Fel'} — +{myResult.pointsAwarded} poäng (låst vid {myResult.lockedAtLevelPoints})
+                </div>
+              </div>
+            )}
+
+            {/* Scoreboard */}
+            {scoreboard.length > 0 && (
+              <Scoreboard entries={scoreboard} myPlayerId={session.playerId} />
+            )}
+          </>
         )}
 
         {/* Next destination banner */}
