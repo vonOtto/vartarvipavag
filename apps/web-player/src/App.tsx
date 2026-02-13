@@ -7,22 +7,15 @@ import { RevealPage } from './pages/RevealPage';
 import { LandingPage } from './pages/LandingPage';
 import { NextDestinationPage } from './pages/NextDestinationPage';
 import { LeaveButton } from './components/LeaveButton';
-import { hasSession, loadSession } from './services/storage';
-import { useWebSocket } from './hooks/useWebSocket';
+import { hasSession } from './services/storage';
+import { WebSocketProvider, useWebSocketContext } from './contexts/WebSocketContext';
 import './App.css';
 
 // Connects to the server on page load when a session exists,
 // waits for STATE_SNAPSHOT, then routes to the correct page based on phase.
 function ResumeRoute() {
   const navigate = useNavigate();
-  const session = loadSession();
-
-  const { isConnected, gameState, error } = useWebSocket(
-    session?.wsUrl || null,
-    session?.playerAuthToken || null,
-    session?.playerId || null,
-    session?.sessionId || null
-  );
+  const { isConnected, gameState, error } = useWebSocketContext();
 
   useEffect(() => {
     if (!gameState?.phase) return;
@@ -83,46 +76,48 @@ const ProtectedRoute = ({ children }: { children: ReactNode }) => {
 function App() {
   return (
     <Router>
-      <Routes>
-        <Route path="/join/:joinCode" element={<JoinPage />} />
-        <Route path="/join" element={<JoinPage />} />
-        <Route
-          path="/lobby"
-          element={
-            <ProtectedRoute>
-              <LobbyPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/next-destination"
-          element={
-            <ProtectedRoute>
-              <NextDestinationPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/game"
-          element={
-            <ProtectedRoute>
-              <GamePage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/reveal"
-          element={
-            <ProtectedRoute>
-              <RevealPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/"
-          element={hasSession() ? <ResumeRoute /> : <LandingPage />}
-        />
-      </Routes>
+      <WebSocketProvider>
+        <Routes>
+          <Route path="/join/:joinCode" element={<JoinPage />} />
+          <Route path="/join" element={<JoinPage />} />
+          <Route
+            path="/lobby"
+            element={
+              <ProtectedRoute>
+                <LobbyPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/next-destination"
+            element={
+              <ProtectedRoute>
+                <NextDestinationPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/game"
+            element={
+              <ProtectedRoute>
+                <GamePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/reveal"
+            element={
+              <ProtectedRoute>
+                <RevealPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/"
+            element={hasSession() ? <ResumeRoute /> : <LandingPage />}
+          />
+        </Routes>
+      </WebSocketProvider>
     </Router>
   );
 }

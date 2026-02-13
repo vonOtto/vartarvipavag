@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useWebSocket } from '../hooks/useWebSocket';
+import { useWebSocketContext } from '../contexts/WebSocketContext';
 import { loadSession } from '../services/storage';
 import './NextDestinationPage.css';
 
@@ -8,12 +8,7 @@ export const NextDestinationPage: React.FC = () => {
   const navigate = useNavigate();
   const session = loadSession();
 
-  const { gameState } = useWebSocket(
-    session?.wsUrl || null,
-    session?.playerAuthToken || null,
-    session?.playerId || null,
-    session?.sessionId || null
-  );
+  const { gameState } = useWebSocketContext();
 
   // Redirect to join if no session
   useEffect(() => {

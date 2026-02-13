@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useWebSocket } from '../hooks/useWebSocket';
+import { useWebSocketContext } from '../contexts/WebSocketContext';
 import { loadSession } from '../services/storage';
 import type { DestinationRevealPayload, DestinationResultsPayload, ScoreboardUpdatePayload, ClueLevelPoints } from '../types/game';
 import { Scoreboard } from '../components/Scoreboard';
@@ -18,12 +18,7 @@ export const RevealPage: React.FC = () => {
   const [destination, setDestination] = useState<{ name: string; country: string } | null>(null);
   const [myResult, setMyResult] = useState<MyResult | null>(null);
 
-  const { isConnected, lastEvent, gameState, error } = useWebSocket(
-    session?.wsUrl || null,
-    session?.playerAuthToken || null,
-    session?.playerId || null,
-    session?.sessionId || null
-  );
+  const { isConnected, lastEvent, gameState, error } = useWebSocketContext();
 
   // Redirect to join if no session
   useEffect(() => {

@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useWebSocket } from '../hooks/useWebSocket';
+import { useWebSocketContext } from '../contexts/WebSocketContext';
 import { loadSession } from '../services/storage';
 import { ClueDisplay } from '../components/ClueDisplay';
 import { BrakeButton } from '../components/BrakeButton';
@@ -12,7 +12,7 @@ import type { CluePresentPayload, BrakeRejectedPayload, FollowupResultsPayload, 
 // HostGameView — pro-view rendered when session.role === 'host'
 // ---------------------------------------------------------------------------
 const HostGameView: React.FC<{
-  gameState: NonNullable<ReturnType<typeof useWebSocket>['gameState']>;
+  gameState: NonNullable<ReturnType<typeof useWebSocketContext>['gameState']>;
   currentClue: { points: ClueLevelPoints; text: string; timerEnd?: number } | null;
   isConnected: boolean;
   error: string | null;
@@ -231,12 +231,7 @@ export const GamePage: React.FC = () => {
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const { isConnected, lastEvent, gameState, error, sendMessage } = useWebSocket(
-    session?.wsUrl || null,
-    session?.playerAuthToken || null,
-    session?.playerId || null,
-    session?.sessionId || null
-  );
+  const { isConnected, lastEvent, gameState, error, sendMessage } = useWebSocketContext();
 
   // Redirect to join if no session
   useEffect(() => {

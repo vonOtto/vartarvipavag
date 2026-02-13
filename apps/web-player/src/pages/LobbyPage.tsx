@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useWebSocket } from '../hooks/useWebSocket';
+import { useWebSocketContext } from '../contexts/WebSocketContext';
 import { loadSession } from '../services/storage';
 import { PlayerList } from '../components/PlayerList';
 import { LeaveButton } from '../components/LeaveButton';
@@ -16,12 +16,7 @@ export const LobbyPage: React.FC = () => {
   const navigate = useNavigate();
   const session = loadSession();
 
-  const { isConnected, lastEvent, gameState, error, sendMessage } = useWebSocket(
-    session?.wsUrl || null,
-    session?.playerAuthToken || null,
-    session?.playerId || null,
-    session?.sessionId || null
-  );
+  const { isConnected, lastEvent, gameState, error, sendMessage } = useWebSocketContext();
 
   // Derived state: player list and host name — updated by both
   // STATE_SNAPSHOT and LOBBY_UPDATED; whichever arrives last wins.
