@@ -203,6 +203,60 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
     };
   }, [connect]);
 
+  // Handle phone lock/unlock and app backgrounding
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      console.log('WebSocket: Visibility changed, hidden =', document.hidden);
+
+      // When page becomes visible again (phone unlocked, app foregrounded)
+      if (!document.hidden) {
+        // If we're not connected, attempt to reconnect immediately
+        if (!isConnected && loadSession()) {
+          console.log('WebSocket: Page visible and disconnected, reconnecting...');
+          reconnectAttemptsRef.current = 0; // Reset reconnect attempts
+          reconnectDelayRef.current = INITIAL_RECONNECT_DELAY;
+          connect();
+        }
+      }
+    };
+
+    const handleOnline = () => {
+      console.log('WebSocket: Network online, checking connection...');
+
+      // Network came back online, reconnect if needed
+      if (!isConnected && loadSession()) {
+        console.log('WebSocket: Network restored and disconnected, reconnecting...');
+        reconnectAttemptsRef.current = 0;
+        reconnectDelayRef.current = INITIAL_RECONNECT_DELAY;
+        connect();
+      }
+    };
+
+    const handleFocus = () => {
+      console.log('WebSocket: Window focused, checking connection...');
+
+      // Window regained focus (user returned to tab/app)
+      if (!isConnected && loadSession()) {
+        console.log('WebSocket: Window focused and disconnected, reconnecting...');
+        reconnectAttemptsRef.current = 0;
+        reconnectDelayRef.current = INITIAL_RECONNECT_DELAY;
+        connect();
+      }
+    };
+
+    // Add event listeners
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      // Cleanup
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [isConnected, connect]);
+
   const value: WebSocketContextValue = {
     isConnected,
     lastEvent,
