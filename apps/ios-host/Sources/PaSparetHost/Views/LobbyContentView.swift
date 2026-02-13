@@ -558,7 +558,7 @@ struct ContentPackPickerView: View {
 
     private var isSelectionValid: Bool {
         let total = currentSelectionCount + selectedIds.count
-        return total >= 3 && total <= 5 && selectedIds.count > 0 && selectedIds.count <= maxSelection
+        return total >= 1 && total <= 5 && selectedIds.count > 0 && selectedIds.count <= maxSelection
     }
 
     private var selectionStatusText: String {
@@ -566,7 +566,7 @@ struct ContentPackPickerView: View {
         if currentSelectionCount > 0 {
             return "Välj upp till \(maxSelection) fler (\(selectedIds.count) valda, totalt \(total))"
         } else {
-            return "Välj 3-5 destinationer (\(selectedIds.count) valda)"
+            return "Välj 1-5 destinationer (\(selectedIds.count) valda)"
         }
     }
 

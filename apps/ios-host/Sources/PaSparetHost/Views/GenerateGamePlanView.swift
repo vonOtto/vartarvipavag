@@ -4,7 +4,7 @@ import SwiftUI
 
 /// Configuration view for AI game plan generation.
 /// Allows users to configure:
-/// - Number of destinations (3-5)
+/// - Number of destinations (1-5)
 /// - Regions (multi-select)
 /// - Custom prompt (optional)
 struct GenerateGamePlanView: View {
@@ -93,7 +93,7 @@ struct GenerateGamePlanView: View {
                             .foregroundColor(.txt1)
 
                         HStack(spacing: Layout.space2) {
-                            ForEach(3...5, id: \.self) { num in
+                            ForEach(1...5, id: \.self) { num in
                                 Button {
                                     #if os(iOS)
                                     hapticImpact(.light)

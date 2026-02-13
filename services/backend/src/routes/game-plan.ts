@@ -88,7 +88,7 @@ function parseDestinationPrompt(prompt: string): { count?: number; regions?: str
 /**
  * POST /v1/sessions/:sessionId/game-plan/generate-ai
  * Creates a game plan by generating multiple destinations via AI
- * Body: { numDestinations?: 3-5, regions?: string[], prompt?: string }
+ * Body: { numDestinations?: 1-5, regions?: string[], prompt?: string }
  * - If prompt is provided, it will be parsed to extract count and regions
  * - Otherwise, numDestinations and regions will be used directly
  * Returns: { gamePlan: GamePlan, destinations: DestinationSummary[] }
@@ -132,12 +132,12 @@ router.post(
       if (
         !count ||
         typeof count !== 'number' ||
-        count < 3 ||
+        count < 1 ||
         count > 5
       ) {
         return res.status(400).json({
           error: 'Validation error',
-          message: 'Destination count must be between 3 and 5',
+          message: 'Destination count must be between 1 and 5',
         });
       }
 
@@ -165,6 +165,7 @@ router.post(
         {
           count: count,
           regions: targetRegions || [],
+          prompt: prompt || undefined, // Forward raw prompt for AI filtering
           language: 'sv',
         },
         {
@@ -266,15 +267,26 @@ router.post(
       }
 
       // Validate contentPackIds
-      if (
-        !contentPackIds ||
-        !Array.isArray(contentPackIds) ||
-        contentPackIds.length < 3 ||
-        contentPackIds.length > 5
-      ) {
+      if (!contentPackIds || !Array.isArray(contentPackIds)) {
         return res.status(400).json({
           error: 'Validation error',
-          message: 'contentPackIds must be an array of 3-5 pack IDs',
+          message: 'contentPackIds must be an array',
+          details: {
+            received: typeof contentPackIds,
+            isArray: Array.isArray(contentPackIds),
+          },
+        });
+      }
+
+      if (contentPackIds.length < 1 || contentPackIds.length > 5) {
+        return res.status(400).json({
+          error: 'Validation error',
+          message: `Game plan requires 1-5 content packs, but received ${contentPackIds.length}`,
+          details: {
+            receivedCount: contentPackIds.length,
+            requiredRange: '1-5',
+            receivedIds: contentPackIds,
+          },
         });
       }
 
@@ -390,10 +402,10 @@ router.post(
       }
 
       const totalDestinations = aiGenerated + manualPackIds.length;
-      if (totalDestinations < 3 || totalDestinations > 5) {
+      if (totalDestinations < 1 || totalDestinations > 5) {
         return res.status(400).json({
           error: 'Validation error',
-          message: 'Total destinations (AI + manual) must be between 3 and 5',
+          message: 'Total destinations (AI + manual) must be between 1 and 5',
         });
       }
 

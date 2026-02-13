@@ -216,6 +216,8 @@ export const GamePage: React.FC = () => {
   const [braking, setBraking] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [rejectionMessage, setRejectionMessage] = useState<string | null>(null);
+  const [brakeCooldown, setBrakeCooldown] = useState<number>(0);
+  const brakeCooldownRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Answer count state
   const [answeredCount, setAnsweredCount] = useState<number>(0);
@@ -296,7 +298,32 @@ export const GamePage: React.FC = () => {
         };
         setRejectionMessage(messages[payload.reason] || 'Broms avvisad.');
         const timer = setTimeout(() => setRejectionMessage(null), 2500);
-        return () => clearTimeout(timer);
+
+        // Start cooldown timer for rate_limited
+        if (payload.reason === 'rate_limited') {
+          setBrakeCooldown(2); // 2 second cooldown
+          if (brakeCooldownRef.current) clearInterval(brakeCooldownRef.current);
+          brakeCooldownRef.current = setInterval(() => {
+            setBrakeCooldown((prev) => {
+              if (prev <= 1) {
+                if (brakeCooldownRef.current) {
+                  clearInterval(brakeCooldownRef.current);
+                  brakeCooldownRef.current = null;
+                }
+                return 0;
+              }
+              return prev - 1;
+            });
+          }, 1000);
+        }
+
+        return () => {
+          clearTimeout(timer);
+          if (brakeCooldownRef.current) {
+            clearInterval(brakeCooldownRef.current);
+            brakeCooldownRef.current = null;
+          }
+        };
       }
       case 'BRAKE_ACCEPTED':
         setBraking(false);
@@ -368,7 +395,7 @@ export const GamePage: React.FC = () => {
       return {
         points: gameState.clueLevelPoints,
         text: gameState.clueText,
-        timerEnd: undefined
+        timerEnd: gameState.clueTimerEnd ?? undefined
       };
     }
     return null;
@@ -411,7 +438,7 @@ export const GamePage: React.FC = () => {
   const lockedAtPoints = gameState?.lockedAnswers?.find(a => a.playerId === session?.playerId)?.lockedAtLevelPoints;
   const isMyBrake = gameState?.brakeOwnerPlayerId === session?.playerId;
   const isLocked = hasLockedAnswer;  // Use server state only to avoid duplicate display
-  const canBrake = gameState?.phase === 'CLUE_LEVEL' && !hasLockedAnswer && !braking;
+  const canBrake = gameState?.phase === 'CLUE_LEVEL' && !hasLockedAnswer && !braking && brakeCooldown === 0;
   const lockedCount = gameState?.lockedAnswers?.length ?? 0;
   const brakeOwnerName = gameState?.brakeOwnerPlayerId
     ? gameState.players.find(p => p.playerId === gameState.brakeOwnerPlayerId)?.name
@@ -528,6 +555,11 @@ export const GamePage: React.FC = () => {
             )}
 
             <BrakeButton disabled={!canBrake} onPullBrake={handlePullBrake} />
+            {brakeCooldown > 0 && (
+              <div className="brake-cooldown">
+                Vänta {brakeCooldown}s...
+              </div>
+            )}
             {hasLockedAnswer && (
               <div className="answer-locked">
                 Ditt svar är låst vid {lockedAtPoints} poäng

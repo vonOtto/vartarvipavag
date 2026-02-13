@@ -81,6 +81,7 @@ export interface GameState {
   destination?: Destination;
   clueLevelPoints: ClueLevelPoints | null;
   clueText: string | null;
+  clueTimerEnd?: number | null;   // Unix timestamp when clue timer expires
   brakeOwnerPlayerId: string | null;
   lockedAnswers: LockedAnswer[];
   followupQuestion: FollowupQuestionState | null;
@@ -203,6 +204,7 @@ export interface FollowupQuestionPresentPayload {
   currentQuestionIndex: number;
   totalQuestions: number;
   timerDurationMs: number;
+  startAtServerMs: number;         // Server time when timer started
   correctAnswer?: string;          // HOST-only
 }
 

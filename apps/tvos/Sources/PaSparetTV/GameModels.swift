@@ -151,6 +151,7 @@ struct GameState: Decodable {
     let destinationName    : String?                 // nil until revealed (TV projection)
     let destinationCountry : String?
     let followupQuestion   : FollowupQuestionInfo?   // non-nil when phase == FOLLOWUP_QUESTION
+    let clueTimerEnd       : Int?                    // Unix timestamp when clue timer expires
     // Multi-destination tracking
     let destinationIndex         : Int?              // 1-based (1, 2, 3...)
     let totalDestinations        : Int?              // total number of destinations
@@ -182,6 +183,7 @@ struct GameState: Decodable {
             self.destinationCountry = nil
         }
         self.followupQuestion = try? c.decode(FollowupQuestionInfo.self, forKey: .followupQuestion)
+        self.clueTimerEnd     = try? c.decode(Int.self, forKey: .clueTimerEnd)
         // Multi-destination tracking
         self.destinationIndex         = try? c.decode(Int.self,  forKey: .destinationIndex)
         self.totalDestinations        = try? c.decode(Int.self,  forKey: .totalDestinations)
@@ -191,7 +193,7 @@ struct GameState: Decodable {
     private enum CodingKeys: String, CodingKey {
         case phase, players, clueText, scoreboard, joinCode, destination, followupQuestion
         case levelPoints = "clueLevelPoints"   // match backend key
-        case lockedAnswersCount, lockedAnswers, brakeOwnerName
+        case lockedAnswersCount, lockedAnswers, brakeOwnerName, clueTimerEnd
         case destinationIndex, totalDestinations, nextDestinationAvailable
     }
 

@@ -394,6 +394,7 @@ class AppState: ObservableObject {
         self.hostName       = hostName
         clueText            = state.clueText
         levelPoints         = state.levelPoints
+        clueTimerEnd        = state.clueTimerEnd
         scoreboard          = state.scoreboard
         lockedAnswersCount  = state.lockedAnswersCount
         brakeOwnerName      = state.brakeOwnerName
