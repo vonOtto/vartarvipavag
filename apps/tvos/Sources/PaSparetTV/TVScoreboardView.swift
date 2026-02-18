@@ -73,6 +73,14 @@ struct TVScoreboardView: View {
     @ViewBuilder
     private var standingsColumn: some View {
         VStack(alignment: .leading, spacing: Layout.space24) {
+            // FINAL_RESULTS podium (stage-gated)
+            if appState.phase == "FINAL_RESULTS",
+               ["third", "second", "first", "full"].contains(appState.finalResultsStage) {
+                PodiumView(entries: appState.scoreboard, stage: appState.finalResultsStage)
+                    .padding(.bottom, Layout.space24)
+                    .transition(.opacity.combined(with: .scale))
+            }
+
             // Destination progress header (if multi-destination game)
             if let index = appState.destinationIndex,
                let total = appState.totalDestinations,
@@ -95,18 +103,22 @@ struct TVScoreboardView: View {
                 .padding(.bottom, Layout.space16)
             }
 
-            Text("Poängtabell")
-                .font(.tvH2)  // 48pt Semibold
-                .foregroundColor(.txt1)
+            if appState.phase != "FINAL_RESULTS" || appState.finalResultsStage == "full" {
+                Text("Poängtabell")
+                    .font(.tvH2)  // 48pt Semibold
+                    .foregroundColor(.txt1)
+            }
 
-            if appState.scoreboard.isEmpty {
-                Text("Inga poäng än…")
-                    .font(.tvMeta)  // 28pt
-                    .foregroundColor(.txt3)
-            } else {
-                ForEach(appState.scoreboard.enumerated().map({ $0 }), id: \.offset) { idx, entry in
-                    StandingRow(rank: idx + 1, entry: entry)
-                        .transition(.opacity.combined(with: .move(edge: .trailing)))
+            if appState.phase != "FINAL_RESULTS" || appState.finalResultsStage == "full" {
+                if appState.scoreboard.isEmpty {
+                    Text("Inga poäng än…")
+                        .font(.tvMeta)  // 28pt
+                        .foregroundColor(.txt3)
+                } else {
+                    ForEach(appState.scoreboard.enumerated().map({ $0 }), id: \.offset) { idx, entry in
+                        StandingRow(rank: idx + 1, entry: entry)
+                            .transition(.opacity.combined(with: .move(edge: .trailing)))
+                    }
                 }
             }
 
@@ -117,7 +129,7 @@ struct TVScoreboardView: View {
                         .font(.system(size: 48))
                         .foregroundColor(.accOrange)
 
-                    Text("Nästa destination kommer snart!")
+                    Text("Nästa destination kommer snart…")
                         .font(.system(size: 44, weight: .medium))
                         .foregroundColor(.txt1)
 
@@ -144,12 +156,19 @@ struct TVScoreboardView: View {
 
     @ViewBuilder
     private func followupIncomingBanner(destination: String) -> some View {
-        Text("Frågor om \(destination) väntar…")
-            .font(.tvBody)  // 34pt
-            .foregroundColor(.txt2)
-            .italic()
-            .multilineTextAlignment(.center)
-            .padding(.bottom, Layout.cardPadding)
+        VStack(spacing: 8) {
+            Text("Bonusfrågor på gång")
+                .font(.tvMeta)  // 28pt
+                .foregroundColor(.txt2)
+                .textCase(.uppercase)
+                .tracking(1)
+            Text("Frågor om \(destination) väntar…")
+                .font(.tvBody)  // 34pt
+                .foregroundColor(.txt2)
+                .italic()
+                .multilineTextAlignment(.center)
+        }
+        .padding(.bottom, Layout.cardPadding)
     }
 
     // MARK: – reconnect banner ─────────────────────────────────────────────
@@ -163,6 +182,101 @@ struct TVScoreboardView: View {
             .background(Color.statusBad.opacity(0.9))
             .cornerRadius(Layout.radiusS)
             .padding(.top, Layout.space16)
+    }
+}
+
+// MARK: – PodiumView ──────────────────────────────────────────────────────────
+
+private struct PodiumView: View {
+    let entries: [ScoreboardEntry]
+    let stage: String
+
+    private var topThree: [ScoreboardEntry] {
+        Array(entries.sorted { $0.totalScore > $1.totalScore }.prefix(3))
+    }
+
+    private var orderedRanks: [(rank: Int, entry: ScoreboardEntry)] {
+        let first: ScoreboardEntry?  = topThree.indices.contains(0) ? topThree[0] : nil
+        let second: ScoreboardEntry? = topThree.indices.contains(1) ? topThree[1] : nil
+        let third: ScoreboardEntry?  = topThree.indices.contains(2) ? topThree[2] : nil
+        let rankMap: [Int: ScoreboardEntry] = [
+            1: first,
+            2: second,
+            3: third,
+        ].compactMapValues { $0 }
+        return [3, 2, 1].compactMap { rank in
+            guard let entry = rankMap[rank] else { return nil }
+            return (rank, entry)
+        }
+    }
+
+    private func isVisible(rank: Int) -> Bool {
+        switch stage {
+        case "third":  return rank == 3
+        case "second": return rank >= 2
+        case "first", "full": return true
+        default: return false
+        }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Layout.space16) {
+            let isSolo = topThree.count == 1
+            Text(isSolo ? "Ensam vinnare" : "Slutställning")
+                .font(.tvMeta)  // 28pt
+                .foregroundColor(.txt2)
+                .textCase(.uppercase)
+                .tracking(1)
+            if isSolo {
+                Text("En värdig seger — allt mot alla och du vann.")
+                    .font(.tvBody)
+                    .foregroundColor(.txt1)
+            }
+
+            HStack(spacing: Layout.space24) {
+                ForEach(orderedRanks, id: \.rank) { item in
+                    if isVisible(rank: item.rank) {
+                    VStack(spacing: Layout.space8) {
+                        ZStack {
+                            Circle()
+                                .fill(rankColor(item.rank))
+                                .frame(width: 56, height: 56)
+                            Text("\(item.rank)")
+                                .font(.system(size: 24, weight: .bold))
+                                .foregroundColor(.bg0)
+                        }
+                        Text(item.entry.name)
+                            .font(.tvBody)
+                            .foregroundColor(.txt1)
+                            .lineLimit(1)
+                        Text("\(item.entry.totalScore) p")
+                            .font(.tvMeta)
+                            .foregroundColor(.txt2)
+                    }
+                    .padding(Layout.space16)
+                    .background(Color.bg1)
+                    .cornerRadius(Layout.radiusM)
+                    .shadow(color: (item.rank == 1 && (stage == "first" || stage == "full")) ? Color.accOrange.opacity(0.6) : .clear,
+                            radius: (item.rank == 1 && (stage == "first" || stage == "full")) ? 22 : 0)
+                    .opacity(isVisible(rank: item.rank) ? 1 : 0)
+                    .scaleEffect(isVisible(rank: item.rank) ? 1 : 0.96)
+                    .offset(y: isVisible(rank: item.rank) ? 0 : 10)
+                    .animation(.easeOut(duration: 0.55)
+                        .delay(Double(orderedRanks.firstIndex { $0.rank == item.rank } ?? 0) * 0.2),
+                        value: stage)
+                    }
+                }
+            }
+        }
+    }
+
+    private func rankColor(_ rank: Int) -> Color {
+        switch rank {
+        case 1: return .accOrange
+        case 2: return .accBlue
+        case 3: return .accMint
+        default: return .txt3
+        }
     }
 }
 

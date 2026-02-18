@@ -22,7 +22,7 @@ struct TVClueView: View {
                 // ── countdown timer (centered above clue) ──
                 if appState.clueTimerEnd != nil {
                     VStack(spacing: 12) {
-                        CountdownTimer(timerEndMs: appState.clueTimerEnd)
+                        CountdownTimer(timerEndMs: appState.clueTimerEnd, serverOffsetMs: appState.serverTimeOffsetMs)
 
                         // ── answer count badge ──
                         if appState.totalPlayers > 0 {
@@ -102,7 +102,7 @@ struct TVClueView: View {
                         value: appState.clueText
                     )
             } else {
-                Text("Väntar på ledtråd…")
+                Text("Väntar på nästa ledtråd…")
                     .font(.tvBody)  // 34pt
                     .foregroundColor(.txt3)
             }
@@ -144,22 +144,32 @@ struct TVClueView: View {
 
     /// "X / Y players locked" counter.
     private var lockedCountRow: some View {
-        let total  = appState.players.count
+        let total  = appState.totalPlayers > 0 ? appState.totalPlayers : appState.players.count
         let locked = appState.lockedAnswersCount
-        return Text("\(locked) / \(total) spelare låsta")
-            .font(.tvMeta)  // 28pt
-            .foregroundColor(.txt2)
+        return HStack(spacing: 12) {
+            Image(systemName: "lock.fill")
+                .font(.system(size: 22, weight: .semibold))
+                .foregroundColor(.accOrange)
+            Text("Svar låsta: \(locked) / \(total)")
+                .font(.tvMeta)  // 28pt
+                .foregroundColor(.txt2)
+        }
     }
 
     /// "X / Y svarat" badge showing answer progress.
     private var answerCountBadge: some View {
-        Text("\(appState.answeredCount)/\(appState.totalPlayers) svarat")
-            .font(.callout)
-            .foregroundColor(.txt1)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
-            .background(Color.accMint.opacity(0.2))
-            .cornerRadius(8)
+        HStack(spacing: 10) {
+            Image(systemName: "checkmark.circle.fill")
+                .font(.system(size: 20, weight: .semibold))
+                .foregroundColor(.accMint)
+            Text("\(appState.answeredCount)/\(appState.totalPlayers) svarat")
+                .font(.callout)
+                .foregroundColor(.txt1)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+        .background(Color.accMint.opacity(0.2))
+        .cornerRadius(12)
     }
 
     // MARK: – reconnect banner ─────────────────────────────────────────────
@@ -235,6 +245,7 @@ private struct SegmentView: View {
 /// Updates every second. Turns red when < 5 seconds remain.
 private struct CountdownTimer: View {
     let timerEndMs: Int?  // Unix timestamp in milliseconds
+    let serverOffsetMs: Double
 
     @State private var remainingSeconds: Int = 0
     @State private var timer: Timer?
@@ -283,7 +294,7 @@ private struct CountdownTimer: View {
             return
         }
 
-        let nowMs = Int(Date().timeIntervalSince1970 * 1000)
+        let nowMs = Int(Date().timeIntervalSince1970 * 1000 + serverOffsetMs)
         let diff = endMs - nowMs
         remainingSeconds = max(0, diff / 1000)
     }

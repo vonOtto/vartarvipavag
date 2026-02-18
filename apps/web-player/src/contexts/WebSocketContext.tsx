@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useRef, useState, useCallback, type ReactNode } from 'react';
-import type { GameEvent, GameState } from '../types/game';
+import type { GameEvent, GameState, LobbyUpdatedPayload } from '../types/game';
 import { loadSession } from '../services/storage';
 
 interface WebSocketContextValue {
@@ -7,6 +7,8 @@ interface WebSocketContextValue {
   lastEvent: GameEvent | null;
   gameState: GameState | null;
   error: string | null;
+  serverTimeOffsetMs: number;
+  getServerNowMs: () => number;
   sendMessage: (type: string, payload: any) => void;
   reconnect: () => void;
 }
@@ -21,7 +23,11 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
   const [isConnected, setIsConnected] = useState(false);
   const [lastEvent, setLastEvent] = useState<GameEvent | null>(null);
   const [gameState, setGameState] = useState<GameState | null>(null);
+  const gameStateRef = useRef<GameState | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [serverTimeOffsetMs, setServerTimeOffsetMs] = useState(0);
+  const serverTimeOffsetRef = useRef(0);
+  const hasServerTimeOffsetRef = useRef(false);
 
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -29,6 +35,26 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
   const reconnectDelayRef = useRef(INITIAL_RECONNECT_DELAY);
   const isConnectingRef = useRef(false);
   const generationRef = useRef(0);
+
+  useEffect(() => {
+    gameStateRef.current = gameState;
+  }, [gameState]);
+
+  const updateServerTimeOffset = useCallback((serverTimeMs: number) => {
+    const localNow = Date.now();
+    const sampleOffset = serverTimeMs - localNow;
+    if (!hasServerTimeOffsetRef.current) {
+      hasServerTimeOffsetRef.current = true;
+      serverTimeOffsetRef.current = sampleOffset;
+      setServerTimeOffsetMs(sampleOffset);
+      return;
+    }
+    const blended = serverTimeOffsetRef.current * 0.85 + sampleOffset * 0.15;
+    serverTimeOffsetRef.current = blended;
+    setServerTimeOffsetMs(blended);
+  }, []);
+
+  const getServerNowMs = useCallback(() => Date.now() + serverTimeOffsetRef.current, []);
 
   const connect = useCallback(() => {
     const session = loadSession();
@@ -66,6 +92,10 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
     try {
       const ws = new WebSocket(wsUrl);
       wsRef.current = ws;
+      (window as any).__ws = ws;
+      if (!(window as any).__wsMessages) {
+        (window as any).__wsMessages = [];
+      }
 
       ws.onopen = () => {
         if (myGeneration !== generationRef.current) {
@@ -74,6 +104,7 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
         }
 
         console.log('WebSocket: Connected');
+        (window as any).__wsStatus = { state: 'open' };
         setIsConnected(true);
         setError(null);
         reconnectAttemptsRef.current = 0;
@@ -86,15 +117,48 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
 
         try {
           const message = JSON.parse(event.data) as GameEvent;
+          if (typeof message.serverTimeMs === 'number') {
+            updateServerTimeOffset(message.serverTimeMs);
+          }
+          (window as any).__wsMessages?.push(message);
           console.log('WebSocket: Received event', message.type, message);
 
           if (message.type === 'STATE_SNAPSHOT') {
             try {
               const payload = message.payload as { state: GameState };
               setGameState(payload.state);
+              (window as any).__gameState = payload.state;
             } catch (stateErr) {
               console.error('WebSocket: Failed to update game state', stateErr, message);
             }
+          }
+          if (message.type === 'LOBBY_UPDATED') {
+            const payload = message.payload as LobbyUpdatedPayload;
+            const currentState = gameStateRef.current;
+            if (currentState) {
+              const hostEntry = currentState.players.find((p) => p.role === 'host');
+              const updatedPlayers = payload.players.map((p) => {
+                const existing = currentState.players.find((pl) => pl.playerId === p.playerId);
+                return {
+                  playerId: p.playerId,
+                  name: p.name,
+                  role: 'player',
+                  isConnected: p.isConnected,
+                  joinedAtMs: existing?.joinedAtMs ?? Date.now(),
+                  score: existing?.score ?? 0,
+                };
+              });
+              const nextState = {
+                ...currentState,
+                joinCode: payload.joinCode || currentState.joinCode,
+                players: hostEntry ? [hostEntry, ...updatedPlayers] : updatedPlayers,
+              };
+              setGameState(nextState);
+              (window as any).__gameState = nextState;
+            }
+          }
+          if (message.type === 'PLAYER_LEFT') {
+            console.log('WebSocket: PLAYER_LEFT payload', message.payload);
           }
 
           setLastEvent(message);
@@ -112,6 +176,7 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
         }
 
         console.error('WebSocket: Error', event);
+        (window as any).__wsStatus = { state: 'error' };
         setError('Connection error occurred');
         isConnectingRef.current = false;
       };
@@ -124,8 +189,12 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
         }
 
         console.log('WebSocket: Closed', event.code, event.reason);
+        (window as any).__wsStatus = { state: 'closed', code: event.code, reason: event.reason };
         setIsConnected(false);
         isConnectingRef.current = false;
+        if ((window as any).__ws === ws) {
+          (window as any).__ws = null;
+        }
 
         // 4xxx = auth / session error — do not retry
         if (event.code >= 4000 && event.code < 5000) {
@@ -168,7 +237,7 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
       const message = {
         type,
         sessionId: gameState?.sessionId || session?.sessionId || '',
-        serverTimeMs: Date.now(),
+        serverTimeMs: getServerNowMs(),
         payload,
       };
       console.log('WebSocket: Sending message', message);
@@ -176,7 +245,7 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
     } else {
       console.warn('WebSocket: Cannot send message, not connected');
     }
-  }, [gameState?.sessionId]);
+  }, [gameState?.sessionId, getServerNowMs]);
 
   const reconnectFn = useCallback(() => {
     reconnectAttemptsRef.current = 0;
@@ -192,6 +261,7 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
 
     return () => {
       generationRef.current += 1;
+      isConnectingRef.current = false;
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current);
         reconnectTimeoutRef.current = null;
@@ -262,6 +332,8 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
     lastEvent,
     gameState,
     error,
+    serverTimeOffsetMs,
+    getServerNowMs,
     sendMessage,
     reconnect: reconnectFn,
   };

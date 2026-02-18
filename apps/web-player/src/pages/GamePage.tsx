@@ -20,7 +20,8 @@ const HostGameView: React.FC<{
   sessionId: string;
   answeredCount: number;
   totalPlayers: number;
-}> = ({ gameState, currentClue, isConnected, error, sendMessage, sessionId, answeredCount, totalPlayers }) => {
+  getServerNowMs: () => number;
+}> = ({ gameState, currentClue, isConnected, error, sendMessage, sessionId, answeredCount, totalPlayers, getServerNowMs }) => {
   const hostPlayerId = gameState?.players?.find(p => p.role === 'host')?.playerId;
 
   const brakeOwnerName = gameState.brakeOwnerPlayerId
@@ -39,13 +40,13 @@ const HostGameView: React.FC<{
       return;
     }
     const tick = () => {
-      const remaining = Math.max(0, Math.ceil((timer.startAtServerMs + timer.durationMs - Date.now()) / 1000));
+      const remaining = Math.max(0, Math.ceil((timer.startAtServerMs + timer.durationMs - getServerNowMs()) / 1000));
       setHostFqTimeLeft(remaining);
     };
     tick();
     hostTimerRef.current = setInterval(tick, 500);
     return () => { if (hostTimerRef.current) clearInterval(hostTimerRef.current); };
-  }, [gameState?.followupQuestion?.timer?.timerId, gameState?.followupQuestion?.timer?.startAtServerMs]);
+  }, [gameState?.followupQuestion?.timer?.timerId, gameState?.followupQuestion?.timer?.startAtServerMs, getServerNowMs]);
 
   const isFollowup = gameState.phase === 'FOLLOWUP_QUESTION' && gameState.followupQuestion != null;
 
@@ -130,14 +131,14 @@ const HostGameView: React.FC<{
 
             {/* Clue timer (if available) */}
             {currentClue?.timerEnd && (
-              <ClueTimer timerEnd={currentClue.timerEnd} />
+              <ClueTimer timerEnd={currentClue.timerEnd} nowMs={getServerNowMs} />
             )}
 
             {/* Current clue */}
             {currentClue ? (
               <ClueDisplay points={currentClue.points} clueText={currentClue.text} />
             ) : (
-              <div className="waiting-message">Väntar på nästa ledtråd...</div>
+              <div className="waiting-message">Väntar på nästa ledtråd…</div>
             )}
 
             {/* Brake status */}
@@ -189,7 +190,7 @@ const HostGameView: React.FC<{
         <div className="host-section scoreboard">
           <h3 style={{ margin: '0 0 0.5rem' }}>Poäng</h3>
           {gameState.scoreboard.length === 0 ? (
-            <div style={{ opacity: 0.6, fontSize: '0.95rem' }}>Ingen poängtablell</div>
+            <div style={{ opacity: 0.6, fontSize: '0.95rem' }}>Ingen poängtavla</div>
           ) : (
             <ol>
               {gameState.scoreboard.filter(e => e.playerId !== hostPlayerId).map(entry => (
@@ -231,7 +232,7 @@ export const GamePage: React.FC = () => {
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const { isConnected, lastEvent, gameState, error, sendMessage } = useWebSocketContext();
+  const { isConnected, lastEvent, gameState, error, sendMessage, getServerNowMs } = useWebSocketContext();
 
   // Redirect to join if no session
   useEffect(() => {
@@ -285,8 +286,8 @@ export const GamePage: React.FC = () => {
       case 'BRAKE_REJECTED': {
         setBraking(false);
         const payload = lastEvent.payload as BrakeRejectedPayload;
-        const messages: Record<string, string> = {
-          too_late: 'Någon annan var snabbarre!',
+          const messages: Record<string, string> = {
+          too_late: 'Någon annan var snabbare!',
           already_paused: 'Spelet är redan pausat.',
           rate_limited: 'Vänta innan du försöker igen.',
           invalid_phase: 'Kan inte bromsa just nu.',
@@ -354,13 +355,13 @@ export const GamePage: React.FC = () => {
       return;
     }
     const tick = () => {
-      const remaining = Math.max(0, Math.ceil((timer.startAtServerMs + timer.durationMs - Date.now()) / 1000));
+      const remaining = Math.max(0, Math.ceil((timer.startAtServerMs + timer.durationMs - getServerNowMs()) / 1000));
       setTimeLeft(remaining);
     };
     tick();
     timerRef.current = setInterval(tick, 500);
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
-  }, [gameState?.followupQuestion?.timer?.timerId, gameState?.followupQuestion?.timer?.startAtServerMs]);
+  }, [gameState?.followupQuestion?.timer?.timerId, gameState?.followupQuestion?.timer?.startAtServerMs, getServerNowMs]);
 
   // Follow-up: capture own result AND full results from FOLLOWUP_RESULTS event
   useEffect(() => {
@@ -373,6 +374,11 @@ export const GamePage: React.FC = () => {
         correctAnswer: payload.correctAnswer,
       });
       setFqAllResults(payload);
+      setTimeLeft(0);
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
     }
   }, [lastEvent, session?.playerId]);
 
@@ -475,6 +481,7 @@ export const GamePage: React.FC = () => {
         sessionId={session.sessionId}
         answeredCount={answeredCount}
         totalPlayers={totalPlayers}
+        getServerNowMs={getServerNowMs}
       />
     );
   }
@@ -523,10 +530,10 @@ export const GamePage: React.FC = () => {
           displayedClueText !== null ? (
             <ClueDisplay points={currentClue.points} clueText={displayedClueText} />
           ) : (
-            <div className="waiting-message">Lyssnar på ledtrådan...</div>
+            <div className="waiting-message">Lyssnar på ledtråden...</div>
           )
         ) : (
-          <div className="waiting-message">Väntar på nästa ledtråd...</div>
+          <div className="waiting-message">Väntar på nästa ledtråd…</div>
         )}
 
         {/* Brake rejection toast */}
@@ -535,7 +542,7 @@ export const GamePage: React.FC = () => {
         )}
 
         {/* CLUE_LEVEL: timer + brake button + locked badge */}
-        {gameState?.phase === 'CLUE_LEVEL' && (
+        {(gameState?.phase === 'CLUE_LEVEL' || gameState?.phase === 'PAUSED_FOR_BRAKE') && (
           <>
             {/* Answer count badge */}
             {totalPlayers > 0 && (
@@ -544,9 +551,13 @@ export const GamePage: React.FC = () => {
               </div>
             )}
 
+            {gameState?.phase === 'CLUE_LEVEL' && (
+              <div className="clue-hint">Tryck Broms när du vill låsa ditt svar</div>
+            )}
+
             {/* Clue timer (if available) */}
             {currentClue?.timerEnd && (
-              <ClueTimer timerEnd={currentClue.timerEnd} />
+              <ClueTimer timerEnd={currentClue.timerEnd} nowMs={getServerNowMs} />
             )}
 
             <BrakeButton disabled={!canBrake} onPullBrake={handlePullBrake} />
@@ -575,7 +586,7 @@ export const GamePage: React.FC = () => {
             )
           ) : (
             <div className="brake-message">
-              {brakeOwnerName || 'Någon'} bromsade!
+              {brakeOwnerName || 'Någon'} bromsade — inväntar svar…
             </div>
           )
         )}
@@ -590,6 +601,7 @@ export const GamePage: React.FC = () => {
         {/* ── Follow-up question ── */}
         {gameState?.phase === 'FOLLOWUP_QUESTION' && gameState.followupQuestion && (() => {
           const fq = gameState.followupQuestion;
+          const resultsVisible = !!fqAllResults || !!fqResult;
           const timerPct = fq.timer
             ? Math.max(0, (timeLeft ?? 0) / (fq.timer.durationMs / 1000)) * 100
             : 0;
@@ -601,7 +613,7 @@ export const GamePage: React.FC = () => {
                 <span className="followup-progress">
                   Fråga {fq.currentQuestionIndex + 1} / {fq.totalQuestions}
                 </span>
-                {timeLeft !== null && (
+                {!resultsVisible && timeLeft !== null && (
                   <span className={`followup-timer ${timeLeft <= 3 ? 'followup-timer-urgent' : ''}`}>
                     {timeLeft}s
                   </span>
@@ -609,7 +621,7 @@ export const GamePage: React.FC = () => {
               </div>
 
               {/* Timer bar */}
-              {fq.timer && (
+              {fq.timer && !resultsVisible && (
                 <div className="followup-timer-bar-bg">
                   <div className="followup-timer-bar" style={{ width: `${timerPct}%` }} />
                 </div>

@@ -39,13 +39,13 @@ struct TVFollowupView: View {
 
     @ViewBuilder
     private var progressHeader: some View {
-        if let fq = appState.followupQuestion {
+        if appState.followupResults == nil, let fq = appState.followupQuestion {
             HStack {
                 Text("Fråga \(fq.currentQuestionIndex + 1) / \(fq.totalQuestions)")
                     .font(.tvBody)  // 34pt
                     .foregroundColor(.txt2)
                 Spacer()
-                CountdownLabel(fq: fq)
+                CountdownLabel(fq: fq, serverOffsetMs: appState.serverTimeOffsetMs)
             }
         }
     }
@@ -54,8 +54,8 @@ struct TVFollowupView: View {
 
     @ViewBuilder
     private var timerBar: some View {
-        if let fq = appState.followupQuestion {
-            AnimatedTimerBar(fq: fq)
+        if appState.followupResults == nil, let fq = appState.followupQuestion {
+            AnimatedTimerBar(fq: fq, serverOffsetMs: appState.serverTimeOffsetMs)
         }
     }
 
@@ -96,15 +96,13 @@ struct TVFollowupView: View {
 /// Ticks every second, derived from server startAt + duration.
 private struct CountdownLabel: View {
     let fq: FollowupQuestionInfo
-
-    private var deadline: Date {
-        guard let start = fq.timerStartMs, let dur = fq.timerDurationMs else { return Date() }
-        return Date(timeIntervalSince1970: Double(start + dur) / 1000.0)
-    }
+    let serverOffsetMs: Double
 
     var body: some View {
         TimelineView(.periodic(from: Date(), by: 1.0)) { timeline in
-            let remaining = max(0, Int(deadline.timeIntervalSince(timeline.date)))
+            let serverNowMs = timeline.date.timeIntervalSince1970 * 1000.0 + serverOffsetMs
+            let deadlineMs = Double((fq.timerStartMs ?? 0) + (fq.timerDurationMs ?? 0))
+            let remaining = max(0, Int(ceil((deadlineMs - serverNowMs) / 1000.0)))
             let isUrgent = remaining <= 10
             let isCritical = remaining <= 3
 
@@ -126,11 +124,8 @@ private struct CountdownLabel: View {
 /// Shrinking progress bar driven by TimelineView (no manual timer needed).
 private struct AnimatedTimerBar: View {
     let fq: FollowupQuestionInfo
+    let serverOffsetMs: Double
 
-    private var startDate: Date {
-        guard let ms = fq.timerStartMs else { return Date() }
-        return Date(timeIntervalSince1970: Double(ms) / 1000.0)
-    }
     private var duration: Double {
         guard let ms = fq.timerDurationMs else { return 15.0 }
         return Double(ms) / 1000.0
@@ -138,7 +133,9 @@ private struct AnimatedTimerBar: View {
 
     var body: some View {
         TimelineView(.periodic(from: Date(), by: 0.2)) { timeline in
-            let elapsed   = timeline.date.timeIntervalSince(startDate)
+            let serverNowMs = timeline.date.timeIntervalSince1970 * 1000.0 + serverOffsetMs
+            let startMs = Double(fq.timerStartMs ?? 0)
+            let elapsed = max(0, (serverNowMs - startMs) / 1000.0)
             let fraction  = max(0, min(1, 1 - elapsed / duration))
             let urgent    = fraction < 0.2   // last ~3 s of a 15 s timer
 

@@ -416,8 +416,6 @@ export function onFinalResults(session: Session): AudioDirectorResult {
 
   const scheduled: Array<{ event: EventEnvelope; delayMs: number }> = [
     { event: buildSfxPlayEvent(sessionId, 'sfx_drumroll', now + 800),          delayMs: 800 },
-    { event: buildSfxPlayEvent(sessionId, 'sfx_winner_fanfare', now + 3200),   delayMs: 3200 },
-    { event: buildUiEffectTriggerEvent(sessionId, 'confetti', 'high'),         delayMs: 3200 },
   ];
 
   return { immediate, scheduled };

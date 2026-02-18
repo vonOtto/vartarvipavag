@@ -32,6 +32,7 @@ import {
   buildNextDestinationEvent,
   buildGameEndedEvent,
   buildAnswerCountUpdateEvent,
+  buildSfxPlayEvent,
 } from './utils/event-builder';
 import { projectState } from './utils/state-projection';
 import { buildLobbyUpdatedEvent } from './utils/lobby-events';
@@ -267,6 +268,18 @@ export function createWebSocketServer(server: HTTPServer) {
         code,
         reason: reason.toString(),
       });
+
+      // Ignore stale close events if a newer connection is already active
+      const activeConnection = sessionStore.getConnection(sessionId, actualPlayerId);
+      if (activeConnection && activeConnection.connectionId !== connectionId) {
+        logger.info('Ignoring close for stale connection', {
+          sessionId,
+          playerId: actualPlayerId,
+          staleConnectionId: connectionId,
+          activeConnectionId: activeConnection.connectionId,
+        });
+        return;
+      }
 
       // Remove the WebSocket entry and mark player as disconnected
       sessionStore.removeConnection(sessionId, actualPlayerId);
@@ -2899,28 +2912,35 @@ function transitionToFinalResults(sessionId: string): void {
     }, delayMs);
   });
 
-  // Server-driven UI events at t=7.0 s (podium) and t=10.5 s (full standings)
-  setTimeout(() => {
-    const sess = sessionStore.getSession(sessionId);
-    if (!sess || sess.state.phase !== 'FINAL_RESULTS') return;
-    sessionStore.broadcastEventToSession(sessionId, {
-      type: 'UI_EFFECT_TRIGGER',
-      sessionId,
-      serverTimeMs: getServerTimeMs(),
-      payload: { effectId: 'podium_reveal', intensity: 'med', durationMs: 3500 },
-    });
-  }, 7000);
+  // Server-driven staged podium reveals (3rd → 2nd → 1st) + full standings
+  const stageSchedule = [
+    { delayMs: 3600, effectId: 'podium_third',  sfxId: 'sfx_reveal' },
+    { delayMs: 5600, effectId: 'podium_second', sfxId: 'sfx_reveal' },
+    // Small "drumroll stop" sting right before first place
+    { delayMs: 7800, effectId: 'podium_first',  sfxId: 'sfx_sting_build' },
+    { delayMs: 8200, effectId: 'podium_first',  sfxId: 'sfx_winner_fanfare' },
+    { delayMs: 8200, effectId: 'confetti',      sfxId: null },
+    { delayMs: 11000, effectId: 'full_standings', sfxId: null },
+  ];
 
-  setTimeout(() => {
-    const sess = sessionStore.getSession(sessionId);
-    if (!sess || sess.state.phase !== 'FINAL_RESULTS') return;
-    sessionStore.broadcastEventToSession(sessionId, {
-      type: 'UI_EFFECT_TRIGGER',
-      sessionId,
-      serverTimeMs: getServerTimeMs(),
-      payload: { effectId: 'full_standings', intensity: 'low', durationMs: 3500 },
-    });
-  }, 10500);
+  stageSchedule.forEach(({ delayMs, effectId, sfxId }) => {
+    setTimeout(() => {
+      const sess = sessionStore.getSession(sessionId);
+      if (!sess || sess.state.phase !== 'FINAL_RESULTS') return;
+      if (sfxId) {
+        sessionStore.broadcastEventToSession(
+          sessionId,
+          buildSfxPlayEvent(sessionId, sfxId, getServerTimeMs())
+        );
+      }
+      sessionStore.broadcastEventToSession(sessionId, {
+        type: 'UI_EFFECT_TRIGGER',
+        sessionId,
+        serverTimeMs: getServerTimeMs(),
+        payload: { effectId, intensity: effectId === 'confetti' ? 'high' : 'med', durationMs: 3500 },
+      });
+    }, delayMs);
+  });
 
   // Transition to ROUND_END at t=11.0 s
   setTimeout(() => {

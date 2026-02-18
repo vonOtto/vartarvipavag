@@ -17,6 +17,7 @@ export const RevealPage: React.FC = () => {
   const session = loadSession();
   const [destination, setDestination] = useState<{ name: string; country: string } | null>(null);
   const [myResult, setMyResult] = useState<MyResult | null>(null);
+  const [finalStage, setFinalStage] = useState<'idle' | 'pending' | 'third' | 'second' | 'first' | 'full'>('idle');
 
   const { isConnected, lastEvent, gameState, error } = useWebSocketContext();
 
@@ -36,7 +37,12 @@ export const RevealPage: React.FC = () => {
     } else if (gameState?.phase === 'CLUE_LEVEL' || gameState?.phase === 'FOLLOWUP_QUESTION') {
       navigate('/game');
     }
-  }, [gameState?.phase, navigate]);
+    if (gameState?.phase !== 'FINAL_RESULTS') {
+      setFinalStage('idle');
+    } else if (gameState?.phase === 'FINAL_RESULTS' && finalStage === 'idle') {
+      setFinalStage('pending');
+    }
+  }, [gameState?.phase, navigate, finalStage]);
 
   // Update destination when revealed
   useEffect(() => {
@@ -92,6 +98,25 @@ export const RevealPage: React.FC = () => {
     return gameState?.scoreboard || [];
   }, [lastEvent, gameState]);
 
+  const topThree = React.useMemo(() => {
+    return [...scoreboard].sort((a, b) => b.score - a.score).slice(0, 3);
+  }, [scoreboard]);
+
+  // FINAL_RESULTS choreography from UI_EFFECT_TRIGGER
+  useEffect(() => {
+    if (lastEvent?.type !== 'UI_EFFECT_TRIGGER') return;
+    const payload = lastEvent.payload as { effectId?: string };
+    if (payload.effectId === 'podium_third') {
+      setFinalStage('third');
+    } else if (payload.effectId === 'podium_second') {
+      setFinalStage('second');
+    } else if (payload.effectId === 'podium_first') {
+      setFinalStage('first');
+    } else if (payload.effectId === 'full_standings') {
+      setFinalStage('full');
+    }
+  }, [lastEvent]);
+
   if (!session) {
     return null;
   }
@@ -130,9 +155,10 @@ export const RevealPage: React.FC = () => {
                 <h2>Det var...</h2>
                 <div className="destination-name">{destination.name}</div>
                 <div className="destination-country">{destination.country}</div>
+                <div className="reveal-subtitle">Snygg resa. Nu kollar vi poängen.</div>
               </div>
             ) : (
-              <div className="waiting-message">Avslöjar destination...</div>
+              <div className="waiting-message">Avslöjar destinationen…</div>
             )}
 
             {/* Own answer result */}
@@ -167,8 +193,48 @@ export const RevealPage: React.FC = () => {
               </div>
             )}
 
+            {/* FINAL_RESULTS podium */}
+            {gameState?.phase === 'FINAL_RESULTS' && topThree.length > 0 && finalStage !== 'pending' && (
+              <div className={`final-podium ${finalStage !== 'idle' ? 'podium-reveal' : ''}`}>
+                <div className="podium-title">{topThree.length === 1 ? 'Ensam vinnare' : 'Slutställning'}</div>
+                {topThree.length === 1 && (
+                  <div className="podium-subtitle">En värdig seger — allt mot alla och du vann.</div>
+                )}
+                <div className="podium-grid">
+                  {(() => {
+                    const rankMap = {
+                      1: topThree[0],
+                      2: topThree[1],
+                      3: topThree[2],
+                    } as const;
+                    const order = [3, 2, 1] as const;
+                    const stageVisible = (rank: 1 | 2 | 3) => {
+                      if (finalStage === 'third') return rank === 3;
+                      if (finalStage === 'second') return rank >= 2;
+                      if (finalStage === 'first' || finalStage === 'full') return true;
+                      return false;
+                    };
+                    return order
+                      .filter((rank) => rankMap[rank])
+                      .filter((rank) => stageVisible(rank))
+                      .map((rank) => {
+                        const entry = rankMap[rank]!;
+                        const isWinner = rank === 1 && (finalStage === 'first' || finalStage === 'full');
+                        return (
+                          <div key={entry.playerId} className={`podium-card podium-rank-${rank} ${isWinner ? 'podium-winner' : ''}`}>
+                            <div className="podium-rank">{rank}</div>
+                            <div className="podium-name">{entry.name}</div>
+                            <div className="podium-score">{entry.score} p</div>
+                          </div>
+                        );
+                      });
+                  })()}
+                </div>
+              </div>
+            )}
+
             {/* Scoreboard */}
-            {scoreboard.length > 0 && (
+            {(gameState?.phase !== 'FINAL_RESULTS' || finalStage === 'full') && scoreboard.length > 0 && (
               <Scoreboard entries={scoreboard} myPlayerId={session.playerId} />
             )}
           </>
@@ -193,7 +259,7 @@ export const RevealPage: React.FC = () => {
         )}
 
         {gameState?.phase === 'FINAL_RESULTS' && (
-          <div className="game-complete">Spelet klart!</div>
+          <div className="game-complete">Spelet är klart!</div>
         )}
       </div>
     </div>

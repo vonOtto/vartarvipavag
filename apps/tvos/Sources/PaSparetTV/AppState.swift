@@ -26,6 +26,8 @@ class AppState: ObservableObject {
     @Published var clueTimerEnd      : Int? = nil  // Unix timestamp when clue timer expires
     @Published var answeredCount     : Int = 0
     @Published var totalPlayers      : Int = 0
+    @Published var serverTimeOffsetMs: Double = 0
+    @Published var finalResultsStage : String = "idle" // idle | pending | podium | full
 
     // MARK: – multi-destination tracking
     @Published var destinationIndex          : Int?  // 1-based (1, 2, 3...)
@@ -56,6 +58,32 @@ class AppState: ObservableObject {
     private var reconnectAttempt: Int  = 0
     private static let maxAttempts    = 10
     private static let maxDelay       = 10.0   // seconds (backoff cap)
+    private var hasServerTimeOffset   = false
+
+    // MARK: – helpers ───────────────────────────────────────────────────
+
+    private func parseInt(_ value: Any?) -> Int? {
+        if let i = value as? Int { return i }
+        if let d = value as? Double { return Int(d) }
+        if let s = value as? String { return Int(s) }
+        return nil
+    }
+
+    private func updateServerTimeOffset(from json: [String: Any]) {
+        guard let serverMs = parseInt(json["serverTimeMs"]) else { return }
+        let localMs = Date().timeIntervalSince1970 * 1000.0
+        let sampleOffset = Double(serverMs) - localMs
+        if !hasServerTimeOffset {
+            hasServerTimeOffset = true
+            serverTimeOffsetMs = sampleOffset
+            return
+        }
+        serverTimeOffsetMs = (serverTimeOffsetMs * 0.85) + (sampleOffset * 0.15)
+    }
+
+    func serverNowMs() -> Double {
+        return Date().timeIntervalSince1970 * 1000.0 + serverTimeOffsetMs
+    }
 
     // MARK: – connect ────────────────────────────────────────────────────────
 
@@ -115,6 +143,8 @@ class AppState: ObservableObject {
               let type = json["type"] as? String
         else { return }
 
+        updateServerTimeOffset(from: json)
+
         switch type {
 
         // ── auth handshake ──────────────────────────────────────────────
@@ -154,7 +184,7 @@ class AppState: ObservableObject {
                 }
             }
             if let p = payload["clueLevelPoints"] as? Int    { levelPoints = p }
-            clueTimerEnd   = payload["timerEnd"] as? Int    // Unix timestamp
+            clueTimerEnd   = parseInt(payload["timerEnd"])  // Unix timestamp
             phase          = "CLUE_LEVEL"
             brakeOwnerName = nil
             // Reset answer count when new clue is presented
@@ -332,6 +362,10 @@ class AppState: ObservableObject {
             guard let payload  = json["payload"] as? [String: Any],
                   let effectId = payload["effectId"] as? String else { break }
             if effectId == "confetti" { showConfetti = true }
+            if effectId == "podium_third" { finalResultsStage = "third" }
+            if effectId == "podium_second" { finalResultsStage = "second" }
+            if effectId == "podium_first" { finalResultsStage = "first" }
+            if effectId == "full_standings" { finalResultsStage = "full" }
 
         case "TTS_PREFETCH":
             guard let payload = json["payload"] as? [String: Any],
@@ -345,10 +379,7 @@ class AppState: ObservableObject {
 
         case "FINAL_RESULTS_PRESENT":
             phase = "FINAL_RESULTS"
-            if !showConfetti {
-                audio.playSFX(sfxId: "sfx_winner_fanfare")
-                showConfetti = true
-            }
+            finalResultsStage = "pending"
 
         case "NEXT_DESTINATION_EVENT":
             guard let payload = json["payload"] as? [String: Any] else { break }
@@ -403,6 +434,7 @@ class AppState: ObservableObject {
         if let jc           = state.joinCode { joinCode = jc }
         followupQuestion    = state.followupQuestion
         if state.phase != "FOLLOWUP_QUESTION" { followupResults = nil }
+        if state.phase != "FINAL_RESULTS" { finalResultsStage = "idle" }
 
         // Multi-destination tracking
         destinationIndex          = state.destinationIndex
@@ -411,9 +443,8 @@ class AppState: ObservableObject {
 
         // Fallback: fanfare + confetti on FINAL_RESULTS entry.
         // Covers reconnect mid-finale when the SFX event sequence is missed.
-        if enteringFinale && !showConfetti {
-            audio.playSFX(sfxId: "sfx_winner_fanfare")
-            showConfetti = true
+        if enteringFinale {
+            finalResultsStage = "pending"
         }
 
         // Re-issue looping music on reconnect into music-bearing phases.

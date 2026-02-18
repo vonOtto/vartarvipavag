@@ -2,15 +2,16 @@ import React, { useEffect, useState, useRef } from 'react';
 
 interface ClueTimerProps {
   timerEnd: number; // Unix timestamp in milliseconds
+  nowMs?: () => number;
 }
 
-export const ClueTimer: React.FC<ClueTimerProps> = ({ timerEnd }) => {
+export const ClueTimer: React.FC<ClueTimerProps> = ({ timerEnd, nowMs }) => {
   const [secondsLeft, setSecondsLeft] = useState<number>(0);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     const updateTimer = () => {
-      const now = Date.now();
+      const now = nowMs ? nowMs() : Date.now();
       const remaining = Math.max(0, Math.ceil((timerEnd - now) / 1000));
       setSecondsLeft(remaining);
     };
