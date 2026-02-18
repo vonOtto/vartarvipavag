@@ -24,7 +24,26 @@ import {
   estimateDuration,
 } from './script-templates';
 
-const AI_CONTENT_URL = process.env.AI_CONTENT_URL ?? 'http://localhost:3001';
+const DEFAULT_AI_CONTENT_URL = 'http://localhost:3001';
+const DEFAULT_TTS_TIMEOUT_MS = 5000;
+
+function getAIContentUrl(): string {
+  return (
+    process.env.AI_CONTENT_URL ??
+    process.env.AI_CONTENT_SERVICE_URL ??
+    DEFAULT_AI_CONTENT_URL
+  );
+}
+
+async function fetchWithTimeout(input: RequestInfo, init: RequestInit, timeoutMs: number): Promise<Response> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(input, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(timeout);
+  }
+}
 
 // ── banter phrase pool — nu med förbättrade templates från script-templates.ts
 // Keys = phraseId prefixes that audio-director.ts searches via startsWith().
@@ -63,11 +82,11 @@ export async function generateClueVoice(
   const text = buildClueRead(clueLevel, clueText);
 
   try {
-    const res = await fetch(`${AI_CONTENT_URL}/tts`, {
+    const res = await fetchWithTimeout(`${getAIContentUrl()}/tts`, {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify({ text }),
-    });
+    }, DEFAULT_TTS_TIMEOUT_MS);
 
     if (!res.ok) {
       logger.warn('generateClueVoice: ai-content non-OK', {
@@ -127,11 +146,11 @@ export async function generateQuestionVoice(
   const { text } = buildQuestionRead(questionText);
 
   try {
-    const res = await fetch(`${AI_CONTENT_URL}/tts`, {
+    const res = await fetchWithTimeout(`${getAIContentUrl()}/tts`, {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify({ text }),
-    });
+    }, DEFAULT_TTS_TIMEOUT_MS);
 
     if (!res.ok) {
       logger.warn('generateQuestionVoice: ai-content non-OK', {
@@ -183,11 +202,11 @@ export async function generateFollowupIntroVoice(
   const estimatedDurationMs = estimateDuration(text);
 
   try {
-    const res = await fetch(`${AI_CONTENT_URL}/tts`, {
+    const res = await fetchWithTimeout(`${getAIContentUrl()}/tts`, {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify({ text }),
-    });
+    }, DEFAULT_TTS_TIMEOUT_MS);
 
     if (!res.ok) {
       logger.warn('generateFollowupIntroVoice: ai-content non-OK', {
@@ -232,11 +251,11 @@ export async function prefetchRoundTts(session: Session): Promise<void> {
   const voiceLines = buildBanterLines();
 
   try {
-    const res = await fetch(`${AI_CONTENT_URL}/tts/batch`, {
+    const res = await fetchWithTimeout(`${getAIContentUrl()}/tts/batch`, {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify({ roundId, voiceLines }),
-    });
+    }, DEFAULT_TTS_TIMEOUT_MS);
 
     if (!res.ok) {
       logger.warn('prefetchRoundTts: ai-content non-OK', {
