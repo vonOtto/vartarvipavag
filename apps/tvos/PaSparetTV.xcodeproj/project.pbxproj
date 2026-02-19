@@ -226,7 +226,7 @@
 				ENABLE_TESTABILITY = YES;
 				SDKROOT = appletvsimulator;
 				SWIFT_VERSION = "5.9";
-				TVOS_DEPLOYMENT_TARGET = 16.0;
+				TVOS_DEPLOYMENT_TARGET = 17.0;
 			};
 			name = Debug;
 		};
@@ -238,7 +238,7 @@
 				CODE_SIGNING_REQUIRED = NO;
 				SDKROOT = appletvsimulator;
 				SWIFT_VERSION = "5.9";
-				TVOS_DEPLOYMENT_TARGET = 16.0;
+				TVOS_DEPLOYMENT_TARGET = 17.0;
 			};
 			name = Release;
 		};
@@ -250,7 +250,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = "com.pasparet.tvos";
 				PRODUCT_TYPE = "com.apple.product-type.application";
 				SWIFT_VERSION = "5.9";
-				TVOS_DEPLOYMENT_TARGET = 16.0;
+				TVOS_DEPLOYMENT_TARGET = 17.0;
 			};
 			name = Debug;
 		};
@@ -262,7 +262,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = "com.pasparet.tvos";
 				PRODUCT_TYPE = "com.apple.product-type.application";
 				SWIFT_VERSION = "5.9";
-				TVOS_DEPLOYMENT_TARGET = 16.0;
+				TVOS_DEPLOYMENT_TARGET = 17.0;
 			};
 			name = Release;
 		};

@@ -118,156 +118,164 @@ struct LaunchView: View {
     @State private var heroOffset: CGFloat = 0
 
     var body: some View {
-        ZStack {
-            Color.bg0.ignoresSafeArea()
+        GeometryReader { geo in
+            let isCompact = geo.size.height < 900
 
-            // Moving particles background
-            MovingParticlesView()
+            ZStack {
+                Color.bg0.ignoresSafeArea()
 
-            VStack(spacing: Layout.space48) {
-                // Hero image with floating animation
-                Image("hero")
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(width: 350)
-                    .scaleEffect(heroScale)
-                    .offset(y: heroOffset)
-                    .onAppear {
-                        withAnimation(.easeInOut(duration: 2.5).repeatForever(autoreverses: true)) {
-                            heroScale = 1.05
-                            heroOffset = -10
+                // Moving particles background
+                MovingParticlesView()
+
+                ScrollView(.vertical, showsIndicators: false) {
+                    VStack(spacing: isCompact ? Layout.space32 : Layout.space48) {
+                        // Hero image with floating animation
+                        Image("hero")
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(width: isCompact ? 260 : 350)
+                            .scaleEffect(heroScale)
+                            .offset(y: heroOffset)
+                            .onAppear {
+                                withAnimation(.easeInOut(duration: 2.5).repeatForever(autoreverses: true)) {
+                                    heroScale = 1.05
+                                    heroOffset = -10
+                                }
+                            }
+
+                        // Title
+                        VStack(spacing: Layout.space16) {
+                            Text("tripto")
+                                .font(.tvH1)  // 72pt Semibold
+                                .foregroundStyle(
+                                    LinearGradient(
+                                        colors: [.accOrange, .accMint],
+                                        startPoint: .leading,
+                                        endPoint: .trailing
+                                    )
+                                )
+                                .textCase(.lowercase)
+
+                            Text("Big world. Small couch.")
+                                .font(.tvMeta)  // 28pt
+                                .tracking(6)
+                                .foregroundColor(.txt2)
                         }
-                    }
 
-                // Title
-                VStack(spacing: Layout.space16) {
-                    Text("tripto")
-                        .font(.tvH1)  // 72pt Semibold
-                        .foregroundStyle(
-                            LinearGradient(
-                                colors: [.accOrange, .accMint],
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            )
+                        // Create button (primary action)
+                        PrimaryButton(
+                            title: busy ? "Skapar spel..." : "Skapa nytt spel",
+                            action: { Task { await createSession() } },
+                            isLoading: busy
                         )
-                        .textCase(.lowercase)
+                        .disabled(busy)
 
-                    Text("Big world. Small couch.")
-                        .font(.tvMeta)  // 28pt
-                        .tracking(6)
-                        .foregroundColor(.txt2)
-                }
-
-                // Create button (primary action)
-                PrimaryButton(
-                    title: busy ? "Skapar spel..." : "Skapa nytt spel",
-                    action: { Task { await createSession() } },
-                    isLoading: busy
-                )
-                .disabled(busy)
-
-                // Divider with "eller" (or)
-                HStack(spacing: Layout.space24) {
-                    Rectangle()
-                        .fill(Color.txt3.opacity(0.3))
-                        .frame(height: 2)
-                        .frame(maxWidth: 200)
-                    Text("eller")
-                        .font(.tvMeta)  // 28pt
-                        .foregroundColor(.txt3)
-                    Rectangle()
-                        .fill(Color.txt3.opacity(0.3))
-                        .frame(height: 2)
-                        .frame(maxWidth: 200)
-                }
-                .padding(.vertical, Layout.space16)
-
-                // Discovered sessions section (Bonjour)
-                if !bonjourDiscovery.discoveredSessions.isEmpty {
-                    discoveredSessionsSection
-                } else {
-                    // Debug: Show searching status
-                    VStack(spacing: Layout.space16) {
-                        Text("Sessioner i närheten")
-                            .font(.tvBody)  // 34pt
-                            .foregroundColor(.txt1)
-
-                        HStack(spacing: Layout.space16) {
-                            ProgressView()
-                                .progressViewStyle(CircularProgressViewStyle(tint: .txt3))
-                                .scaleEffect(0.8)
-
-                            Text("Söker efter sessioner...")
+                        // Divider with "eller" (or)
+                        HStack(spacing: Layout.space24) {
+                            Rectangle()
+                                .fill(Color.txt3.opacity(0.3))
+                                .frame(height: 2)
+                                .frame(maxWidth: 200)
+                            Text("eller")
                                 .font(.tvMeta)  // 28pt
                                 .foregroundColor(.txt3)
-                                .italic()
+                            Rectangle()
+                                .fill(Color.txt3.opacity(0.3))
+                                .frame(height: 2)
+                                .frame(maxWidth: 200)
                         }
+                        .padding(.vertical, Layout.space16)
 
-                        // Force refresh button
-                        Button(action: {
-                            print("[Bonjour Debug] Manual refresh triggered")
-                            bonjourDiscovery.stopDiscovery()
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                                bonjourDiscovery.startDiscovery()
-                            }
-                        }) {
-                            HStack(spacing: Layout.space16) {
-                                Image(systemName: "arrow.clockwise")
-                                    .font(.system(size: 24, weight: .semibold))
-                                Text("Uppdatera sökning")
-                                    .font(.tvMeta)  // 28pt
-                            }
-                            .foregroundColor(.txt2)
-                            .padding(.horizontal, Layout.space24)
-                            .padding(.vertical, Layout.space16)
-                            .background(
-                                RoundedRectangle(cornerRadius: Layout.radiusM, style: .continuous)
-                                    .fill(Color.bg1)
-                            )
-                        }
+                        // Discovered sessions section (Bonjour)
+                        if !bonjourDiscovery.discoveredSessions.isEmpty {
+                            discoveredSessionsSection
+                        } else {
+                            // Debug: Show searching status
+                            VStack(spacing: Layout.space16) {
+                                Text("Sessioner i närheten")
+                                    .font(.tvBody)  // 34pt
+                                    .foregroundColor(.txt1)
+
+                                HStack(spacing: Layout.space16) {
+                                    ProgressView()
+                                        .progressViewStyle(CircularProgressViewStyle(tint: .txt3))
+                                        .scaleEffect(0.8)
+
+                                    Text("Söker efter sessioner...")
+                                        .font(.tvMeta)  // 28pt
+                                        .foregroundColor(.txt3)
+                                        .italic()
+                                }
+
+                                // Force refresh button
+                                Button(action: {
+                                    print("[Bonjour Debug] Manual refresh triggered")
+                                    bonjourDiscovery.stopDiscovery()
+                                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                                        bonjourDiscovery.startDiscovery()
+                                    }
+                                }) {
+                                    HStack(spacing: Layout.space16) {
+                                        Image(systemName: "arrow.clockwise")
+                                            .font(.system(size: 24, weight: .semibold))
+                                        Text("Uppdatera sökning")
+                                            .font(.tvMeta)  // 28pt
+                                    }
+                                    .foregroundColor(.txt2)
+                                    .padding(.horizontal, Layout.space24)
+                                    .padding(.vertical, Layout.space16)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: Layout.radiusM, style: .continuous)
+                                            .fill(Color.bg1)
+                                    )
+                                }
                         .buttonStyle(.plain)
+                        .focusEffect(.none)
+                            }
+                            .padding(.vertical, Layout.space24)
+                        }
+
+                        // Join code input (secondary action)
+                        VStack(spacing: Layout.space24) {
+                            Text("Ange join-kod från värden")
+                                .font(.tvBody)  // 34pt
+                                .foregroundColor(.txt1)
+
+                            FocusableTextField(text: $joinCode, busy: busy)
+
+                            if joinCode.isEmpty {
+                                Text("Koden är 6 tecken")
+                                    .font(.tvMeta)  // 28pt
+                                    .foregroundColor(.txt3)
+                            } else {
+                                Text("\(joinCode.count) / 6")
+                                    .font(.tvMeta)  // 28pt
+                                    .foregroundColor(joinCode.count == 6 ? .accMint : .txt3)
+                            }
+                        }
+
+                        // Error message
+                        if let error = errorMessage {
+                            Text(error)
+                                .font(.tvMeta)  // 28pt
+                                .foregroundColor(.statusBad)
+                                .padding(.horizontal, 60)
+                                .multilineTextAlignment(.center)
+                        }
+
+                        // Join button
+                        PrimaryButton(
+                            title: busy ? "Ansluter..." : "Hoppa in!",
+                            action: { Task { await joinSession() } },
+                            isLoading: busy
+                        )
+                        .disabled(joinCode.count != 6 || busy)
+                        .opacity(joinCode.count == 6 ? 1.0 : 0.5)
                     }
-                    .padding(.vertical, Layout.space24)
+                    .padding(isCompact ? 40 : 60)
+                    .frame(maxWidth: .infinity)
                 }
-
-                // Join code input (secondary action)
-                VStack(spacing: Layout.space24) {
-                    Text("Ange join-kod från värden")
-                        .font(.tvBody)  // 34pt
-                        .foregroundColor(.txt1)
-
-                    FocusableTextField(text: $joinCode, busy: busy)
-
-                    if joinCode.isEmpty {
-                        Text("Koden är 6 tecken")
-                            .font(.tvMeta)  // 28pt
-                            .foregroundColor(.txt3)
-                    } else {
-                        Text("\(joinCode.count) / 6")
-                            .font(.tvMeta)  // 28pt
-                            .foregroundColor(joinCode.count == 6 ? .accMint : .txt3)
-                    }
-                }
-
-                // Error message
-                if let error = errorMessage {
-                    Text(error)
-                        .font(.tvMeta)  // 28pt
-                        .foregroundColor(.statusBad)
-                        .padding(.horizontal, 60)
-                        .multilineTextAlignment(.center)
-                }
-
-                // Join button
-                PrimaryButton(
-                    title: busy ? "Ansluter..." : "Hoppa in!",
-                    action: { Task { await joinSession() } },
-                    isLoading: busy
-                )
-                .disabled(joinCode.count != 6 || busy)
-                .opacity(joinCode.count == 6 ? 1.0 : 0.5)
             }
-            .padding(60)
         }
         .onAppear {
             bonjourDiscovery.startDiscovery()
@@ -431,6 +439,7 @@ private struct DiscoveredSessionRow: View {
             .scaleEffect(isFocused ? 1.05 : 1.0)
         }
         .buttonStyle(.plain)
+        .focusEffect(.none)
         .animation(.easeInOut(duration: 0.2), value: isFocused)
     }
 }
@@ -951,29 +960,18 @@ struct BackButton: View {
         }) {
             HStack(spacing: Layout.space16) {
                 Image(systemName: "chevron.left")
-                    .font(.system(size: 28, weight: .semibold))
+                    .font(.system(size: 26, weight: .semibold))
                 Text("Tillbaka till start")
                     .font(.tvMeta)  // 28pt
             }
             .foregroundColor(.txt1)
             .padding(.horizontal, Layout.cardPadding)
-            .padding(.vertical, Layout.space16)
             .frame(height: Layout.buttonHeight)  // 72pt
-            .background(
-                RoundedRectangle(cornerRadius: Layout.radiusM, style: .continuous)
-                    .fill(isFocused ? Color.bg2.opacity(0.8) : Color.bg2)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: Layout.radiusM, style: .continuous)
-                            .stroke(
-                                isFocused ? Color.accMint.opacity(0.5) : Color.clear,
-                                lineWidth: 2
-                            )
-                    )
-                    .shadow(color: isFocused ? Color.accMint.opacity(0.3) : .clear, radius: 12, x: 0, y: 0)
-            )
+            .background(TVButtonChrome(variant: .secondary, isFocused: isFocused))
             .scaleEffect(isFocused ? 1.05 : 1.0)
         }
         .buttonStyle(.plain)
+        .focusEffect(.none)
         .animation(.easeInOut(duration: 0.2), value: isFocused)
     }
 }
@@ -989,29 +987,18 @@ struct NewGameButton: View {
         }) {
             HStack(spacing: Layout.space16) {
                 Image(systemName: "arrow.counterclockwise")
-                    .font(.system(size: 28, weight: .semibold))
+                    .font(.system(size: 26, weight: .semibold))
                 Text("Nytt spel")
                     .font(.tvMeta)  // 28pt
             }
             .foregroundColor(.txt1)
             .padding(.horizontal, Layout.cardPadding)
-            .padding(.vertical, Layout.space16)
             .frame(height: Layout.buttonHeight)  // 72pt
-            .background(
-                RoundedRectangle(cornerRadius: Layout.radiusM, style: .continuous)
-                    .fill(isFocused ? Color.bg2.opacity(0.8) : Color.bg2)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: Layout.radiusM, style: .continuous)
-                            .stroke(
-                                isFocused ? Color.accMint.opacity(0.5) : Color.clear,
-                                lineWidth: 2
-                            )
-                    )
-                    .shadow(color: isFocused ? Color.accMint.opacity(0.3) : .clear, radius: 12, x: 0, y: 0)
-            )
+            .background(TVButtonChrome(variant: .secondary, isFocused: isFocused))
             .scaleEffect(isFocused ? 1.05 : 1.0)
         }
         .buttonStyle(.plain)
+        .focusEffect(.none)
         .animation(.easeInOut(duration: 0.2), value: isFocused)
     }
 }
@@ -1093,15 +1080,61 @@ struct PrimaryButton: View {
             .frame(minWidth: 400)
             .frame(height: Layout.buttonHeight)  // 72pt
             .padding(.horizontal, Layout.cardPadding)
-            .background(
-                RoundedRectangle(cornerRadius: Layout.radiusM, style: .continuous)  // 16pt
-                    .fill(isFocused ? Color.accOrange.opacity(0.9) : Color.accOrange)
-                    .shadow(color: isFocused ? Color.accMint.opacity(0.4) : .clear, radius: 16, x: 0, y: 0)
-            )
+            .background(TVButtonChrome(variant: .primary, isFocused: isFocused))
             .scaleEffect(isFocused ? 1.05 : 1.0)
         }
         .buttonStyle(.plain)
+        .focusEffect(.none)
         .animation(.easeInOut(duration: 0.2), value: isFocused)
+    }
+}
+
+// MARK: – Shared Button Chrome ───────────────────────────────────────────────
+
+private enum TVButtonVariant {
+    case primary
+    case secondary
+}
+
+private struct TVButtonChrome: View {
+    let variant: TVButtonVariant
+    let isFocused: Bool
+
+    var body: some View {
+        RoundedRectangle(cornerRadius: Layout.radiusM, style: .continuous)
+            .fill(backgroundColor)
+            .overlay(
+                RoundedRectangle(cornerRadius: Layout.radiusM, style: .continuous)
+                    .stroke(focusStrokeColor, lineWidth: isFocused ? 2 : 0)
+            )
+            .shadow(color: focusShadowColor, radius: isFocused ? 18 : 0, x: 0, y: 0)
+    }
+
+    private var backgroundColor: Color {
+        switch variant {
+        case .primary:
+            return isFocused ? Color.accOrange.opacity(0.95) : Color.accOrange
+        case .secondary:
+            return isFocused ? Color.bg1 : Color.bg2
+        }
+    }
+
+    private var focusStrokeColor: Color {
+        switch variant {
+        case .primary:
+            return Color.accMint.opacity(0.6)
+        case .secondary:
+            return Color.accMint.opacity(0.5)
+        }
+    }
+
+    private var focusShadowColor: Color {
+        switch variant {
+        case .primary:
+            return Color.accOrange.opacity(0.45)
+        case .secondary:
+            return Color.accMint.opacity(0.25)
+        }
     }
 }
 
