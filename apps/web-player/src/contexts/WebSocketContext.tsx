@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useRef, useState, useCallback, type ReactNode } from 'react';
-import type { GameEvent, GameState, LobbyUpdatedPayload } from '../types/game';
+import type { GameEvent, GameState, LobbyUpdatedPayload, Role } from '../types/game';
 import { loadSession } from '../services/storage';
 
 interface WebSocketContextValue {
@@ -142,7 +142,7 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
                 return {
                   playerId: p.playerId,
                   name: p.name,
-                  role: 'player',
+                  role: 'player' as Role,
                   isConnected: p.isConnected,
                   joinedAtMs: existing?.joinedAtMs ?? Date.now(),
                   score: existing?.score ?? 0,
