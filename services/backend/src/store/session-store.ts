@@ -56,6 +56,8 @@ export interface Session {
   _clueTimer?: NodeJS.Timeout; // Timer handle for auto-advance
   // Scoreboard auto-advance timer (multi-destination only)
   _scoreboardTimer?: NodeJS.Timeout; // Timer handle for auto-advance to next destination
+  // Followup auto-advance timer
+  _followupTimer?: NodeJS.Timeout; // Timer handle for followup sequence
   // Clue start time tracking for speed bonus calculation
   _clueStartTime?: number; // Timestamp when current clue level started (for speed bonus)
   // Join flow lock to prevent race conditions

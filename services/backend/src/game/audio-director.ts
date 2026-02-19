@@ -21,7 +21,6 @@ import {
   buildAudioPlayEvent,
   buildAudioStopEvent,
   buildTtsPrefetchEvent,
-  buildUiEffectTriggerEvent,
 } from '../utils/event-builder';
 import { getServerTimeMs } from '../utils/time';
 import { logger } from '../utils/logger';
